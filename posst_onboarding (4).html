@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Get Started — posst.app</title>
+<link rel="icon" type="image/x-icon" href="https://posst.app/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="https://posst.app/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://posst.app/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#1648FF;--blue-dim:#E8EEFF;--blue-dark:#0F35CC;
+  --cream:#FFFAF4;--cream-dark:#F5EFE6;--ink:#0F0E17;
+  --ink-mid:#4A4860;--ink-light:#9896A8;--border:#E4DFD6;
+  --white:#FFFFFF;--green:#16A34A;--red:#DC2626;--dark:#0F0E17;
+  --serif:'DM Serif Display',Georgia,serif;
+  --sans:'DM Sans',system-ui,sans-serif;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh}
+
+/* NAV */
+.nav{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,250,244,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{height:28px;width:auto;display:block}
+.nav-back{font-size:13px;color:var(--ink-light);text-decoration:none;display:flex;align-items:center;gap:6px;transition:color 0.15s}
+.nav-back:hover{color:var(--blue)}
+
+/* LAYOUT */
+.layout{display:flex;min-height:100vh;padding-top:64px}
+
+/* SIDEBAR */
+.sidebar{width:280px;flex-shrink:0;background:var(--dark);padding:40px 28px;position:fixed;top:64px;left:0;bottom:0;display:flex;flex-direction:column;overflow-y:auto;z-index:100}
+.sidebar-logo{height:28px;width:auto;display:block;margin-bottom:40px;opacity:0.8}
+.steps-nav{flex:1}
+.step-item{display:flex;align-items:flex-start;gap:12px;margin-bottom:20px}
+.step-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;transition:all 0.2s}
+.s-done .step-dot{background:var(--blue);color:white}
+.s-active .step-dot{background:white;color:var(--dark)}
+.s-future .step-dot{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.15)}
+.step-label{padding-top:2px}
+.step-name{font-size:12px;font-weight:600;transition:color 0.2s}
+.s-done .step-name{color:rgba(255,255,255,0.35)}
+.s-active .step-name{color:white}
+.s-future .step-name{color:rgba(255,255,255,0.15)}
+.step-sub{font-size:10px;color:rgba(255,255,255,0.2);margin-top:2px}
+.connector{width:2px;height:14px;background:rgba(255,255,255,0.07);margin-left:12px;margin-top:-8px;margin-bottom:6px}
+.progress-bar{height:2px;background:rgba(255,255,255,0.07);border-radius:1px;margin-top:28px;overflow:hidden}
+.progress-fill{height:100%;background:var(--blue);border-radius:1px;transition:width 0.4s ease}
+
+/* MAIN */
+.main{margin-left:280px;flex:1;padding:48px 60px;min-height:calc(100vh - 64px)}
+
+/* STEP HEADER */
+.step-header{margin-bottom:32px}
+.step-tag{font-size:10px;font-weight:700;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.step-tag::before{content:'';width:16px;height:2px;background:var(--blue)}
+.step-title{font-family:var(--serif);font-size:28px;line-height:1.15;letter-spacing:-0.3px;color:var(--ink);margin-bottom:7px}
+.step-desc{font-size:13px;color:var(--ink-mid);line-height:1.65}
+
+/* FORM ELEMENTS */
+.form-group{margin-bottom:20px}
+.form-label{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.form-label-opt{font-weight:400;color:var(--ink-light);font-size:11px;margin-left:4px}
+.form-hint{font-size:11px;color:var(--ink-light);margin-top:5px;line-height:1.5}
+.form-error{font-size:11px;color:var(--red);margin-top:5px;font-weight:500}
+.form-input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:14px;font-family:var(--sans);color:var(--ink);background:white;outline:none;transition:border-color 0.15s,box-shadow 0.15s}
+.form-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,72,255,0.08)}
+.form-input.err{border-color:var(--red)}
+.form-input::placeholder{color:var(--ink-light)}
+.form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239896A8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;cursor:pointer}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+textarea.form-input{resize:vertical;min-height:100px}
+
+/* PHONE INPUT */
+.phone-wrap{display:flex}
+.phone-code{width:130px;flex-shrink:0;border-radius:9px 0 0 9px;border-right:none}
+.phone-num{border-radius:0 9px 9px 0;flex:1}
+
+/* OTP */
+.otp-wrap{display:flex;gap:10px;margin-bottom:12px}
+.otp-input{width:56px;height:56px;border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;text-align:center;font-family:var(--sans);color:var(--ink);outline:none;transition:all 0.15s;background:white}
+.otp-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,72,255,0.08)}
+.otp-input.filled{border-color:var(--blue);background:var(--blue-dim)}
+.otp-resend{font-size:12px;color:var(--blue);cursor:pointer;background:none;border:none;font-family:var(--sans);padding:0}
+.otp-timer{font-size:12px;color:var(--ink-light)}
+
+/* INFO BOXES */
+.info-box{border-radius:10px;padding:13px 16px;display:flex;gap:11px;align-items:flex-start;margin-bottom:18px}
+.info-box.blue{background:var(--blue-dim);border:1px solid rgba(22,72,255,0.15)}
+.info-box.amber{background:#FFFBEB;border:1px solid #FDE68A}
+.info-box.green{background:#F0FDF4;border:1px solid #BBF7D0}
+.info-box.red{background:#FEF2F2;border:1px solid #FECACA}
+.info-box-icon{font-size:15px;flex-shrink:0;margin-top:1px}
+.info-box-text{font-size:12px;line-height:1.6;color:var(--ink-mid)}
+.info-box.blue .info-box-text{color:#1e3a8a}
+.info-box.amber .info-box-text{color:#78350F}
+.info-box.green .info-box-text{color:#166534}
+.info-box-text strong{font-weight:600}
+
+/* PLATFORM CARDS */
+.platform-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px}
+.platform-card{border:1.5px solid var(--border);border-radius:11px;padding:16px 12px;cursor:pointer;transition:all 0.15s;text-align:center;background:white;user-select:none}
+.platform-card:hover{border-color:var(--blue)}
+.platform-card.selected{border-color:var(--blue);background:var(--blue-dim)}
+.platform-icon{font-size:22px;margin-bottom:7px}
+.platform-name{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.platform-sub{font-size:10px;color:var(--ink-light)}
+
+/* GBP SCORE IN FORM */
+.score-reveal{background:var(--dark);border-radius:14px;padding:22px;margin-bottom:20px}
+.score-big{font-family:var(--serif);font-size:52px;color:white;line-height:1;margin-bottom:4px}
+.score-big-label{font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:16px}
+.score-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.score-stat{background:rgba(255,255,255,0.06);border-radius:8px;padding:12px}
+.score-stat-val{font-size:20px;font-weight:600;color:white;margin-bottom:3px}
+.score-stat-label{font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.5px}
+.score-warning{font-size:12px;color:#FCA5A5;line-height:1.5;padding:10px 14px;background:rgba(239,68,68,0.1);border-radius:8px;border-left:3px solid #EF4444}
+
+/* TIER CARDS */
+.tier-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tier-card{border:1.5px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.15s;background:white;position:relative}
+.tier-card:hover{border-color:var(--blue)}
+.tier-card.selected{border-color:var(--blue);background:var(--blue-dim)}
+.tier-card.selected-dark{border-color:var(--dark);background:var(--dark)}
+.tier-popular{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--blue);color:white;font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;white-space:nowrap}
+.tier-name{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-light);margin-bottom:6px}
+.tier-card.selected-dark .tier-name{color:rgba(255,255,255,0.4)}
+.tier-price{font-family:var(--serif);font-size:28px;color:var(--ink);margin-bottom:3px;line-height:1}
+.tier-card.selected-dark .tier-price{color:white}
+.tier-price sup{font-family:var(--sans);font-size:13px;font-weight:400;vertical-align:super}
+.tier-per{font-size:11px;color:var(--ink-light);margin-bottom:10px}
+.tier-card.selected-dark .tier-per{color:rgba(255,255,255,0.3)}
+.tier-divider{height:1px;background:var(--border);margin-bottom:10px}
+.tier-card.selected-dark .tier-divider{background:rgba(255,255,255,0.1)}
+.tier-feat{font-size:11px;color:var(--ink-mid);padding:2px 0;display:flex;gap:7px;align-items:flex-start;line-height:1.4}
+.tier-card.selected-dark .tier-feat{color:rgba(255,255,255,0.6)}
+.tier-ck{color:var(--blue);font-weight:700;flex-shrink:0;font-size:11px}
+.tier-diff{color:#E85D24;font-weight:700;flex-shrink:0;font-size:11px}
+.tier-diff-text{font-weight:600}
+.tier-card.selected-dark .tier-diff-text{color:white}
+
+/* DAY + TIME PICKER */
+.days-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:12px}
+.day-chip{aspect-ratio:1;border:1.5px solid var(--border);border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;background:white;user-select:none;font-size:10px;font-weight:700;letter-spacing:0.3px;text-transform:uppercase;color:var(--ink-mid)}
+.day-chip:hover{border-color:var(--blue)}
+.day-chip.selected{background:var(--blue);border-color:var(--blue);color:white}
+.time-select-row{display:flex;gap:10px;align-items:center}
+.time-select-row .form-input{flex:1}
+
+/* REVIEW */
+.review-section{margin-bottom:22px}
+.review-heading{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--blue);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.review-heading::before{content:'';width:12px;height:2px;background:var(--blue)}
+.review-row{display:flex;padding:8px 0;border-bottom:1px solid var(--border)}
+.review-row:last-child{border-bottom:none}
+.review-key{font-size:11px;color:var(--ink-light);width:140px;flex-shrink:0;font-weight:500;padding-top:1px}
+.review-val{font-size:12px;color:var(--ink);font-weight:500;flex:1;line-height:1.4}
+
+/* NAV BUTTONS */
+.form-nav{display:flex;align-items:center;justify-content:space-between;margin-top:40px;padding-top:20px;border-top:1px solid var(--border)}
+.btn-back{background:transparent;border:none;font-size:13px;font-weight:500;color:var(--ink-light);cursor:pointer;font-family:var(--sans);display:flex;align-items:center;gap:5px;transition:color 0.15s}
+.btn-back:hover{color:var(--ink)}
+.btn-next{background:var(--blue);color:white;border:none;border-radius:10px;padding:13px 30px;font-size:14px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:7px}
+.btn-next:hover{background:var(--blue-dark);transform:translateY(-1px);box-shadow:0 6px 20px rgba(22,72,255,0.25)}
+
+/* SUCCESS */
+.success{text-align:center;padding:60px 20px}
+.success-icon{width:68px;height:68px;background:#DCFCE7;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 22px}
+.success-title{font-family:var(--serif);font-size:28px;color:var(--ink);margin-bottom:10px;letter-spacing:-0.3px}
+.success-sub{font-size:14px;color:var(--ink-mid);max-width:400px;margin:0 auto 28px;line-height:1.65}
+.next-steps{text-align:left;max-width:420px;margin:0 auto}
+.next-step{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)}
+.next-step:last-child{border-bottom:none}
+.next-step-num{width:26px;height:26px;background:var(--blue-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--blue);flex-shrink:0}
+.next-step-text{font-size:13px;color:var(--ink-mid);line-height:1.5}
+.next-step-text strong{color:var(--ink)}
+
+/* SPINNER */
+.submitting{text-align:center;padding:80px 20px}
+.spinner{width:36px;height:36px;border:3px solid var(--blue-dim);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* RESPONSIVE */
+@media(max-width:860px){
+  .sidebar{display:none}
+  .main{margin-left:0;padding:32px 20px}
+  .form-row{grid-template-columns:1fr}
+  .platform-grid{grid-template-columns:1fr 1fr}
+  .days-grid{grid-template-columns:repeat(4,1fr)}
+  .tier-grid{grid-template-columns:1fr}
+  .nav{padding:0 20px}
+  .score-stat-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="https://posst.app">
+    <img class="nav-logo" src="https://posst.app/posst_logo_dark.png" alt="posst.app">
+  </a>
+  <a class="nav-back" href="https://posst.app">← Back to home</a>
+</nav>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <img class="sidebar-logo" src="https://posst.app/posst_logo_white.png" alt="posst.app">
+    <div class="steps-nav" id="steps-nav"></div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="main-content"></main>
+</div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzqmxr1kfyF_iYPIIx4gCbBrx7Z2ifgRZsfoYazRQcxEkc0D-H-1skScKD56G9AVlaN/exec';
+
+const STEPS = [
+  {name:'Phone verification', sub:'Who you are'},
+  {name:'Your business',      sub:'Name + Google score'},
+  {name:'Platforms',          sub:'Where you post'},
+  {name:'Choose your plan',   sub:'Standard or Pro'},
+  {name:'Schedule',           sub:'Days + posting time'},
+  {name:'Review & submit',    sub:'Almost done'},
+];
+
+const PLATFORMS = [
+  {id:'facebook',  icon:'📘', name:'Facebook Page',          sub:'Business page'},
+  {id:'instagram', icon:'📸', name:'Instagram Business',      sub:'Business or Creator'},
+  {id:'gbp',       icon:'🗺️', name:'Google Business Profile', sub:'Google Maps listing'},
+];
+
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+const COUNTRY_CODES = [
+  {d:'+61',n:'Australia 🇦🇺'},{d:'+91',n:'India 🇮🇳'},{d:'+1',n:'USA 🇺🇸'},
+  {d:'+44',n:'UK 🇬🇧'},{d:'+971',n:'UAE 🇦🇪'},{d:'+65',n:'Singapore 🇸🇬'},
+  {d:'+64',n:'New Zealand 🇳🇿'},{d:'+1',n:'Canada 🇨🇦'},{d:'+27',n:'South Africa 🇿🇦'},
+  {d:'+92',n:'Pakistan 🇵🇰'},{d:'+880',n:'Bangladesh 🇧🇩'},{d:'+94',n:'Sri Lanka 🇱🇰'},
+  {d:'+60',n:'Malaysia 🇲🇾'},{d:'+63',n:'Philippines 🇵🇭'},{d:'+62',n:'Indonesia 🇮🇩'},
+  {d:'+66',n:'Thailand 🇹🇭'},{d:'+84',n:'Vietnam 🇻🇳'},{d:'+852',n:'Hong Kong 🇭🇰'},
+  {d:'+81',n:'Japan 🇯🇵'},{d:'+82',n:'South Korea 🇰🇷'},{d:'+86',n:'China 🇨🇳'},
+  {d:'+49',n:'Germany 🇩🇪'},{d:'+33',n:'France 🇫🇷'},{d:'+39',n:'Italy 🇮🇹'},
+  {d:'+34',n:'Spain 🇪🇸'},{d:'+31',n:'Netherlands 🇳🇱'},{d:'+353',n:'Ireland 🇮🇪'},
+  {d:'+46',n:'Sweden 🇸🇪'},{d:'+47',n:'Norway 🇳🇴'},{d:'+45',n:'Denmark 🇩🇰'},
+  {d:'+41',n:'Switzerland 🇨🇭'},{d:'+48',n:'Poland 🇵🇱'},{d:'+966',n:'Saudi Arabia 🇸🇦'},
+  {d:'+974',n:'Qatar 🇶🇦'},{d:'+973',n:'Bahrain 🇧🇭'},{d:'+20',n:'Egypt 🇪🇬'},
+  {d:'+234',n:'Nigeria 🇳🇬'},{d:'+254',n:'Kenya 🇰🇪'},{d:'+55',n:'Brazil 🇧🇷'},
+  {d:'+52',n:'Mexico 🇲🇽'},{d:'+54',n:'Argentina 🇦🇷'},{d:'+56',n:'Chile 🇨🇱'},
+  {d:'+57',n:'Colombia 🇨🇴'},{d:'+64',n:'New Zealand 🇳🇿'},
+];
+
+const FIXED_PRICES = {
+  AU:{sym:'A$',std:'24.99',pro:'34.99'},
+  IN:{sym:'₹', std:'799',  pro:'999'},
+  US:{sym:'$', std:'15.99',pro:'21.99'},
+  GB:{sym:'£', std:'11.99',pro:'16.99'},
+  EU:{sym:'€', std:'14.99',pro:'21.99'},
+  AE:{sym:'AED ',std:'94.99',pro:'130.99'},
+  SG:{sym:'S$',std:'21.99',pro:'29.99'},
+  NZ:{sym:'NZ$',std:'27.99',pro:'37.99'},
+  CA:{sym:'CA$',std:'21.99',pro:'29.99'},
+};
+
+// ── STATE ──────────────────────────────────────────────────
+let step = 0;
+let errors = {};
+let otpSent = false;
+let otpVerified = false;
+let otpTimer = null;
+let otpSeconds = 30;
+let detectedCountry = 'AU';
+let gbpScore = null;
+let gbpData = null;
+
+const F = {
+  phone_code:'+61', phone_number:'',
+  business_name:'', business_city:'',
+  platforms:[], facebook_page_name:'', facebook_page_url:'',
+  ig_handle:'', ig_url:'', gbp_name:'', gbp_status:'',
+  tier:'', posting_days:[], posting_time:'11:00',
+  contact_email:'', business_type:'', business_description:'',
+  target_audience:'', brand_keywords:'', caption_cta_email:'',
+  timezone:'',
+};
+
+// ── HELPERS ────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const esc = s => !s ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const hasFB  = () => F.platforms.includes('facebook');
+const hasIG  = () => F.platforms.includes('instagram');
+const hasGBP = () => F.platforms.includes('gbp');
+
+function togglePlatform(id) {
+  const i = F.platforms.indexOf(id);
+  if(i > -1) F.platforms.splice(i,1); else F.platforms.push(id);
+  render();
+}
+function toggleDay(d) {
+  const i = F.posting_days.indexOf(d);
+  if(i > -1) F.posting_days.splice(i,1); else F.posting_days.push(d);
+  renderDays();
+}
+
+// ── PRICING ────────────────────────────────────────────────
+async function detectCountry() {
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    const d = await r.json();
+    let cc = d.country_code || 'AU';
+    const eurozone = ['AT','BE','CY','EE','FI','FR','DE','GR','IE','IT','LV','LT','LU','MT','NL','PT','SK','SI','ES'];
+    if(eurozone.includes(cc)) cc = 'EU';
+    detectedCountry = cc;
+    F.timezone = d.timezone || '';
+  } catch(e) {}
+}
+
+function getPrice() {
+  return FIXED_PRICES[detectedCountry] || {sym:'$', std:'15.99', pro:'21.99'};
+}
+
+// ── OTP ────────────────────────────────────────────────────
+async function sendOTP() {
+  try {
+    const phone = (F.phone_code || '+61') + (F.phone_number || '');
+    if(!F.phone_number || F.phone_number.length < 6) {
+      errors.phone = 'Please enter a valid phone number';
+      render(); return;
+    }
+    errors.phone = '';
+
+    // Show loading state on button
+    const btn = document.querySelector('button[onclick="sendOTP()"]');
+    if(btn){ btn.disabled=true; btn.textContent='Sending...'; }
+
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'send_otp', phone: phone }),
+    });
+    const result = await resp.json();
+
+    if(result.status === 'success') {
+      otpSent = true;
+      otpVerified = false;
+      startOTPTimer();
+      render();
+    } else {
+      errors.phone = result.message || 'Failed to send code. Please try again.';
+      render();
+    }
+  } catch(err) {
+    console.error('sendOTP error:', err);
+    // Show actual error for debugging
+    errors.phone = 'Error: ' + (err && err.message ? err.message : String(err));
+    render();
+  }
+}
+
+function startOTPTimer() {
+  otpSeconds = 30;
+  if(otpTimer) clearInterval(otpTimer);
+  otpTimer = setInterval(() => {
+    otpSeconds--;
+    const el = $('otp-timer');
+    if(el) el.textContent = `Resend in ${otpSeconds}s`;
+    if(otpSeconds <= 0) {
+      clearInterval(otpTimer);
+      const btn = $('otp-resend');
+      if(btn) { btn.style.display='inline'; }
+      const timer = $('otp-timer');
+      if(timer) timer.style.display='none';
+    }
+  }, 1000);
+}
+
+async function verifyOTP() {
+  const digits = ['otp-1','otp-2','otp-3','otp-4','otp-5','otp-6'].map(id => $(id)?.value || '').join('');
+  if(digits.length < 6) { errors.otp = 'Enter the 6-digit code'; render(); return; }
+
+  const btn = document.querySelector('button[onclick="verifyOTP()"]');
+  if(btn){ btn.disabled=true; btn.textContent='Verifying...'; }
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'verify_otp',
+        phone: F.phone_code + F.phone_number,
+        code:  digits,
+      }),
+    });
+    const result = await resp.json();
+
+    if(result.status === 'success' && result.verified) {
+      otpVerified = true;
+      errors.otp = '';
+      next();
+    } else {
+      errors.otp = result.message || 'Incorrect code. Please try again.';
+      // Clear OTP inputs
+      ['otp-1','otp-2','otp-3','otp-4','otp-5','otp-6'].forEach(id => {
+        const el = $(id); if(el){ el.value=''; el.classList.remove('filled'); }
+      });
+      $('otp-1')?.focus();
+      render();
+    }
+  } catch(e) {
+    errors.otp = 'Network error. Please try again.';
+    render();
+  }
+}
+
+function handleOTPInput(el, next_id) {
+  if(el.value.length === 1 && next_id) {
+    $(next_id)?.focus();
+  }
+  el.classList.toggle('filled', el.value.length === 1);
+}
+
+// GBP score — coming soon with Google Places API
+
+// ── VALIDATION ─────────────────────────────────────────────
+function validate() {
+  errors = {};
+  if(step === 0) {
+    if(!otpVerified) errors.otp = 'Please verify your phone number';
+  }
+  if(step === 1) {
+    if(!F.business_name.trim()) errors.business_name = 'Required';
+    if(!F.business_city.trim()) errors.business_city = 'Required';
+    if(!F.contact_email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) errors.contact_email = 'Valid email required';
+  }
+  if(step === 2) {
+    if(F.platforms.length === 0) errors.platforms = 'Select at least one platform';
+    if(hasFB() && !F.facebook_page_url.trim()) errors.facebook_page_url = 'Required';
+    if(hasIG() && !F.ig_handle.trim()) errors.ig_handle = 'Required';
+  }
+  if(step === 3) {
+    if(!F.tier) errors.tier = 'Please choose a plan';
+  }
+  if(step === 4) {
+    if(F.posting_days.length === 0) errors.posting_days = 'Select at least one day';
+    if(!F.posting_time) errors.posting_time = 'Choose a posting time';
+  }
+  return Object.keys(errors).length === 0;
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────
+function next() {
+  if(!validate()) { render(); window.scrollTo(0,0); return; }
+  if(step < 5) { step++; render(); window.scrollTo(0,0); }
+
+}
+function back() {
+  if(step > 0) { step--; render(); window.scrollTo(0,0); }
+  else window.location.href = 'https://posst.app';
+}
+
+// ── SUBMIT ──────────────────────────────────────────────────
+async function submitForm() {
+  if(!validate()) { render(); return; }
+  $('main-content').innerHTML = `<div class="submitting"><div class="spinner"></div><div style="font-size:15px;font-weight:600;color:var(--ink)">Submitting your details...</div><div style="font-size:13px;color:var(--ink-mid);margin-top:6px">This takes just a moment.</div></div>`;
+
+  const postingDaysObj = {};
+  F.posting_days.forEach(day => {
+    postingDaysObj[day.toLowerCase()] = {
+      active: true, category: '', image_source: 'stock+ai', subcategories: [],
+    };
+  });
+
+  const payload = {
+    business_name:        F.business_name,
+    contact_email:        F.contact_email,
+    business_phone:       F.phone_code + ' ' + F.phone_number,
+    business_type:        F.business_type || 'Not specified',
+    business_city:        F.business_city,
+    timezone:             F.timezone,
+    business_description: F.business_description,
+    target_audience:      F.target_audience,
+    brand_keywords:       F.brand_keywords,
+    caption_cta_email:    F.caption_cta_email || F.contact_email,
+    platforms:            F.platforms,
+    fb_page_name:         F.facebook_page_name,
+    facebook_page_url:    F.facebook_page_url,
+    ig_handle:            F.ig_handle,
+    instagram_url:        F.ig_url,
+    gbp_name:             F.gbp_name,
+    gbp_status:           F.gbp_status,
+    posting_days:         postingDaysObj,
+    posting_time:         F.posting_time,
+    tier:                 F.tier,
+    gbp_score:            gbpScore || 0,
+  };
+
+  try {
+    await fetch(APPS_SCRIPT_URL, { method:'POST', body:JSON.stringify(payload) });
+  } catch(e) { console.error(e); }
+  renderSuccess();
+}
+
+// ── SIDEBAR ─────────────────────────────────────────────────
+function renderSidebar() {
+  $('steps-nav').innerHTML = STEPS.map((s,i) => {
+    const cls = i < step ? 's-done' : i === step ? 's-active' : 's-future';
+    return `<div class="step-item ${cls}">
+      <div class="step-dot">${i < step ? '✓' : i+1}</div>
+      <div class="step-label"><div class="step-name">${s.name}</div><div class="step-sub">${s.sub}</div></div>
+    </div>${i < STEPS.length-1 ? '<div class="connector"></div>' : ''}`;
+  }).join('');
+  $('progress-fill').style.width = `${((step+1)/STEPS.length)*100}%`;
+}
+
+// ── STEP RENDERERS ───────────────────────────────────────────
+
+function renderStep0() {
+  return `
+    <div class="step-header">
+      <div class="step-tag">Step 1 of 6</div>
+      <h2 class="step-title">Enter your phone number</h2>
+      <p class="step-desc">We'll send a verification code via SMS. No email or passwords needed.</p>
+    </div>
+
+    ${!otpSent ? `
+      <div class="form-group">
+        <label class="form-label">Phone number *</label>
+        <div class="phone-wrap">
+          <select class="form-input form-select phone-code" onchange="F.phone_code=this.value">
+            ${COUNTRY_CODES.map(c=>`<option value="${c.d}" ${F.phone_code===c.d?'selected':''}>${c.d} ${c.n}</option>`).join('')}
+          </select>
+          <input class="form-input phone-num ${errors.phone?'err':''}" value="${esc(F.phone_number)}"
+            placeholder="412 345 678" type="tel" oninput="F.phone_number=this.value">
+        </div>
+        ${errors.phone ? `<div class="form-error">${errors.phone}</div>` : ''}
+        <div class="form-hint">We'll send a 6-digit code to verify your number.</div>
+      </div>
+      <button class="btn-next" onclick="sendOTP()" style="margin-top:8px">Send verification code →</button>
+    ` : `
+      <div class="info-box green">
+        <span class="info-box-icon">✅</span>
+        <div class="info-box-text">Code sent to <strong>${F.phone_code} ${F.phone_number}</strong> via SMS.
+          <button onclick="otpSent=false;render()" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:12px;padding:0;margin-left:6px;font-family:var(--sans)">Change number</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Enter 4-digit code *</label>
+        <div class="otp-wrap">
+          <input class="otp-input" id="otp-1" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-2')">
+          <input class="otp-input" id="otp-2" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-3')">
+          <input class="otp-input" id="otp-3" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-4')">
+          <input class="otp-input" id="otp-4" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-5')">
+          <input class="otp-input" id="otp-5" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-6')">
+          <input class="otp-input" id="otp-6" maxlength="1" type="tel" oninput="handleOTPInput(this,null)">
+        </div>
+        ${errors.otp ? `<div class="form-error">${errors.otp}</div>` : ''}
+        <div style="margin-top:8px;display:flex;align-items:center;gap:12px">
+          <span class="otp-timer" id="otp-timer">Resend in ${otpSeconds}s</span>
+          <button class="otp-resend" id="otp-resend" style="display:none" onclick="sendOTP()">Resend code</button>
+        </div>
+      </div>
+      <button class="btn-next" onclick="verifyOTP()">Verify & continue →</button>
+    `}`;
+}
+
+function renderStep1() {
+  const showScore = gbpScore !== null;
+  return `
+    <div class="step-header">
+      <div class="step-tag">Step 2 of 6</div>
+      <h2 class="step-title">Tell us about your business</h2>
+      <p class="step-desc">We'll check your Google visibility score instantly and show you how you compare to competitors.</p>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Business name *</label>
+        <input class="form-input ${errors.business_name?'err':''}" value="${esc(F.business_name)}"
+          placeholder="Joe's Bakery" oninput="F.business_name=this.value">
+        ${errors.business_name ? `<div class="form-error">${errors.business_name}</div>` : ''}
+      </div>
+      <div class="form-group">
+        <label class="form-label">City / Suburb *</label>
+        <input class="form-input ${errors.business_city?'err':''}" value="${esc(F.business_city)}"
+          placeholder="e.g. Melbourne" oninput="F.business_city=this.value">
+        ${errors.business_city ? `<div class="form-error">${errors.business_city}</div>` : ''}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Contact email *</label>
+      <input class="form-input ${errors.contact_email?'err':''}" value="${esc(F.contact_email)}"
+        placeholder="joe@joesbakery.com.au" type="email" oninput="F.contact_email=this.value">
+      ${errors.contact_email ? `<div class="form-error">${errors.contact_email}</div>` : ''}
+      <div class="form-hint">We'll send your confirmation and Go Live emails here.</div>
+    </div>
+
+
+
+    <div class="form-group">
+      <label class="form-label">Describe your business <span class="form-label-opt">optional but recommended</span></label>
+      <textarea class="form-input" placeholder="What do you sell or offer? Who are your customers? What makes you different? The more detail, the better your posts."
+        oninput="F.business_description=this.value">${esc(F.business_description)}</textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Brand keywords <span class="form-label-opt">optional</span></label>
+        <input class="form-input" value="${esc(F.brand_keywords)}"
+          placeholder="warm, local, premium, trusted..." oninput="F.brand_keywords=this.value">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email for post captions <span class="form-label-opt">optional</span></label>
+        <input class="form-input" value="${esc(F.caption_cta_email)}"
+          placeholder="${esc(F.contact_email) || 'bookings@yourbusiness.com'}"
+          type="email" oninput="F.caption_cta_email=this.value">
+        <div class="form-hint">Email shown in post captions. Defaults to contact email.</div>
+      </div>
+    </div>`;
+}
+
+function renderStep2() {
+  const igOnly = hasIG() && !hasFB();
+  return `
+    <div class="step-header">
+      <div class="step-tag">Step 3 of 6</div>
+      <h2 class="step-title">Your social media accounts</h2>
+      <p class="step-desc">Select the platforms you want us to post to. We connect directly to your own accounts.</p>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Which platforms? *</label>
+      <div class="platform-grid">
+        ${PLATFORMS.map(p=>`
+          <div class="platform-card ${F.platforms.includes(p.id)?'selected':''}" onclick="togglePlatform('${p.id}')">
+            <div class="platform-icon">${p.icon}</div>
+            <div class="platform-name">${p.name}</div>
+            <div class="platform-sub">${p.sub}</div>
+          </div>`).join('')}
+      </div>
+      ${errors.platforms ? `<div class="form-error" style="margin-top:6px">${errors.platforms}</div>` : ''}
+    </div>
+
+    ${F.platforms.length === 0 ? `
+      <div class="info-box blue">
+        <span class="info-box-icon">👆</span>
+        <div class="info-box-text">Select at least one platform above to continue.<br><br>
+          Don't have accounts yet?&nbsp;
+          <a href="https://facebook.com/pages/create" target="_blank" style="color:var(--blue)">Create Facebook Page</a> &nbsp;·&nbsp;
+          <a href="https://business.google.com" target="_blank" style="color:var(--blue)">Set up Google Business</a>
+        </div>
+      </div>` : ''}
+
+    ${igOnly ? `
+      <div class="info-box amber">
+        <span class="info-box-icon">ℹ️</span>
+        <div class="info-box-text"><strong>Instagram requires a Facebook Page.</strong> Meta's API requires a linked Facebook Page to post automatically — even if you never use Facebook. We'll guide you through this after signup. Takes 5 minutes.</div>
+      </div>` : ''}
+
+    ${hasFB() ? `
+    <div style="height:1px;background:var(--border);margin:20px 0"></div>
+    <div class="step-tag" style="margin-bottom:12px">Facebook details</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Page name *</label>
+        <input class="form-input" value="${esc(F.facebook_page_name)}" placeholder="Joe's Bakery" oninput="F.facebook_page_name=this.value">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Page URL *</label>
+        <input class="form-input ${errors.facebook_page_url?'err':''}" value="${esc(F.facebook_page_url)}"
+          placeholder="facebook.com/joesbakery" oninput="F.facebook_page_url=this.value">
+        <div class="form-hint">Accepts facebook.com/Name or facebook.com/profile.php?id=123</div>
+        ${errors.facebook_page_url ? `<div class="form-error">${errors.facebook_page_url}</div>` : ''}
+      </div>
+    </div>
+    <div class="info-box blue">
+      <span class="info-box-icon">📧</span>
+      <div class="info-box-text">After signup we'll email you one simple instruction — add our team to your Facebook Page as Admin (2 minutes, once only).</div>
+    </div>` : ''}
+
+    ${hasIG() ? `
+    <div style="height:1px;background:var(--border);margin:20px 0"></div>
+    <div class="step-tag" style="margin-bottom:12px">Instagram details</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Instagram handle *</label>
+        <input class="form-input ${errors.ig_handle?'err':''}" value="${esc(F.ig_handle)}"
+          placeholder="@joesbakery" oninput="F.ig_handle=this.value">
+        ${errors.ig_handle ? `<div class="form-error">${errors.ig_handle}</div>` : ''}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Profile URL <span class="form-label-opt">optional</span></label>
+        <input class="form-input" value="${esc(F.ig_url)}" placeholder="instagram.com/joesbakery" oninput="F.ig_url=this.value">
+      </div>
+    </div>` : ''}
+
+    ${hasGBP() ? `
+    <div style="height:1px;background:var(--border);margin:20px 0"></div>
+    <div class="step-tag" style="margin-bottom:12px">Google Business Profile</div>
+    <div class="info-box amber">
+      <span class="info-box-icon">🗺️</span>
+      <div class="info-box-text"><strong>Verification takes 1–2 weeks</strong> — Google posts a code to your business address. Start this as soon as possible.</div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">GBP listing name <span class="form-label-opt">if verified</span></label>
+        <input class="form-input" value="${esc(F.gbp_name)}" placeholder="Joe's Bakery Glen Waverley" oninput="F.gbp_name=this.value">
+        <div class="form-hint">Exactly as it appears on Google Maps</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Verification status</label>
+        <select class="form-input form-select" onchange="F.gbp_status=this.value">
+          <option value="">Select status...</option>
+          <option ${F.gbp_status==='Already verified'?'selected':''}>Already verified</option>
+          <option ${F.gbp_status==='Waiting for postcard'?'selected':''}>Waiting for postcard</option>
+          <option ${F.gbp_status==='Not started yet'?'selected':''}>Not started yet</option>
+          <option ${F.gbp_status==='Online business only'?'selected':''}>Online business only</option>
+        </select>
+      </div>
+    </div>` : ''}`;
+}
+
+function renderStep3() {
+  const p = getPrice();
+  return `
+    <div class="step-header">
+      <div class="step-tag">Step 4 of 6</div>
+      <h2 class="step-title">Choose your plan</h2>
+      <p class="step-desc">Both plans include daily posting, AI captions, gpt-image-1 images, and automated Google review replies. The only difference is own photos.</p>
+    </div>
+
+
+
+    <div class="tier-grid">
+      <div class="tier-card ${F.tier==='Standard'?'selected':''}" onclick="F.tier='Standard';render()">
+        <div class="tier-name">Standard</div>
+        <div class="tier-price"><sup>${esc(p.sym)}</sup>${esc(p.std)}</div>
+        <div class="tier-per">per month · no setup fee</div>
+        <div class="tier-divider"></div>
+        <div class="tier-feat"><span class="tier-ck">✓</span>Daily posting</div>
+        <div class="tier-feat"><span class="tier-ck">✓</span>AI images (gpt-image-1)</div>
+        <div class="tier-feat"><span class="tier-ck">✓</span>Stock photos (Unsplash)</div>
+        <div class="tier-feat"><span class="tier-ck">✓</span>AI captions — brand voice</div>
+        <div class="tier-feat"><span class="tier-ck">✓</span>Auto Google review replies</div>
+        <div class="tier-feat"><span class="tier-ck">✓</span>Monthly performance report</div>
+      </div>
+      <div class="tier-card ${F.tier==='Pro'?'selected-dark':''}" onclick="F.tier='Pro';render()">
+        <div class="tier-popular">+ Own photos</div>
+        <div class="tier-name" style="${F.tier==='Pro'?'':''}">Pro</div>
+        <div class="tier-price"><sup>${esc(p.sym)}</sup>${esc(p.pro)}</div>
+        <div class="tier-per">per month · no setup fee</div>
+        <div class="tier-divider"></div>
+        <div class="tier-feat"><span class="tier-ck">✓</span>Everything in Standard</div>
+        <div class="tier-feat"><span class="tier-ck">✓</span>AI images (gpt-image-1)</div>
+        <div class="tier-feat"><span class="tier-ck">✓</span>Stock photos (Unsplash)</div>
+        <div class="tier-feat"><span class="tier-ck">✓</span>AI captions — brand voice</div>
+        <div class="tier-feat"><span class="tier-ck">✓</span>Auto Google review replies</div>
+        <div class="tier-feat"><span class="tier-diff">+</span><span class="tier-diff-text">Your own photos via Google Drive</span></div>
+      </div>
+    </div>
+    ${errors.tier ? `<div class="form-error" style="margin-top:8px">${errors.tier}</div>` : ''}
+
+    <div class="info-box green" style="margin-top:16px">
+      <span class="info-box-icon">🎁</span>
+      <div class="info-box-text"><strong>30 days completely free</strong> — no credit card needed. Cancel anytime. All platform infrastructure costs are included in your monthly fee.</div>
+    </div>`;
+}
+
+function renderStep4() {
+  return `
+    <div class="step-header">
+      <div class="step-tag">Step 5 of 6</div>
+      <h2 class="step-title">Posting schedule</h2>
+      <p class="step-desc">Choose which days to post and what time. We'll post automatically at your chosen time every selected day.</p>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Which days? *</label>
+      <div class="days-grid" id="days-grid">
+        ${DAYS.map(d=>`<div class="day-chip ${F.posting_days.includes(d)?'selected':''}" onclick="toggleDay('${d}')">${d}</div>`).join('')}
+      </div>
+      ${errors.posting_days ? `<div class="form-error" style="margin-top:6px">${errors.posting_days}</div>` : ''}
+      <div class="form-hint" style="margin-top:8px">Most businesses start with 3–5 days. You can change this anytime.</div>
+    </div>
+
+    <div style="height:1px;background:var(--border);margin:24px 0"></div>
+
+    <div class="form-group">
+      <label class="form-label">What time should we post? *</label>
+      <div class="time-select-row">
+        <input class="form-input ${errors.posting_time?'err':''}"
+          type="time" value="${esc(F.posting_time)}"
+          min="06:00" max="22:00"
+          onchange="F.posting_time=this.value"
+          style="max-width:160px">
+        <span style="font-size:13px;color:var(--ink-mid)">in your local timezone</span>
+      </div>
+      ${errors.posting_time ? `<div class="form-error">${errors.posting_time}</div>` : ''}
+      <div class="form-hint">Choose any time between 6:00 AM and 10:00 PM. Posts go out at this time on every selected day.</div>
+    </div>
+
+    <div class="info-box blue">
+      <span class="info-box-icon">💡</span>
+      <div class="info-box-text">Popular times: <strong>7–9am</strong> (morning commute), <strong>11am–1pm</strong> (lunch), <strong>6–8pm</strong> (evening browse). Choose what suits your customers best.</div>
+    </div>`;
+}
+
+function renderStep5() {
+  const plats = F.platforms.map(p => PLATFORMS.find(x=>x.id===p)?.name).filter(Boolean).join(', ');
+  const p = getPrice();
+  return `
+    <div class="step-header">
+      <div class="step-tag">Step 6 of 6</div>
+      <h2 class="step-title">Review your setup</h2>
+      <p class="step-desc">Check everything before submitting. Go back to change anything.</p>
+    </div>
+
+    <div class="review-section">
+      <div class="review-heading">Business</div>
+      ${rr('Name', F.business_name)}
+      ${rr('City', F.business_city)}
+      ${rr('Email', F.contact_email)}
+      ${rr('Phone', F.phone_code + ' ' + F.phone_number)}
+    </div>
+    <div class="review-section">
+      <div class="review-heading">Platforms</div>
+      ${rr('Platforms', plats || '—')}
+      ${F.facebook_page_name ? rr('Facebook Page', F.facebook_page_name) : ''}
+      ${F.ig_handle ? rr('Instagram', F.ig_handle) : ''}
+      ${F.gbp_name ? rr('GBP name', F.gbp_name) : ''}
+    </div>
+    <div class="review-section">
+      <div class="review-heading">Plan & Schedule</div>
+      ${rr('Plan', F.tier + ' — ' + p.sym + (F.tier==='Standard'?p.std:p.pro) + '/mo')}
+      ${rr('Posting days', F.posting_days.join(', ') || '—')}
+      ${rr('Post time', F.posting_time + ' your time, every posting day')}
+    </div>
+
+    <div class="info-box green">
+      <span class="info-box-icon">✅</span>
+      <div class="info-box-text">By submitting you confirm these details are correct. A confirmation email will be sent to <strong>${esc(F.contact_email)}</strong>.</div>
+    </div>
+    <div class="info-box blue" style="margin-top:10px">
+      <span class="info-box-icon">🔑</span>
+      <div class="info-box-text"><strong>You own everything.</strong> We build inside your accounts. If you ever stop, all your social media accounts and content stay yours.</div>
+    </div>`;
+}
+
+function rr(k,v) {
+  if(!v) return '';
+  return `<div class="review-row"><div class="review-key">${k}</div><div class="review-val">${esc(v)}</div></div>`;
+}
+
+function renderDays() {
+  const g = $('days-grid');
+  if(g) g.innerHTML = DAYS.map(d=>`<div class="day-chip ${F.posting_days.includes(d)?'selected':''}" onclick="toggleDay('${d}')">${d}</div>`).join('');
+}
+
+function renderSuccess() {
+  let n = 1;
+  const steps = [];
+  steps.push(`<div class="next-step"><div class="next-step-num">${n++}</div><div class="next-step-text"><strong>Check your email</strong> — confirmation sent to ${esc(F.contact_email)}</div></div>`);
+  if(hasFB()) steps.push(`<div class="next-step"><div class="next-step-num">${n++}</div><div class="next-step-text"><strong>Facebook access</strong> — we'll email you to add our team to your Page (2 minutes)</div></div>`);
+  if(hasIG() && !hasFB()) steps.push(`<div class="next-step"><div class="next-step-num">${n++}</div><div class="next-step-text"><strong>Instagram guide</strong> — we'll email you about the Facebook Page requirement</div></div>`);
+  if(hasGBP()) steps.push(`<div class="next-step"><div class="next-step-num">${n++}</div><div class="next-step-text"><strong>GBP guide</strong> — email with Google Business Profile verification steps</div></div>`);
+  steps.push(`<div class="next-step"><div class="next-step-num">${n++}</div><div class="next-step-text"><strong>We set everything up</strong> — within 24 hours, your automation is ready</div></div>`);
+  steps.push(`<div class="next-step"><div class="next-step-num">${n}</div><div class="next-step-text"><strong>You go live</strong> — confirmation email when your first posts are scheduled</div></div>`);
+
+  $('sidebar').style.display = 'none';
+  $('main-content').style.marginLeft = '0';
+  $('main-content').innerHTML = `
+    <div class="success">
+      <div class="success-icon">✅</div>
+      <h2 class="success-title">You're all set!</h2>
+      <p class="success-sub">We've received your details. Our team will have your social media running on autopilot within 1 business day. Check your inbox — a confirmation email is on its way.</p>
+      <div class="next-steps">${steps.join('')}</div>
+      <a href="https://posst.app" style="display:inline-flex;align-items:center;gap:8px;margin-top:32px;background:var(--blue);color:white;text-decoration:none;padding:12px 26px;border-radius:10px;font-size:14px;font-weight:600;">Back to posst.app</a>
+    </div>`;
+}
+
+// ── MAIN RENDER ──────────────────────────────────────────────
+function render() {
+  renderSidebar();
+  const steps = [renderStep0, renderStep1, renderStep2, renderStep3, renderStep4, renderStep5];
+  const nav = `<div class="form-nav">
+    <button class="btn-back" onclick="back()">← ${step===0?'Back to home':'Back'}</button>
+    ${step < 5
+      ? `<button class="btn-next" onclick="next()">Continue →</button>`
+      : `<button class="btn-next" onclick="submitForm()">Submit & start free trial ✓</button>`}
+  </div>`;
+
+  // Step 0 has its own buttons
+  if(step === 0) {
+    $('main-content').innerHTML = steps[0]() + `<div class="form-nav"><button class="btn-back" onclick="back()">← Back to home</button></div>`;
+  } else {
+    $('main-content').innerHTML = steps[step]() + nav;
+  }
+}
+
+// ── INIT ────────────────────────────────────────────────────
+detectCountry();
+render();
+</script>
+</body>
+</html>
