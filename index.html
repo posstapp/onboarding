@@ -143,6 +143,13 @@ textarea.form-input{resize:vertical;min-height:100px}
 .submitting{text-align:center;padding:80px 20px}
 .spinner{width:36px;height:36px;border:3px solid var(--blue-dim);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
 @keyframes spin{to{transform:rotate(360deg)}}
+.location-wrap{position:relative}
+.location-dropdown{position:absolute;top:100%;left:0;right:0;background:white;border:1.5px solid var(--blue);border-top:none;border-radius:0 0 9px 9px;z-index:100;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.1)}
+.location-option{padding:10px 14px;font-size:14px;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--border)}
+.location-option:last-child{border-bottom:none}
+.location-option:hover{background:var(--blue-dim)}
+.location-option .loc-main{font-weight:500}
+.location-option .loc-sub{font-size:11px;color:var(--ink-light);margin-top:2px}
 @media(max-width:860px){
   .sidebar{display:none}
   .main{margin-left:0;padding:32px 20px}
@@ -155,6 +162,7 @@ textarea.form-input{resize:vertical;min-height:100px}
   .nav{padding:0 20px}
 }
 </style>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDbn7d3qH3Td2TyarZjAUnptoFnazBHNms&libraries=places"></script>
 </head>
 <body>
 <nav class="nav">
@@ -227,6 +235,111 @@ const BIZ_CATEGORIES = [
   { group: 'Other', types: ['Other / Not listed'] },
 ];
 
+const COUNTRIES = [
+  {code:'AU', name:'Australia'},
+  {code:'NZ', name:'New Zealand'},
+  {code:'US', name:'United States'},
+  {code:'GB', name:'United Kingdom'},
+  {code:'CA', name:'Canada'},
+  {code:'IN', name:'India'},
+  {code:'SG', name:'Singapore'},
+  {code:'AE', name:'United Arab Emirates'},
+  {code:'ZA', name:'South Africa'},
+  {code:'PH', name:'Philippines'},
+  {code:'MY', name:'Malaysia'},
+  {code:'IE', name:'Ireland'},
+  {code:'PK', name:'Pakistan'},
+  {code:'BD', name:'Bangladesh'},
+  {code:'LK', name:'Sri Lanka'},
+  {code:'ID', name:'Indonesia'},
+  {code:'TH', name:'Thailand'},
+  {code:'VN', name:'Vietnam'},
+  {code:'HK', name:'Hong Kong'},
+  {code:'JP', name:'Japan'},
+  {code:'KR', name:'South Korea'},
+  {code:'CN', name:'China'},
+  {code:'DE', name:'Germany'},
+  {code:'FR', name:'France'},
+  {code:'IT', name:'Italy'},
+  {code:'ES', name:'Spain'},
+  {code:'NL', name:'Netherlands'},
+  {code:'SE', name:'Sweden'},
+  {code:'NO', name:'Norway'},
+  {code:'DK', name:'Denmark'},
+  {code:'CH', name:'Switzerland'},
+  {code:'PL', name:'Poland'},
+  {code:'SA', name:'Saudi Arabia'},
+  {code:'QA', name:'Qatar'},
+  {code:'BH', name:'Bahrain'},
+  {code:'EG', name:'Egypt'},
+  {code:'NG', name:'Nigeria'},
+  {code:'KE', name:'Kenya'},
+  {code:'BR', name:'Brazil'},
+  {code:'MX', name:'Mexico'},
+  {code:'AR', name:'Argentina'},
+  {code:'CL', name:'Chile'},
+  {code:'CO', name:'Colombia'},
+];
+
+// Location autocomplete state
+let cityAutocomplete = null;
+let suburbAutocomplete = null;
+let placesService = null;
+
+function initPlacesAutocomplete() {
+  if(typeof google === 'undefined' || !google.maps || !google.maps.places) return;
+
+  const cityInput = document.getElementById('city-input');
+  const suburbInput = document.getElementById('suburb-input');
+  if(!cityInput || !suburbInput) return;
+
+  // City autocomplete - cities only
+  cityAutocomplete = new google.maps.places.Autocomplete(cityInput, {
+    types: ['(cities)'],
+    fields: ['address_components', 'name', 'formatted_address'],
+  });
+
+  cityAutocomplete.addListener('place_changed', () => {
+    const place = cityAutocomplete.getPlace();
+    if(!place.address_components) return;
+    // Extract city and country
+    let city = '', country = '';
+    for(const comp of place.address_components) {
+      if(comp.types.includes('locality') || comp.types.includes('administrative_area_level_1')) {
+        if(!city) city = comp.long_name;
+      }
+      if(comp.types.includes('country')) country = comp.long_name;
+    }
+    F.business_city = city || place.name;
+    // Update country if changed
+    const countryEl = document.getElementById('country-select');
+    if(countryEl && country) {
+      // find matching country
+      const match = COUNTRIES.find(c => c.name === country);
+      if(match) { F.business_country = match.name; countryEl.value = match.code; }
+    }
+    // Reset suburb when city changes
+    F.business_suburb = '';
+    const si = document.getElementById('suburb-input');
+    if(si) si.value = '';
+    // Update suburb autocomplete location bias
+    if(suburbAutocomplete && place.geometry) {
+      suburbAutocomplete.setBounds(new google.maps.LatLngBounds(place.geometry.location));
+    }
+  });
+
+  // Suburb autocomplete - sublocalities and neighborhoods
+  suburbAutocomplete = new google.maps.places.Autocomplete(suburbInput, {
+    types: ['sublocality', 'neighborhood', 'postal_code'],
+    fields: ['address_components', 'name'],
+  });
+
+  suburbAutocomplete.addListener('place_changed', () => {
+    const place = suburbAutocomplete.getPlace();
+    F.business_suburb = place.name || suburbInput.value;
+  });
+}
+
 const COUNTRY_CODES = [
   {d:'+61',n:'Australia 🇦🇺'},{d:'+91',n:'India 🇮🇳'},{d:'+1',n:'USA 🇺🇸'},
   {d:'+44',n:'UK 🇬🇧'},{d:'+971',n:'UAE 🇦🇪'},{d:'+65',n:'Singapore 🇸🇬'},
@@ -269,7 +382,7 @@ let isSubmitting = false;
 
 const F = {
   phone_code:'+61', phone_number:'',
-  business_name:'', business_suburb:'', business_city:'',
+  business_name:'', business_country:'Australia', business_suburb:'', business_city:'',
   platforms:[], facebook_page_name:'', facebook_page_url:'',
   ig_handle:'', ig_url:'', gbp_name:'', gbp_status:'',
   tier:'', posting_days:[], posting_time:'11:00',
@@ -316,6 +429,9 @@ async function detectCountry() {
     if(eurozone.includes(cc)) cc = 'EU';
     detectedCountry = cc;
     F.timezone = d.timezone || '';
+    // Set default country for location fields
+    const countryMatch = COUNTRIES.find(c => c.code === d.country_code);
+    if(countryMatch) F.business_country = countryMatch.name;
   } catch(e) {}
 }
 
@@ -371,6 +487,7 @@ function validate() {
   if(step===0) { if(!otpVerified) errors.otp='Please verify your phone number'; }
   if(step===1) {
     if(!F.business_name.trim()) errors.business_name='Required';
+    if(!F.business_country.trim()) errors.business_country='Required';
     if(!F.business_suburb.trim()) errors.business_suburb='Required';
     if(!F.business_city.trim()) errors.business_city='Required';
     if(!F.business_type.trim()) errors.business_type='Please select a business type';
@@ -441,6 +558,7 @@ async function submitForm() {
     business_phone:       F.phone_code+' '+F.phone_number,
     business_type:        F.business_type || 'Not specified',
     business_suburb:      F.business_suburb,
+    business_country:     F.business_country,
     business_city:        F.business_city,
     timezone:             F.timezone,
     business_description: F.business_description,
@@ -558,18 +676,24 @@ function renderStep1() {
         ${errors.contact_email?`<div class="form-error">${errors.contact_email}</div>`:''}
       </div>
     </div>
+    <div class="form-group">
+      <label class="form-label">Country *</label>
+      <select class="form-input form-select" id="country-select" onchange="F.business_country=this.options[this.selectedIndex].text;F.business_city='';F.business_suburb='';setTimeout(initPlacesAutocomplete,50)">
+        ${COUNTRIES.map(c=>`<option value="${c.code}" ${F.business_country===c.name?'selected':''}>${c.name}</option>`).join('')}
+      </select>
+    </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Suburb *</label>
-        <input class="form-input ${errors.business_suburb?'err':''}" value="${esc(F.business_suburb)}" placeholder="e.g. Glen Waverley" oninput="F.business_suburb=this.value">
-        ${errors.business_suburb?`<div class="form-error">${errors.business_suburb}</div>`:''}
-        <div class="form-hint">Your local suburb — used in post captions</div>
+        <label class="form-label">City *</label>
+        <input class="form-input ${errors.business_city?'err':''}" id="city-input" value="${esc(F.business_city)}" placeholder="Start typing your city..." oninput="F.business_city=this.value">
+        ${errors.business_city?`<div class="form-error">${errors.business_city}</div>`:''}
+        <div class="form-hint">Used for local SEO and content</div>
       </div>
       <div class="form-group">
-        <label class="form-label">City *</label>
-        <input class="form-input ${errors.business_city?'err':''}" value="${esc(F.business_city)}" placeholder="e.g. Melbourne" oninput="F.business_city=this.value">
-        ${errors.business_city?`<div class="form-error">${errors.business_city}</div>`:''}
-        <div class="form-hint">Your city — used for local SEO and content</div>
+        <label class="form-label">Suburb *</label>
+        <input class="form-input ${errors.business_suburb?'err':''}" id="suburb-input" value="${esc(F.business_suburb)}" placeholder="Start typing your suburb..." oninput="F.business_suburb=this.value">
+        ${errors.business_suburb?`<div class="form-error">${errors.business_suburb}</div>`:''}
+        <div class="form-hint">Used in post captions</div>
       </div>
     </div>
     <div class="form-row">
@@ -1009,6 +1133,8 @@ function render() {
   } else {
     $('main-content').innerHTML = logoHtml + steps[step]()+nav;
   }
+  // Init Places autocomplete on business step
+  if(step===1) setTimeout(initPlacesAutocomplete, 100);
 }
 
 detectCountry();
