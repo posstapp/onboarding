@@ -45,6 +45,7 @@ body{font-family:var(--sans);background:var(--cream);color:var(--ink);-webkit-fo
 .progress-bar{height:2px;background:rgba(255,255,255,0.07);border-radius:1px;margin-top:28px;overflow:hidden}
 .progress-fill{height:100%;background:var(--blue);border-radius:1px;transition:width 0.4s ease}
 .main{margin-left:280px;flex:1;padding:48px 60px;min-height:calc(100vh - 64px)}
+.form-logo{display:block;height:36px;width:auto;margin:0 auto 36px;opacity:0.85}
 .step-header{margin-bottom:32px}
 .step-tag{font-size:10px;font-weight:700;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .step-tag::before{content:'';width:16px;height:2px;background:var(--blue)}
@@ -1002,10 +1003,11 @@ function render() {
       ? `<button class="btn-next" onclick="next()">Continue →</button>`
       : `<button class="btn-next" onclick="submitForm()">Submit & connect accounts →</button>`}
   </div>`;
+  const logoHtml = '<img class="form-logo" src="https://posst.app/posst_logo_final.png" alt="posst.app" onerror="this.src='https://posst.app/posst_logo_dark.png'">';
   if(step===0) {
-    $('main-content').innerHTML = steps[0]()+`<div class="form-nav"><button class="btn-back" onclick="back()">← Back to home</button></div>`;
+    $('main-content').innerHTML = logoHtml + steps[0]()+`<div class="form-nav"><button class="btn-back" onclick="back()">← Back to home</button></div>`;
   } else {
-    $('main-content').innerHTML = steps[step]()+nav;
+    $('main-content').innerHTML = logoHtml + steps[step]()+nav;
   }
 }
 
