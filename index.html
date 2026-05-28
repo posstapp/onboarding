@@ -499,7 +499,7 @@ function renderStep0() {
         <label class="form-label">Phone number *</label>
         <div class="phone-wrap">
           <select class="form-input form-select phone-code" onchange="F.phone_code=this.value">
-            ${COUNTRY_CODES.map(c=>`<option value="${c.d}" ${F.phone_code===c.d?'selected':''}>${c.d} ${c.n.split(" ")[0]}</option>`).join('')}
+            ${COUNTRY_CODES.map(c=>`<option value="${c.d}" ${F.phone_code===c.d?'selected':''}>${c.d} ${c.n}</option>`).join('')}
           </select>
           <input class="form-input phone-num ${errors.phone?'err':''}" value="${esc(F.phone_number)}" placeholder="412 345 678" type="tel" oninput="F.phone_number=this.value">
         </div>
