@@ -64,7 +64,7 @@ body{font-family:var(--sans);background:var(--cream);color:var(--ink);-webkit-fo
 .form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
 textarea.form-input{resize:vertical;min-height:100px}
 .phone-wrap{display:flex}
-.phone-code{width:130px;flex-shrink:0;border-radius:9px 0 0 9px;border-right:none}
+.phone-code{width:90px;flex-shrink:0;border-radius:9px 0 0 9px;border-right:none}
 .phone-num{border-radius:0 9px 9px 0;flex:1}
 .otp-wrap{display:flex;gap:10px;margin-bottom:12px}
 .otp-input{width:56px;height:56px;border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;text-align:center;font-family:var(--sans);color:var(--ink);outline:none;transition:all 0.15s;background:white}
@@ -499,7 +499,7 @@ function renderStep0() {
         <label class="form-label">Phone number *</label>
         <div class="phone-wrap">
           <select class="form-input form-select phone-code" onchange="F.phone_code=this.value">
-            ${COUNTRY_CODES.map(c=>`<option value="${c.d}" ${F.phone_code===c.d?'selected':''}>${c.d} ${c.n}</option>`).join('')}
+            ${COUNTRY_CODES.map(c=>`<option value="${c.d}" ${F.phone_code===c.d?'selected':''}>${c.d} — ${c.n}</option>`).join('')}
           </select>
           <input class="form-input phone-num ${errors.phone?'err':''}" value="${esc(F.phone_number)}" placeholder="412 345 678" type="tel" oninput="F.phone_number=this.value">
         </div>
