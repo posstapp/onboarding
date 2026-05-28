@@ -294,9 +294,11 @@ function initPlacesAutocomplete() {
   if(!cityInput || !suburbInput) return;
 
   // City autocomplete - cities only
+  const selectedCountry = document.getElementById('country-select')?.value || 'AU';
   cityAutocomplete = new google.maps.places.Autocomplete(cityInput, {
     types: ['(cities)'],
-    fields: ['address_components', 'name', 'formatted_address'],
+    fields: ['address_components', 'name', 'formatted_address', 'geometry'],
+    componentRestrictions: {country: selectedCountry},
   });
 
   cityAutocomplete.addListener('place_changed', () => {
@@ -328,15 +330,28 @@ function initPlacesAutocomplete() {
     }
   });
 
-  // Suburb autocomplete - sublocalities and neighborhoods
+  // Suburb autocomplete - use (regions) which covers suburbs/localities in AU
   suburbAutocomplete = new google.maps.places.Autocomplete(suburbInput, {
-    types: ['sublocality', 'neighborhood', 'postal_code'],
-    fields: ['address_components', 'name'],
+    types: ['(regions)'],
+    fields: ['address_components', 'name', 'formatted_address'],
   });
+
+  // Bias to selected city/country
+  const countryCode = document.getElementById('country-select')?.value || 'AU';
+  suburbAutocomplete.setComponentRestrictions({country: countryCode});
 
   suburbAutocomplete.addListener('place_changed', () => {
     const place = suburbAutocomplete.getPlace();
-    F.business_suburb = place.name || suburbInput.value;
+    if(!place.address_components) { F.business_suburb = suburbInput.value; return; }
+    // Get the suburb/locality name
+    let suburb = '';
+    for(const comp of place.address_components) {
+      if(comp.types.includes('locality') || comp.types.includes('sublocality_level_1') || comp.types.includes('neighborhood')) {
+        suburb = comp.long_name; break;
+      }
+    }
+    F.business_suburb = suburb || place.name || suburbInput.value;
+    suburbInput.value = F.business_suburb;
   });
 }
 
