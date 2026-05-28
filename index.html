@@ -178,6 +178,7 @@ const STEPS = [
   {name:'Your business',      sub:'Tell us about you'},
   {name:'Platforms',          sub:'Where you post'},
   {name:'Choose your plan',   sub:'Standard or Pro'},
+  {name:'Google Drive',       sub:'Pro: your photos'},
   {name:'Schedule',           sub:'Posting time'},
   {name:'Review & submit',    sub:'Almost done'},
 ];
@@ -274,7 +275,7 @@ const F = {
   tier:'', posting_days:[], posting_time:'11:00',
   contact_email:'', business_type_group:'', business_type:'',
   business_description:'', brand_keywords:'', caption_cta_email:'',
-  timezone:'', day_themes: {...DEFAULT_DAY_THEMES},
+  timezone:'', day_themes: {...DEFAULT_DAY_THEMES}, google_drive_url:'',
 };
 
 const $ = id => document.getElementById(id);
@@ -378,8 +379,11 @@ function validate() {
   }
   if(step===2) {
     if(F.platforms.length===0) errors.platforms='Select at least one platform';
+    if(hasFB()&&!F.facebook_page_name.trim()) errors.facebook_page_name='Required';
     if(hasFB()&&!F.facebook_page_url.trim()) errors.facebook_page_url='Required';
     if(hasIG()&&!F.ig_handle.trim()) errors.ig_handle='Required';
+    if(hasIG()&&!F.ig_url.trim()) errors.ig_url='Required';
+    if(hasGBP()&&!F.gbp_name.trim()) errors.gbp_name='Required';
   }
   if(step===3) { if(!F.tier) errors.tier='Please choose a plan'; }
   if(step===4) {
@@ -391,12 +395,23 @@ function validate() {
 
 function next() {
   if(!validate()) { render(); window.scrollTo(0,0); return; }
-  if(step<5) { step++; render(); window.scrollTo(0,0); }
+  if(step<6) {
+    step++;
+    // Standard plan skips Google Drive step (step 4)
+    if(step===4 && !isPro()) step++;
+    render(); window.scrollTo(0,0);
+  }
 }
 function back() {
-  if(step>0) { step--; render(); window.scrollTo(0,0); }
-  else window.location.href='https://posst.app';
+  if(step>0) {
+    step--;
+    // Standard plan skips Google Drive step going back too
+    if(step===4 && !isPro()) step--;
+    if(step<0) { window.location.href='https://posst.app'; return; }
+    render(); window.scrollTo(0,0);
+  } else window.location.href='https://posst.app';
 }
+
 
 // ── SUBMIT ──────────────────────────────────────────────────
 async function submitForm() {
@@ -437,6 +452,7 @@ async function submitForm() {
     posting_days:         postingDaysObj,
     posting_time:         F.posting_time,
     tier:                 F.tier,
+    google_drive_url:     F.google_drive_url,
   };
 
   try {
@@ -456,11 +472,13 @@ async function submitForm() {
 
 // ── SIDEBAR ────────────────────────────────────────────────
 function renderSidebar() {
-  $('steps-nav').innerHTML = STEPS.map((s,i) => {
-    const cls = i<step?'s-done':i===step?'s-active':'s-future';
-    return `<div class="step-item ${cls}"><div class="step-dot">${i<step?'✓':i+1}</div><div class="step-label"><div class="step-name">${s.name}</div><div class="step-sub">${s.sub}</div></div></div>${i<STEPS.length-1?'<div class="connector"></div>':''}`;
+  const visibleSteps = isPro() ? STEPS : STEPS.filter((_,i) => i !== 4);
+  const visibleStep = isPro() ? step : (step >= 5 ? step - 1 : step);
+  $('steps-nav').innerHTML = visibleSteps.map((s,i) => {
+    const cls = i<visibleStep?'s-done':i===visibleStep?'s-active':'s-future';
+    return `<div class="step-item ${cls}"><div class="step-dot">${i<visibleStep?'✓':i+1}</div><div class="step-label"><div class="step-name">${s.name}</div><div class="step-sub">${s.sub}</div></div></div>${i<visibleSteps.length-1?'<div class="connector"></div>':''}`;
   }).join('');
-  $('progress-fill').style.width = `${((step+1)/STEPS.length)*100}%`;
+  $('progress-fill').style.width = `${((visibleStep+1)/visibleSteps.length)*100}%`;
 }
 
 // ── STEP 0: Phone ──────────────────────────────────────────
@@ -518,7 +536,7 @@ function renderStep1() {
 
   return `
     <div class="step-header">
-      <div class="step-tag">Step 2 of 6</div>
+      <div class="step-tag">Step 2 of 7</div>
       <h2 class="step-title">Tell us about your business</h2>
       <p class="step-desc">This is how we write posts that sound exactly like you. The more you share, the better your content.</p>
     </div>
@@ -590,7 +608,7 @@ function renderStep2() {
   const igOnly = hasIG() && !hasFB();
   return `
     <div class="step-header">
-      <div class="step-tag">Step 3 of 6</div>
+      <div class="step-tag">Step 3 of 7</div>
       <h2 class="step-title">Your social media accounts</h2>
       <p class="step-desc">Select the platforms you want us to post to.</p>
     </div>
@@ -639,8 +657,9 @@ function renderStep2() {
       <div class="step-tag" style="margin-bottom:12px">Google Business Profile</div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">GBP listing name <span class="form-label-opt">optional</span></label>
-          <input class="form-input" value="${esc(F.gbp_name)}" placeholder="Joe's Bakery Glen Waverley" oninput="F.gbp_name=this.value">
+          <label class="form-label">GBP listing name *</label>
+          <input class="form-input ${errors.gbp_name?'err':''}" value="${esc(F.gbp_name)}" placeholder="Joe's Bakery Glen Waverley" oninput="F.gbp_name=this.value">
+          ${errors.gbp_name?`<div class="form-error">${errors.gbp_name}</div>`:''}
           <div class="form-hint">Exactly as it appears on Google Maps</div>
         </div>
         <div class="form-group">
@@ -661,7 +680,7 @@ function renderStep3() {
   const p = getPrice();
   return `
     <div class="step-header">
-      <div class="step-tag">Step 4 of 6</div>
+      <div class="step-tag">Step 4 of 7</div>
       <h2 class="step-title">Choose your plan</h2>
       <p class="step-desc">Both plans include daily posting, AI captions, AI images, and automated Google review replies.</p>
     </div>
@@ -695,14 +714,64 @@ function renderStep3() {
     </div>`;
 }
 
+
+// ── STEP 4: Google Drive (Pro only) ───────────────────────
+function renderStep4GDrive() {
+  if(!isPro()) return ''; // Should never reach here for Standard
+  return `
+    <div class="step-header">
+      <div class="step-tag">Step 5 of 7</div>
+      <h2 class="step-title">Set up your photo library</h2>
+      <p class="step-desc">Pro plan uses your own photos alongside AI-generated images. Your photos make posts feel real and personal — customers connect far better with authentic images of your actual business.</p>
+    </div>
+    <div class="info-box blue" style="margin-bottom:20px">
+      <span class="info-box-icon">📸</span>
+      <div class="info-box-text"><strong>How it works:</strong> Create a Google Drive folder, drop your best business photos in, and share it with us. We'll automatically pull from it when posting — mixing your real photos with AI images for variety.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="font-size:14px;font-weight:700;margin-bottom:14px">Follow these 3 steps:</label>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+        <div style="display:flex;gap:14px;align-items:flex-start;background:white;border:1.5px solid var(--border);border-radius:12px;padding:16px">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);color:white;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px">Create a Google Drive folder</div>
+            <div style="font-size:12px;color:var(--ink-mid);line-height:1.6">Go to <a href="https://drive.google.com" target="_blank" style="color:var(--blue)">drive.google.com</a> → New → Folder → name it "<strong>posst.app photos</strong>" (or anything you like)</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start;background:white;border:1.5px solid var(--border);border-radius:12px;padding:16px">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);color:white;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px">Share the folder with posst.app</div>
+            <div style="font-size:12px;color:var(--ink-mid);line-height:1.6">Right-click the folder → Share → add this email as <strong>Viewer</strong>:</div>
+            <div style="background:var(--dark);color:white;border-radius:7px;padding:8px 14px;font-family:monospace;font-size:13px;margin-top:8px;letter-spacing:0.3px">posst-media@posst-app.iam.gserviceaccount.com</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start;background:white;border:1.5px solid var(--border);border-radius:12px;padding:16px">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);color:white;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px">Paste the folder link below</div>
+            <div style="font-size:12px;color:var(--ink-mid);line-height:1.6">Right-click the folder → Get link → Copy link → paste below</div>
+          </div>
+        </div>
+      </div>
+      <label class="form-label">Google Drive folder link <span class="form-label-opt">optional — you can add this later</span></label>
+      <input class="form-input" value="${esc(F.google_drive_url)}" placeholder="https://drive.google.com/drive/folders/..." oninput="F.google_drive_url=this.value">
+      <div class="form-hint">Don't have photos ready yet? Skip this and add the folder later — we'll use AI images until you do.</div>
+    </div>`;
+}
+
 // ── STEP 4: Schedule ───────────────────────────────────────
 function renderStep4() {
   if(isPro()) {
     return `
       <div class="step-header">
-        <div class="step-tag">Step 5 of 6</div>
-        <h2 class="step-title">Your posting schedule</h2>
-        <p class="step-desc">Pro plan posts every day. Choose a content theme for each day — or keep the smart defaults.</p>
+        <div class="step-tag">Step 5 of 7</div>
+        <h2 class="step-title">Your content calendar</h2>
+        <p class="step-desc">Great choice — themed posts consistently outperform random content. Each day has a purpose: Monday builds awareness, Friday drives bookings, Sunday builds community love. Your audience starts to expect and look forward to your posts.</p>
+      </div>
+      <div class="info-box green" style="margin-bottom:20px">
+        <span class="info-box-icon">🎯</span>
+        <div class="info-box-text"><strong>Why themes work:</strong> Businesses with a consistent content rhythm get 3–4× more engagement than those posting randomly. We've pre-set smart defaults — customise any day or leave as-is.</div>
       </div>
       <div class="form-group">
         <label class="form-label">Content theme per day</label>
@@ -735,7 +804,7 @@ function renderStep4() {
   // Standard plan
   return `
     <div class="step-header">
-      <div class="step-tag">Step 5 of 6</div>
+      <div class="step-tag">Step 5 of 7</div>
       <h2 class="step-title">Your posting schedule</h2>
       <p class="step-desc">Choose which days to post and what time. We handle everything automatically.</p>
     </div>
@@ -769,7 +838,7 @@ function renderStep5() {
   const daysDisplay = 'Every day (Mon–Sun)';
   return `
     <div class="step-header">
-      <div class="step-tag">Step 6 of 6</div>
+      <div class="step-tag">Step 6 of 7</div>
       <h2 class="step-title">Review your setup</h2>
       <p class="step-desc">Check everything before submitting. Go back to change anything.</p>
     </div>
@@ -817,7 +886,7 @@ function renderDays() {
 
 function render() {
   renderSidebar();
-  const steps = [renderStep0, renderStep1, renderStep2, renderStep3, renderStep4, renderStep5];
+  const steps = [renderStep0, renderStep1, renderStep2, renderStep3, renderStep4GDrive, renderStep4, renderStep5];
   const nav = `<div class="form-nav">
     <button class="btn-back" onclick="back()">← ${step===0?'Back to home':'Back'}</button>
     ${step<5
