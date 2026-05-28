@@ -162,7 +162,6 @@ textarea.form-input{resize:vertical;min-height:100px}
 </nav>
 <div class="layout">
   <aside class="sidebar" id="sidebar">
-    <img class="sidebar-logo" src="https://posst.app/posst_logo_white.png" alt="posst.app">
     <div class="steps-nav" id="steps-nav"></div>
     <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
   </aside>
@@ -275,7 +274,7 @@ const F = {
   tier:'', posting_days:[], posting_time:'11:00',
   contact_email:'', business_type_group:'', business_type:'',
   business_description:'', brand_keywords:'', caption_cta_email:'',
-  timezone:'', day_themes: {...DEFAULT_DAY_THEMES}, google_drive_url:'', drive_categories:[], google_drive_intent:'later',
+  timezone:'', day_themes: {...DEFAULT_DAY_THEMES}, google_drive_url:'', drive_categories:[], google_drive_intent:'',
 };
 
 const $ = id => document.getElementById(id);
@@ -832,13 +831,34 @@ function renderStep4GDrive() {
     '</div>' +
     '<div class="info-box green" style="margin-bottom:20px"><span class="info-box-icon">📸</span><div class="info-box-text"><strong>Here is what we need from you:</strong> A Google Drive folder shared with posst.app, organised into categories (up to 7) and subcategories. We read photos from the deepest folder level only. If a folder is empty on posting day, we generate a matching AI image instead.</div></div>' +
     '<div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">' +
-    '<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px">What you need to do</div>' +
+    '<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:16px">What you need to do</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">' +
     '<div style="display:flex;flex-direction:column;gap:12px">' +
-    '<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div><div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Create a Google Drive folder</strong> — name it anything (e.g. "My Business Photos"). This is your main library.</div></div>' +
-    '<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</div><div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Create up to 7 category folders inside</strong> — one per day of the week, named after your services or content areas. Example: <em>Holidays, Hotel Bookings, Corporate Travel</em></div></div>' +
-    '<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</div><div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Create subcategory folders inside each category</strong> — and drop your photos in there. Example: inside <em>Holidays</em> → <em>International Holidays</em>, <em>Weekend Trips</em>. <strong>Photos must go in subcategory folders — not the category folder itself.</strong></div></div>' +
-    '<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">4</div><div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Share the main folder with posst.app</strong> — right-click → Share → add as Viewer: <span style="background:#f1f5f9;border-radius:5px;padding:2px 8px;font-family:monospace;font-size:11px">posst-media@posst-app.iam.gserviceaccount.com</span></div></div>' +
+    '<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div><div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Create a Google Drive folder</strong> — name it anything. This is your main library.</div></div>' +
+    '<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</div><div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Create up to 7 category folders inside</strong> — one per day of the week, named after your services or content areas.</div></div>' +
+    '<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</div><div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Inside each category, create subcategory folders</strong> and drop your photos in there. <strong>Photos go in subcategory folders only — not the category folder itself.</strong></div></div>' +
+    '<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">4</div><div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Share the main folder with posst.app</strong> — right-click the main folder → Share → add as Viewer: <span style="background:#f1f5f9;border-radius:5px;padding:2px 8px;font-family:monospace;font-size:10px">posst-media@posst-app.iam.gserviceaccount.com</span></div></div>' +
     '<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">5</div><div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Paste the folder link below</strong> and name your categories — we handle the rest.</div></div>' +
+    '</div>' +
+    '<div style="background:#f8f7f4;border-radius:10px;padding:16px">' +
+    '<div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">Example — Travel Agency</div>' +
+    '<div style="font-size:12px;color:var(--ink);font-weight:600;margin-bottom:8px">📁 My Travel Photos (main folder)</div>' +
+    '<div style="padding-left:16px;font-size:11px;color:var(--ink-mid);line-height:2">' +
+    '<div>📁 Air Tickets</div>' +
+    '<div style="padding-left:16px;color:var(--ink-light)">📷 Domestic Flights &nbsp;<em>(photos here)</em></div>' +
+    '<div style="padding-left:16px;color:var(--ink-light)">📷 International Flights &nbsp;<em>(photos here)</em></div>' +
+    '<div>📁 Holidays</div>' +
+    '<div style="padding-left:16px;color:var(--ink-light)">📷 Domestic Holidays</div>' +
+    '<div style="padding-left:16px;color:var(--ink-light)">📷 International Holidays</div>' +
+    '<div style="padding-left:16px;color:var(--ink-light)">📷 Weekend Trips</div>' +
+    '<div style="padding-left:16px;color:var(--ink-light)">📷 Destination Weddings</div>' +
+    '<div>📁 Hotel Bookings</div>' +
+    '<div style="padding-left:16px;color:var(--ink-light)">📷 Domestic Hotels</div>' +
+    '<div style="padding-left:16px;color:var(--ink-light)">📷 International Hotels</div>' +
+    '<div style="padding-left:16px;color:var(--ink-light)">📷 Cruise</div>' +
+    '</div>' +
+    '<div style="margin-top:10px;padding:8px;background:#fff3cd;border-radius:6px;font-size:10px;color:#856404">⚠️ Photos go inside the subcategory folders — not directly in Air Tickets, Holidays, or Hotel Bookings</div>' +
+    '</div>' +
     '</div></div>' +
     '<div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:12px">Ready to set this up?</div>' +
     driveIntentButtons(intent) +
@@ -856,7 +876,11 @@ function renderStep4() {
       </div>
       <div class="info-box green" style="margin-bottom:20px">
         <span class="info-box-icon">🎯</span>
-        <div class="info-box-text"><strong>Why themes work:</strong> Businesses with a consistent content rhythm get 3–4× more engagement than those posting randomly. We've pre-set smart defaults — customise any day or leave as-is.</div>
+        <div class="info-box-text"><strong>Why themes work:</strong> Businesses with a consistent content rhythm get 3–4x more engagement than those posting randomly. Pre-set smart defaults below — customise any day or leave as-is.</div>
+      </div>
+      <div class="info-box blue" style="margin-bottom:20px">
+        <span class="info-box-icon">📸</span>
+        <div class="info-box-text"><strong>If you are using your own photos:</strong> your Google Drive photos take priority on any day they are available. If a folder has no photos for that day, we fall back to a themed AI post using your selection below.</div>
       </div>
       <div class="form-group">
         <label class="form-label">Content theme per day</label>
