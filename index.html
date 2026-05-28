@@ -1003,7 +1003,7 @@ function render() {
       ? `<button class="btn-next" onclick="next()">Continue →</button>`
       : `<button class="btn-next" onclick="submitForm()">Submit & connect accounts →</button>`}
   </div>`;
-  const logoHtml = '<img class="form-logo" src="https://posst.app/posst_logo_final.png" alt="posst.app" onerror="this.src='https://posst.app/posst_logo_dark.png'">';
+  const logoHtml = '<img class="form-logo" src="https://raw.githubusercontent.com/posstapp/posstapp.github.io/main/posst_logo_final.png" alt="posst.app">';
   if(step===0) {
     $('main-content').innerHTML = logoHtml + steps[0]()+`<div class="form-nav"><button class="btn-back" onclick="back()">← Back to home</button></div>`;
   } else {
