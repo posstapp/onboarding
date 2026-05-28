@@ -275,7 +275,7 @@ const F = {
   tier:'', posting_days:[], posting_time:'11:00',
   contact_email:'', business_type_group:'', business_type:'',
   business_description:'', brand_keywords:'', caption_cta_email:'',
-  timezone:'', day_themes: {...DEFAULT_DAY_THEMES}, google_drive_url:'',
+  timezone:'', day_themes: {...DEFAULT_DAY_THEMES}, google_drive_url:'', drive_categories:[],
 };
 
 const $ = id => document.getElementById(id);
@@ -387,7 +387,11 @@ function validate() {
   }
   if(step===3) { if(!F.tier) errors.tier='Please choose a plan'; }
   if(step===4) {
-    // Both plans post every day — no day selection needed
+    if(isPro()) {
+      if(!F.google_drive_url.trim()) errors.google_drive_url='Please paste your Google Drive folder link';
+    }
+  }
+  if(step===5) {
     if(!F.posting_time) errors.posting_time='Choose a posting time';
   }
   return Object.keys(errors).length===0;
@@ -453,6 +457,7 @@ async function submitForm() {
     posting_time:         F.posting_time,
     tier:                 F.tier,
     google_drive_url:     F.google_drive_url,
+    drive_categories:     F.drive_categories,
   };
 
   try {
@@ -715,48 +720,114 @@ function renderStep3() {
 }
 
 
+
+// ── DRIVE FOLDER HELPERS ───────────────────────────────────
+function addCategory() {
+  if(F.drive_categories.length >= 7) return;
+  F.drive_categories.push({ name:'', day:'', subcategories:[''] });
+  render();
+}
+function removeCategory(ci) {
+  F.drive_categories.splice(ci, 1);
+  render();
+}
+function updateCategory(ci, val) {
+  F.drive_categories[ci].name = val;
+}
+function updateCategoryDay(ci, val) {
+  F.drive_categories[ci].day = val;
+}
+function addSubcategory(ci) {
+  F.drive_categories[ci].subcategories.push('');
+  render();
+}
+function removeSubcategory(ci, si) {
+  F.drive_categories[ci].subcategories.splice(si, 1);
+  render();
+}
+function updateSubcategory(ci, si, val) {
+  F.drive_categories[ci].subcategories[si] = val;
+}
+
 // ── STEP 4: Google Drive (Pro only) ───────────────────────
 function renderStep4GDrive() {
-  if(!isPro()) return ''; // Should never reach here for Standard
+  if(!isPro()) return '';
+
+  const catCount = F.drive_categories.length;
+  const catsHtml = F.drive_categories.map((cat, ci) => `
+    <div style="background:white;border:1.5px solid ${cat.name?'var(--blue)':'var(--border)'};border-radius:12px;padding:16px;margin-bottom:10px">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--blue);color:white;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ci+1}</div>
+        <input class="form-input" style="flex:1" value="${esc(cat.name)}" placeholder="Category name (e.g. Holidays)" oninput="updateCategory(${ci},this.value)">
+        <select class="form-input form-select" style="width:130px;flex-shrink:0" onchange="updateCategoryDay(${ci},this.value)">
+          <option value="">Auto day</option>
+          ${DAYS.map(d=>`<option value="${d}" ${cat.day===d?'selected':''}>${d}</option>`).join('')}
+        </select>
+        <button onclick="removeCategory(${ci})" style="background:none;border:none;color:var(--ink-light);cursor:pointer;font-size:18px;flex-shrink:0;padding:0 4px" title="Remove">×</button>
+      </div>
+      <div style="padding-left:36px">
+        <div style="font-size:11px;font-weight:600;color:var(--ink-mid);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">📁 Subcategories (photos go here)</div>
+        ${cat.subcategories.map((sub, si) => `
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+            <span style="font-size:12px;color:var(--ink-light)">└</span>
+            <input class="form-input" style="flex:1;font-size:13px;padding:8px 12px" value="${esc(sub)}" placeholder="Subcategory name (e.g. International Holidays)" oninput="updateSubcategory(${ci},${si},this.value)">
+            ${cat.subcategories.length>1?`<button onclick="removeSubcategory(${ci},${si})" style="background:none;border:none;color:var(--ink-light);cursor:pointer;font-size:16px;padding:0 4px">×</button>`:''}
+          </div>`).join('')}
+        <button onclick="addSubcategory(${ci})" style="background:none;border:1px dashed var(--border);border-radius:7px;padding:5px 12px;font-size:11px;color:var(--blue);cursor:pointer;font-family:var(--sans);margin-top:2px">+ Add subcategory</button>
+      </div>
+    </div>`).join('');
+
   return `
     <div class="step-header">
       <div class="step-tag">Step 5 of 7</div>
       <h2 class="step-title">Set up your photo library</h2>
-      <p class="step-desc">Pro plan uses your own photos alongside AI-generated images. Your photos make posts feel real and personal — customers connect far better with authentic images of your actual business.</p>
+      <p class="step-desc">Your real photos make posts far more authentic and engaging. Organise them by service or category — we'll automatically pick the right photos for each day's post.</p>
     </div>
-    <div class="info-box blue" style="margin-bottom:20px">
+
+    <div class="info-box blue" style="margin-bottom:8px">
       <span class="info-box-icon">📸</span>
-      <div class="info-box-text"><strong>How it works:</strong> Create a Google Drive folder, drop your best business photos in, and share it with us. We'll automatically pull from it when posting — mixing your real photos with AI images for variety.</div>
+      <div class="info-box-text"><strong>How it works:</strong> Create a Google Drive folder → add categories and subcategories below → drop your photos into the subcategory folders. We read photos from the deepest level only. If a folder is empty on posting day, we generate a matching AI image instead.</div>
     </div>
-    <div class="form-group">
-      <label class="form-label" style="font-size:14px;font-weight:700;margin-bottom:14px">Follow these 3 steps:</label>
-      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
-        <div style="display:flex;gap:14px;align-items:flex-start;background:white;border:1.5px solid var(--border);border-radius:12px;padding:16px">
-          <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);color:white;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
-          <div>
-            <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px">Create a Google Drive folder</div>
-            <div style="font-size:12px;color:var(--ink-mid);line-height:1.6">Go to <a href="https://drive.google.com" target="_blank" style="color:var(--blue)">drive.google.com</a> → New → Folder → name it "<strong>posst.app photos</strong>" (or anything you like)</div>
-          </div>
+
+    <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px">Step 1 — Create & share your main folder</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div>
+          <div style="font-size:12px;color:var(--ink-mid);line-height:1.6">Go to <a href="https://drive.google.com" target="_blank" style="color:var(--blue)">drive.google.com</a> → New → Folder → name it anything you like</div>
         </div>
-        <div style="display:flex;gap:14px;align-items:flex-start;background:white;border:1.5px solid var(--border);border-radius:12px;padding:16px">
-          <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);color:white;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
-          <div>
-            <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px">Share the folder with posst.app</div>
-            <div style="font-size:12px;color:var(--ink-mid);line-height:1.6">Right-click the folder → Share → add this email as <strong>Viewer</strong>:</div>
-            <div style="background:var(--dark);color:white;border-radius:7px;padding:8px 14px;font-family:monospace;font-size:13px;margin-top:8px;letter-spacing:0.3px">posst-media@posst-app.iam.gserviceaccount.com</div>
-          </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</div>
+          <div style="font-size:12px;color:var(--ink-mid);line-height:1.6">Right-click the folder → Share → add as <strong>Viewer</strong>: <span style="background:#f1f5f9;border-radius:5px;padding:2px 8px;font-family:monospace;font-size:11px">posst-media@posst-app.iam.gserviceaccount.com</span></div>
         </div>
-        <div style="display:flex;gap:14px;align-items:flex-start;background:white;border:1.5px solid var(--border);border-radius:12px;padding:16px">
-          <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);color:white;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
-          <div>
-            <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px">Paste the folder link below</div>
-            <div style="font-size:12px;color:var(--ink-mid);line-height:1.6">Right-click the folder → Get link → Copy link → paste below</div>
-          </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</div>
+          <div style="font-size:12px;color:var(--ink-mid);line-height:1.6">Right-click → Get link → Copy → paste below</div>
         </div>
       </div>
-      <label class="form-label">Google Drive folder link <span class="form-label-opt">optional — you can add this later</span></label>
-      <input class="form-input" value="${esc(F.google_drive_url)}" placeholder="https://drive.google.com/drive/folders/..." oninput="F.google_drive_url=this.value">
-      <div class="form-hint">Don't have photos ready yet? Skip this and add the folder later — we'll use AI images until you do.</div>
+      <input class="form-input ${errors.google_drive_url?'err':''}" value="${esc(F.google_drive_url)}" placeholder="https://drive.google.com/drive/folders/..." oninput="F.google_drive_url=this.value">
+      ${errors.google_drive_url?`<div class="form-error">${errors.google_drive_url}</div>`:''}
+    </div>
+
+    <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">Step 2 — Build your folder structure <span style="font-weight:400;color:var(--ink-light);font-size:11px">optional — you can do this later</span></div>
+        <div style="font-size:11px;color:${catCount>=7?'var(--red)':'var(--ink-light)'}">📁 ${catCount}/7 categories</div>
+      </div>
+      <div style="font-size:11px;color:var(--ink-mid);line-height:1.6;margin-bottom:14px">
+        Add up to 7 categories (one per day of week). Under each, add subcategories — <strong>photos go in the subcategory folders only</strong>, not in the category folder itself. You can map each category to a specific day, or leave it as "Auto" and we'll rotate through them.
+      </div>
+      ${catsHtml}
+      ${catCount < 7 ? `
+        <button onclick="addCategory()" style="width:100%;background:none;border:2px dashed var(--border);border-radius:10px;padding:12px;font-size:13px;color:var(--blue);cursor:pointer;font-family:var(--sans);font-weight:500;transition:border-color .15s" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
+          + Add category
+        </button>` : `
+        <div style="text-align:center;font-size:12px;color:var(--ink-light);padding:10px">Maximum 7 categories reached</div>`}
+    </div>
+
+    <div class="info-box amber">
+      <span class="info-box-icon">⏭️</span>
+      <div class="info-box-text"><strong>No photos ready yet?</strong> That's fine — skip the folder structure for now. We'll use AI-generated images until you're ready. Once you go live, you'll receive a link to set this up anytime.</div>
     </div>`;
 }
 
