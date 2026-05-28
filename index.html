@@ -783,48 +783,75 @@ function renderStep4GDrive() {
   return `
     <div class="step-header">
       <div class="step-tag">Step 5 of 7</div>
-      <h2 class="step-title">Your own photos</h2>
-      <p class="step-desc">Posts with real photos of your business get significantly more engagement than stock or AI images. Would you like to use your own photos?</p>
+      <h2 class="step-title">Bring your own photos</h2>
+      <p class="step-desc">Real photos of your business consistently outperform stock and AI images — customers connect with what's authentic. As a Pro member, you can plug in your own photo library and we'll use them automatically.</p>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px">
+    <div class="info-box green" style="margin-bottom:20px">
+      <span class="info-box-icon">📸</span>
+      <div class="info-box-text"><strong>Here's what we need from you:</strong> A Google Drive folder shared with posst.app, organised into categories (up to 7) and subcategories. We read photos from the deepest folder level. On each posting day, we pick from the matching category. If a folder is empty, we generate a relevant AI image instead — so you're never left with a blank post.</div>
+    </div>
+
+    <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px">What you'll need to do</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div>
+          <div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Create a Google Drive folder</strong> — name it anything (e.g. "My Business Photos"). This is your main library.</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</div>
+          <div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Inside, create up to 7 category folders</strong> — one per day of the week, named after your services or content areas. Example: <em>Holidays, Hotel Bookings, Corporate Travel</em></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</div>
+          <div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Inside each category, create subcategory folders</strong> — and drop your photos in there. Example: inside <em>Holidays</em> → <em>International Holidays</em>, <em>Weekend Trips</em>, <em>Destination Weddings</em>. <strong>Photos must go in subcategory folders — not the category folder itself.</strong></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">4</div>
+          <div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Share the main folder with posst.app</strong> — right-click → Share → add as Viewer: <span style="background:#f1f5f9;border-radius:5px;padding:2px 8px;font-family:monospace;font-size:11px">posst-media@posst-app.iam.gserviceaccount.com</span></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">5</div>
+          <div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Come back here and tell us the folder structure</strong> — paste the folder link and name your categories. We'll handle the rest.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:12px">Ready to set this up?</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
       <div onclick="F.google_drive_intent='now';render()" style="border:1.5px solid ${intentSelected==='now'?'var(--blue)':'var(--border)'};background:${intentSelected==='now'?'var(--blue-dim)':'white'};border-radius:12px;padding:16px;cursor:pointer;text-align:center;transition:all .15s">
-        <div style="font-size:24px;margin-bottom:8px">📁</div>
-        <div style="font-size:13px;font-weight:600;color:var(--ink)">Set up now</div>
-        <div style="font-size:11px;color:var(--ink-mid);margin-top:4px;line-height:1.5">I have photos ready and want to connect my Google Drive today</div>
+        <div style="font-size:24px;margin-bottom:8px">✅</div>
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">Yes, set up now</div>
+        <div style="font-size:11px;color:var(--ink-mid);margin-top:4px;line-height:1.5">I have my folder ready — let's connect it today</div>
       </div>
       <div onclick="F.google_drive_intent='later';render()" style="border:1.5px solid ${intentSelected==='later'?'var(--blue)':'var(--border)'};background:${intentSelected==='later'?'var(--blue-dim)':'white'};border-radius:12px;padding:16px;cursor:pointer;text-align:center;transition:all .15s">
         <div style="font-size:24px;margin-bottom:8px">⏰</div>
         <div style="font-size:13px;font-weight:600;color:var(--ink)">Set up later</div>
-        <div style="font-size:11px;color:var(--ink-mid);margin-top:4px;line-height:1.5">I'm interested but not ready yet — send me the setup link after I go live</div>
+        <div style="font-size:11px;color:var(--ink-mid);margin-top:4px;line-height:1.5">I'm interested — send me the link after I go live</div>
       </div>
       <div onclick="F.google_drive_intent='no';render()" style="border:1.5px solid ${intentSelected==='no'?'var(--blue)':'var(--border)'};background:${intentSelected==='no'?'var(--blue-dim)':'white'};border-radius:12px;padding:16px;cursor:pointer;text-align:center;transition:all .15s">
         <div style="font-size:24px;margin-bottom:8px">🤖</div>
         <div style="font-size:13px;font-weight:600;color:var(--ink)">AI images only</div>
-        <div style="font-size:11px;color:var(--ink-mid);margin-top:4px;line-height:1.5">Use AI-generated images for all posts — no photos needed</div>
+        <div style="font-size:11px;color:var(--ink-mid);margin-top:4px;line-height:1.5">No thanks — AI images are fine for me</div>
       </div>
     </div>
 
-    \${intentSelected === 'later' ? \`
+    ${intentSelected === 'later' ? `
     <div class="info-box green">
       <span class="info-box-icon">✅</span>
-      <div class="info-box-text"><strong>Got it!</strong> We'll use AI images until you're ready. Once you go live, we'll email you a personalised setup link so you can connect your Google Drive and build your folder structure at your own pace.</div>
-    </div>\` : ''}
+      <div class="info-box-text"><strong>Noted!</strong> We'll use AI images until you're ready. After you go live, we'll email you a personalised setup link — click it anytime to connect your Drive and build your folder structure.</div>
+    </div>` : ''}
 
-    \${intentSelected === 'no' ? \`
+    ${intentSelected === 'no' ? `
     <div class="info-box blue">
       <span class="info-box-icon">🤖</span>
-      <div class="info-box-text">No problem — our AI generates high-quality, relevant images for every post based on your business type and content theme. You can always switch to your own photos later.</div>
-    </div>\` : ''}
+      <div class="info-box-text">No problem — AI generates high-quality, relevant images for every post. You can always switch to your own photos later from your account settings.</div>
+    </div>` : ''}
 
-    \${intentSelected === 'now' ? \`
-    <div class="info-box blue" style="margin-bottom:16px">
-      <span class="info-box-icon">📸</span>
-      <div class="info-box-text"><strong>How it works:</strong> Create a Google Drive folder → organise photos into categories and subcategories → share it with us. We read photos from the deepest subfolder level. If a folder is empty on posting day, we generate a matching AI image instead.</div>
-    </div>
-
+    ${intentSelected === 'now' ? `
     <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">
-      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px">Step 1 — Create & share your main folder</div>
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px">Paste your main folder link</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
         <div style="display:flex;gap:12px;align-items:flex-start">
           <div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div>
