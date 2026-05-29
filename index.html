@@ -1125,7 +1125,7 @@ function renderStep4GDrive() {
     '<div class="info-box green" style="margin-bottom:20px"><span class="info-box-icon">📸</span><div class="info-box-text"><strong>Here is what we need from you:</strong> A Google Drive folder shared with posst.app, organised into categories (up to 7) and subcategories. We read photos from the deepest folder level only. If a folder is empty on posting day, we generate a matching AI image instead.</div></div>' +
     '<div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">' +
     '<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:16px">What you need to do</div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch">' +
     '<div style="display:flex;flex-direction:column;gap:12px">' +
     '<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div><div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Create a Google Drive folder</strong> — name it anything. This is your main library.</div></div>' +
     '<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</div><div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Create up to 7 category folders inside</strong> — one per day of the week, named after your services or content areas.</div></div>' +
@@ -1133,9 +1133,9 @@ function renderStep4GDrive() {
     '<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">4</div><div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Share the main folder with posst.app</strong> — right-click the main folder → Share → add as Viewer: <span style="background:#f1f5f9;border-radius:5px;padding:2px 8px;font-family:monospace;font-size:10px">posst-media@posst-app.iam.gserviceaccount.com</span></div></div>' +
     '<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">5</div><div style="font-size:12px;color:var(--ink-mid);line-height:1.7"><strong style="color:var(--ink)">Paste the folder link below</strong> and name your categories — we handle the rest.</div></div>' +
     '</div>' +
-    '<div style="background:#f0f4ff;border:1.5px solid #dde4ff;border-radius:12px;padding:18px">' +
+    '<div style="background:#f0f4ff;border:1.5px solid #dde4ff;border-radius:12px;padding:18px;display:flex;flex-direction:column;justify-content:space-between">' +
     '<div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px">Example — Travel Agency</div>' +
-    '<div style="font-family:monospace;font-size:12px;line-height:2;color:var(--ink)">' +
+    '<div style="font-family:monospace;font-size:12px;line-height:2.1;color:var(--ink);flex:1">' +
     '<div>📁 <strong>My Travel Photos</strong></div>' +
     '<div style="padding-left:20px;color:var(--ink-mid)">📁 Air Tickets</div>' +
     '<div style="padding-left:40px;color:var(--ink-light)">🖼 Domestic Flights</div>' +
@@ -1144,7 +1144,6 @@ function renderStep4GDrive() {
     '<div style="padding-left:40px;color:var(--ink-light)">🖼 Domestic Holidays</div>' +
     '<div style="padding-left:40px;color:var(--ink-light)">🖼 International Holidays</div>' +
     '<div style="padding-left:40px;color:var(--ink-light)">🖼 Weekend Trips</div>' +
-    '<div style="padding-left:40px;color:var(--ink-light)">🖼 Destination Weddings</div>' +
     '<div style="padding-left:20px;color:var(--ink-mid)">📁 Hotel Bookings</div>' +
     '<div style="padding-left:40px;color:var(--ink-light)">🖼 Domestic Hotels</div>' +
     '<div style="padding-left:40px;color:var(--ink-light)">🖼 International Hotels</div>' +
@@ -1165,7 +1164,7 @@ function renderStep4() {
       <div class="step-header">
         <div class="step-tag">Step 5 of 7</div>
         <h2 class="step-title">Your content calendar</h2>
-        <p class="step-desc">Great choice — themed posts consistently outperform random content. Each day has a purpose: Monday builds awareness, Friday drives bookings, Sunday builds community love. Your audience starts to expect and look forward to your posts.</p>
+        <p class="step-desc">Each day has a purpose: Monday builds awareness, Friday drives bookings, Sunday builds community love. Smart defaults are set below — customise any day or leave as-is.</p>
       </div>
       <div class="info-box green" style="margin-bottom:20px">
         <span class="info-box-icon">🎯</span>
@@ -1203,22 +1202,13 @@ function renderStep4() {
       </div>`;
   }
 
-  // Standard plan
+  // Standard plan — time only, posts every day
   return `
     <div class="step-header">
-      <div class="step-tag">Step 5 of 7</div>
+      <div class="step-tag">Step 5 of 6</div>
       <h2 class="step-title">Your posting schedule</h2>
-      <p class="step-desc">Choose which days to post and what time. We handle everything automatically.</p>
+      <p class="step-desc">We post every day for you — just pick the time that works best for your audience.</p>
     </div>
-    <div class="form-group">
-      <label class="form-label">Which days? *</label>
-      <div class="days-grid" id="days-grid">
-        ${DAYS.map(d=>`<div class="day-chip ${F.posting_days.includes(d)?'selected':''}" onclick="toggleDay('${d}')">${d}</div>`).join('')}
-      </div>
-      ${errors.posting_days?`<div class="form-error" style="margin-top:6px">${errors.posting_days}</div>`:''}
-      <div class="form-hint" style="margin-top:8px">Most businesses start with 3–5 days. You can change this anytime.</div>
-    </div>
-    <div style="height:1px;background:var(--border);margin:24px 0"></div>
     <div class="form-group">
       <label class="form-label">What time should we post? *</label>
       <div class="time-select-row">
