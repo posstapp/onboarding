@@ -747,11 +747,12 @@ async function submitForm() {
   try {
     const resp = await fetch(APPS_SCRIPT_URL, { method:'POST', body:JSON.stringify(payload) });
     const result = await resp.json();
-    const clientId = result.client_id || '';
+    const clientId     = result.client_id || '';
+    const pendingToken = result.pending_token || '';
     let oauthPlatforms = [];
     if(hasFB()||hasIG()) oauthPlatforms.push('facebook','instagram');
     if(hasGBP()) oauthPlatforms.push('gbp');
-    const params = new URLSearchParams({ client_id:clientId, platforms:oauthPlatforms.join(','), business:F.business_name, email:F.contact_email });
+    const params = new URLSearchParams({ client_id:clientId, token:pendingToken, platforms:oauthPlatforms.join(','), business:F.business_name, email:F.contact_email });
     window.location.href = `${OAUTH_BASE_URL}?${params.toString()}`;
   } catch(e) {
     isSubmitting = false;
