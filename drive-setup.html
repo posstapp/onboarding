@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Set up your photo library — posst.app</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#1648FF;--blue-dim:#E8EEFF;--blue-dark:#0F35CC;
+  --cream:#FFFAF4;--ink:#0F0E17;--ink-mid:#4A4860;--ink-light:#9896A8;
+  --border:#E4DFD6;--white:#FFFFFF;--green:#16A34A;--red:#DC2626;
+  --serif:'DM Serif Display',Georgia,serif;
+  --sans:'DM Sans',system-ui,sans-serif;
+}
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+nav{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,250,244,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{height:28px}
+.nav-back{font-size:13px;color:var(--ink-light);text-decoration:none;display:flex;align-items:center;gap:6px}
+.nav-back:hover{color:var(--blue)}
+.page{max-width:720px;margin:0 auto;padding:96px 24px 60px}
+.step-tag{font-size:10px;font-weight:700;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.step-tag::before{content:'';width:16px;height:2px;background:var(--blue)}
+h1{font-family:var(--serif);font-size:32px;line-height:1.15;color:var(--ink);margin-bottom:8px}
+.page-desc{font-size:15px;color:var(--ink-mid);line-height:1.65;margin-bottom:28px}
+.form-group{margin-bottom:20px}
+.form-label{display:block;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.form-hint{font-size:12px;color:var(--ink-light);margin-top:5px;line-height:1.5}
+.form-error{font-size:12px;color:var(--red);margin-top:5px;font-weight:500}
+.form-input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:15px;font-family:var(--sans);color:var(--ink);background:white;outline:none;transition:border-color 0.15s}
+.form-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,72,255,0.08)}
+.form-input.err{border-color:var(--red)}
+.form-input::placeholder{color:var(--ink-light)}
+.form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239896A8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;cursor:pointer}
+.info-box{border-radius:10px;padding:13px 16px;display:flex;gap:11px;align-items:flex-start;margin-bottom:18px}
+.info-box.blue{background:var(--blue-dim);border:1px solid rgba(22,72,255,0.15)}
+.info-box.green{background:#F0FDF4;border:1px solid #BBF7D0}
+.info-box.amber{background:#FFFBEB;border:1px solid #FDE68A}
+.info-box-icon{font-size:15px;flex-shrink:0;margin-top:1px}
+.info-box-text{font-size:13px;line-height:1.6;color:var(--ink-mid)}
+.info-box.blue .info-box-text{color:#1e3a8a}
+.info-box.green .info-box-text{color:#166534}
+.info-box-text strong{font-weight:600}
+.card{background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+.card-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px}
+.steps-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch;margin-bottom:20px}
+.step-item{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.step-num{width:22px;height:22px;border-radius:50%;background:var(--blue);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-text{font-size:12px;color:var(--ink-mid);line-height:1.7}
+.step-text strong{color:var(--ink)}
+.example-box{background:#f0f4ff;border:1.5px solid #dde4ff;border-radius:12px;padding:18px;display:flex;flex-direction:column;justify-content:space-between}
+.example-label{font-size:10px;font-weight:700;color:var(--blue);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px}
+.example-tree{font-family:monospace;font-size:12px;line-height:2.1;color:var(--ink);flex:1}
+.example-note{margin-top:12px;padding:8px 12px;background:rgba(255,193,7,0.15);border-left:3px solid #f59e0b;border-radius:0 6px 6px 0;font-size:11px;color:#92400e;line-height:1.5}
+.cat-block{background:white;border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;transition:border-color .15s}
+.cat-block.has-name{border-color:var(--blue)}
+.cat-header{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.cat-num{width:26px;height:26px;border-radius:50%;background:var(--blue);color:white;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cat-remove{background:none;border:none;color:var(--ink-light);cursor:pointer;font-size:18px;flex-shrink:0;padding:0 4px;line-height:1}
+.sub-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.sub-indent{font-size:12px;color:var(--ink-light)}
+.sub-remove{background:none;border:none;color:var(--ink-light);cursor:pointer;font-size:16px;padding:0 4px;line-height:1}
+.add-sub-btn{background:none;border:1px dashed var(--border);border-radius:7px;padding:5px 12px;font-size:11px;color:var(--blue);cursor:pointer;font-family:var(--sans);margin-top:2px}
+.add-sub-btn:hover{border-color:var(--blue)}
+.sub-label{font-size:11px;font-weight:600;color:var(--ink-mid);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px}
+.add-cat-btn{width:100%;background:none;border:2px dashed var(--border);border-radius:10px;padding:12px;font-size:13px;color:var(--blue);cursor:pointer;font-family:var(--sans);font-weight:500;transition:border-color .15s}
+.add-cat-btn:hover{border-color:var(--blue)}
+.btn-submit{width:100%;background:var(--blue);color:white;border:none;border-radius:10px;padding:15px 30px;font-size:15px;font-weight:600;font-family:var(--sans);cursor:pointer;margin-top:24px;transition:all .2s}
+.btn-submit:hover{background:var(--blue-dark);transform:translateY(-1px);box-shadow:0 6px 20px rgba(22,72,255,0.25)}
+.btn-submit:disabled{background:#a0b4f5;cursor:not-allowed;transform:none;box-shadow:none}
+.spinner{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.success-box{text-align:center;padding:60px 20px}
+.success-icon{font-size:56px;margin-bottom:16px}
+.success-title{font-family:var(--serif);font-size:28px;margin-bottom:12px}
+.success-desc{font-size:15px;color:var(--ink-mid);line-height:1.6;max-width:400px;margin:0 auto}
+.error-page{text-align:center;padding:60px 20px}
+@media(max-width:640px){
+  nav{padding:0 20px}
+  .page{padding:84px 16px 40px}
+  h1{font-size:26px}
+  .steps-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<nav>
+  <a href="https://posst.app"><img class="nav-logo" src="https://posst.app/posst_logo_dark.png" alt="posst.app"></a>
+  <a class="nav-back" href="https://posst.app">← posst.app</a>
+</nav>
+
+<div class="page" id="page">
+  <div id="app">
+    <div style="text-align:center;padding:60px 0">
+      <div class="spinner" style="width:32px;height:32px;border-color:var(--border);border-top-color:var(--blue);display:inline-block"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyGmzB2ym3jcb2f7MqWUBtMgIU1veoF_NLoDhRYhFWBrilZIaURPHkuP8g68UTjBxJ95g/exec';
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+// State
+let clientId = '';
+let token = '';
+let businessName = '';
+let driveUrl = '';
+let categories = [{ name:'', day:'', subcategories:[''] }];
+let errors = {};
+let submitting = false;
+
+const esc = s => !s ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const $ = id => document.getElementById(id);
+
+// ── INIT ──────────────────────────────────────────────────────
+async function init() {
+  const params = new URLSearchParams(location.search);
+  clientId    = params.get('client_id') || '';
+  token       = params.get('token') || '';
+  businessName = params.get('business') || '';
+
+  if (!clientId || !token) {
+    showError('This link is incomplete. Please use the link from your setup email.');
+    return;
+  }
+
+  // Validate token via Apps Script
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'validate_drive_token', client_id: clientId, token })
+    });
+    const result = await resp.json();
+    if (result.status !== 'success') {
+      showError('This link has expired or has already been used. Please contact chief@posst.app for a new link.');
+      return;
+    }
+    businessName = result.business_name || businessName;
+  } catch(e) {
+    showError('Could not verify your link. Please check your connection and try again.');
+    return;
+  }
+
+  render();
+}
+
+// ── RENDER ────────────────────────────────────────────────────
+function render() {
+  const catCount = categories.length;
+
+  const catsHtml = categories.map((cat, ci) => {
+    const subHtml = cat.subcategories.map((sub, si) =>
+      '<div class="sub-row">' +
+      '<span class="sub-indent">└</span>' +
+      '<input class="form-input" style="flex:1;font-size:13px;padding:8px 12px" value="' + esc(sub) + '" placeholder="Subcategory name (e.g. Breed Cuts)" oninput="updateSubcategory(' + ci + ',' + si + ',this.value)">' +
+      (cat.subcategories.length > 1 ? '<button class="sub-remove" onclick="removeSubcategory(' + ci + ',' + si + ')">×</button>' : '') +
+      '</div>'
+    ).join('');
+
+    return '<div class="cat-block ' + (cat.name ? 'has-name' : '') + '">' +
+      '<div class="cat-header">' +
+      '<div class="cat-num">' + (ci+1) + '</div>' +
+      '<input class="form-input" style="flex:1" value="' + esc(cat.name) + '" placeholder="Category name (e.g. Grooming)" oninput="updateCategory(' + ci + ',this.value)">' +
+      '<select class="form-input form-select" style="width:130px;flex-shrink:0" onchange="updateCategoryDay(' + ci + ',this.value)">' +
+      '<option value="">Auto day</option>' +
+      DAYS.map(d => '<option value="' + d + '" ' + (cat.day === d ? 'selected' : '') + '>' + d + '</option>').join('') +
+      '</select>' +
+      (categories.length > 1 ? '<button class="cat-remove" onclick="removeCategory(' + ci + ')">×</button>' : '') +
+      '</div>' +
+      '<div style="padding-left:36px">' +
+      '<div class="sub-label">📁 Subcategories (photos go here)</div>' +
+      subHtml +
+      '<button class="add-sub-btn" onclick="addSubcategory(' + ci + ')">+ Add subcategory</button>' +
+      '</div></div>';
+  }).join('');
+
+  $('app').innerHTML =
+    '<div class="step-tag">Photo Library Setup</div>' +
+    '<h1>Set up your photo library' + (businessName ? ', ' + businessName.split(' ')[0] : '') + '</h1>' +
+    '<p class="page-desc">Connect your Google Drive photos and we\'ll use them automatically in your daily posts. If a folder is empty on posting day, we generate a matching AI image instead.</p>' +
+
+    // Instructions card
+    '<div class="card">' +
+    '<div class="card-title">What you need to do</div>' +
+    '<div class="steps-grid">' +
+    '<div>' +
+    stepItem(1, 'Create a Google Drive folder', 'Name it anything — this is your main library.') +
+    stepItem(2, 'Create category subfolders inside', 'Up to 7 — one per day, named after your services or content areas.') +
+    stepItem(3, 'Inside each category, add subcategory folders', 'Drop your photos in these. <strong>Photos go in subcategory folders only.</strong>') +
+    stepItem(4, 'Share the main folder with posst.app', 'Right-click → Share → add as Viewer: <span style="background:#f1f5f9;border-radius:5px;padding:2px 8px;font-family:monospace;font-size:10px">posst-sheets-bot@posst-app.iam.gserviceaccount.com</span>') +
+    stepItem(5, 'Paste the folder link below', 'Then name your categories below and submit.') +
+    '</div>' +
+    '<div class="example-box">' +
+    '<div class="example-label">Example — Dog Grooming</div>' +
+    '<div class="example-tree">' +
+    '📁 <strong>My Grooming Photos</strong>\n' +
+    '<div style="padding-left:20px;color:var(--ink-mid)">📁 Grooming</div>' +
+    '<div style="padding-left:40px;color:var(--ink-light)">🖼 Breed Cuts</div>' +
+    '<div style="padding-left:40px;color:var(--ink-light)">🖼 Large Dogs</div>' +
+    '<div style="padding-left:20px;color:var(--ink-mid)">📁 Before & After</div>' +
+    '<div style="padding-left:40px;color:var(--ink-light)">🖼 Transformations</div>' +
+    '<div style="padding-left:20px;color:var(--ink-mid)">📁 Happy Clients</div>' +
+    '<div style="padding-left:40px;color:var(--ink-light)">🖼 Reviews</div>' +
+    '<div style="padding-left:40px;color:var(--ink-light)">🖼 Thank Yous</div>' +
+    '</div>' +
+    '<div class="example-note">🖼 photos go inside subcategory folders only — not directly in Grooming, Before & After, or Happy Clients</div>' +
+    '</div>' +
+    '</div>' + // end steps-grid
+    '</div>' + // end card
+
+    // Folder URL
+    '<div class="form-group">' +
+    '<label class="form-label">Paste your main folder link *</label>' +
+    '<input id="drive-url-input" class="form-input ' + (errors.driveUrl ? 'err' : '') + '" value="' + esc(driveUrl) + '" placeholder="https://drive.google.com/drive/folders/..." oninput="driveUrl=this.value">' +
+    (errors.driveUrl ? '<div class="form-error">' + errors.driveUrl + '</div>' : '') +
+    '<div class="form-hint">Right-click your main folder → Get link → make sure it\'s set to "Anyone with the link can view"</div>' +
+    '</div>' +
+
+    // Category builder
+    '<div class="card">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
+    '<div class="card-title" style="margin-bottom:0">Build your folder structure</div>' +
+    '<div style="font-size:11px;color:' + (catCount >= 7 ? 'var(--red)' : 'var(--ink-light)') + '">📁 ' + catCount + '/7 categories</div>' +
+    '</div>' +
+    '<div style="font-size:12px;color:var(--ink-mid);line-height:1.6;margin-bottom:14px">Name each category to match your Google Drive folder names exactly. Assign a day or leave as Auto to rotate.</div>' +
+    (errors.categories ? '<div class="form-error" style="margin-bottom:12px">' + errors.categories + '</div>' : '') +
+    catsHtml +
+    (catCount < 7
+      ? '<button class="add-cat-btn" onclick="addCategory()">+ Add category</button>'
+      : '<div style="text-align:center;font-size:12px;color:var(--ink-light);padding:10px">Maximum 7 categories reached</div>') +
+    '</div>' +
+
+    '<div class="info-box amber">' +
+    '<span class="info-box-icon">⚠️</span>' +
+    '<div class="info-box-text">Category names must match your Google Drive folder names <strong>exactly</strong> (including capitalisation). We look up your folders by name.</div>' +
+    '</div>' +
+
+    '<button class="btn-submit" onclick="submitSetup()" ' + (submitting ? 'disabled' : '') + '>' +
+    (submitting ? '<span class="spinner"></span>Saving...' : 'Connect my photo library →') +
+    '</button>';
+}
+
+function stepItem(n, title, body) {
+  return '<div class="step-item">' +
+    '<div class="step-num">' + n + '</div>' +
+    '<div class="step-text"><strong>' + title + '</strong><br>' + body + '</div>' +
+    '</div>';
+}
+
+// ── CATEGORY HELPERS ──────────────────────────────────────────
+function addCategory() {
+  if(categories.length >= 7) return;
+  categories.push({ name:'', day:'', subcategories:[''] });
+  render();
+}
+function removeCategory(ci) {
+  categories.splice(ci, 1);
+  render();
+}
+function updateCategory(ci, val) { categories[ci].name = val; }
+function updateCategoryDay(ci, val) { categories[ci].day = val; }
+function addSubcategory(ci) { categories[ci].subcategories.push(''); render(); }
+function removeSubcategory(ci, si) { categories[ci].subcategories.splice(si, 1); render(); }
+function updateSubcategory(ci, si, val) { categories[ci].subcategories[si] = val; }
+
+// ── VALIDATE ──────────────────────────────────────────────────
+function validate() {
+  errors = {};
+  if (!driveUrl || !driveUrl.includes('drive.google.com')) {
+    errors.driveUrl = 'Please paste a valid Google Drive folder link';
+  }
+  const namedCats = categories.filter(c => c.name.trim());
+  if (namedCats.length === 0) {
+    errors.categories = 'Please add at least one category with a name';
+  }
+  // Clean empty subcategories
+  categories.forEach(cat => {
+    cat.subcategories = cat.subcategories.filter(s => s.trim());
+    if (cat.subcategories.length === 0) cat.subcategories = [''];
+  });
+  return Object.keys(errors).length === 0;
+}
+
+// ── SUBMIT ────────────────────────────────────────────────────
+async function submitSetup() {
+  if (submitting) return;
+  if (!validate()) { render(); return; }
+
+  submitting = true;
+  render();
+
+  // Only include named categories with at least one subcategory
+  const cleanCategories = categories
+    .filter(c => c.name.trim())
+    .map(c => ({
+      name: c.name.trim(),
+      day:  c.day || '',
+      subcategories: c.subcategories.filter(s => s.trim())
+    }));
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action:           'update_drive_setup',
+        client_id:        clientId,
+        token:            token,
+        google_drive_url: driveUrl,
+        drive_categories: JSON.stringify(cleanCategories),
+        google_drive_intent: 'now',
+      })
+    });
+    const result = await resp.json();
+    if (result.status === 'success') {
+      showSuccess();
+    } else {
+      submitting = false;
+      errors.driveUrl = result.message || 'Something went wrong. Please try again.';
+      render();
+    }
+  } catch(e) {
+    submitting = false;
+    errors.driveUrl = 'Connection error. Please check your internet and try again.';
+    render();
+  }
+}
+
+// ── STATES ────────────────────────────────────────────────────
+function showSuccess() {
+  $('app').innerHTML =
+    '<div class="success-box">' +
+    '<div class="success-icon">🎉</div>' +
+    '<div class="success-title">Photo library connected!</div>' +
+    '<p class="success-desc">Your Google Drive photos will be used in your next scheduled post. If a folder is empty on posting day, we\'ll generate a matching AI image automatically.</p>' +
+    '</div>';
+}
+
+function showError(msg) {
+  $('app').innerHTML =
+    '<div class="error-page">' +
+    '<div style="font-size:40px;margin-bottom:16px">🔗</div>' +
+    '<h1 style="font-size:22px;margin-bottom:12px">This link has a problem</h1>' +
+    '<p style="font-size:14px;color:var(--ink-mid);line-height:1.6;max-width:380px;margin:0 auto 20px">' + msg + '</p>' +
+    '<a href="mailto:chief@posst.app" style="color:var(--blue);font-weight:600;font-size:14px">Contact us →</a>' +
+    '</div>';
+}
+
+// Start
+init();
+</script>
+</body>
+</html>
