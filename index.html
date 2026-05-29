@@ -939,7 +939,10 @@ function renderStep2() {
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Instagram handle *</label>
-          <input class="form-input ${errors.ig_handle?'err':''}" value="${esc(F.ig_handle)}" placeholder="@joesbakery" oninput="F.ig_handle=this.value">
+          <div style="display:flex;align-items:center;gap:0">
+            <span style="padding:0 10px;height:44px;display:flex;align-items:center;background:#f7f4ef;border:1.5px solid ${errors.ig_handle?'#e53e3e':'var(--border)'};border-right:none;border-radius:8px 0 0 8px;font-size:15px;color:var(--ink-mid);font-weight:600">@</span>
+            <input class="form-input ${errors.ig_handle?'err':''}" style="border-radius:0 8px 8px 0;flex:1" value="${esc(F.ig_handle.replace(/^@/,''))}" placeholder="joesbakery" oninput="F.ig_handle=this.value.replace(/^@+/,'')">
+          </div>
           ${errors.ig_handle?`<div class="form-error">${errors.ig_handle}</div>`:''}
         </div>
         <div class="form-group">
