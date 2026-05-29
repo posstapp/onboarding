@@ -887,12 +887,12 @@ function renderStep1() {
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Brand keywords <span class="form-label-opt">optional</span></label>
-        <input class="form-input" value="${esc(F.brand_keywords)}" placeholder="warm, local, premium, trusted..." oninput="F.brand_keywords=this.value">
+        <input id="inp-brand-keywords" class="form-input" value="${esc(F.brand_keywords)}" placeholder="warm, local, premium, trusted..." oninput="F.brand_keywords=this.value">
         <div class="form-hint">Words that describe your brand voice</div>
       </div>
       <div class="form-group">
         <label class="form-label">Email for post captions <span class="form-label-opt">optional</span></label>
-        <input class="form-input" value="${esc(F.caption_cta_email)}" placeholder="${esc(F.contact_email)||'bookings@yourbusiness.com'}" type="email" oninput="F.caption_cta_email=this.value">
+        <input id="inp-caption-email" class="form-input" value="${esc(F.caption_cta_email)}" placeholder="${esc(F.contact_email)||'bookings@yourbusiness.com'}" type="email" oninput="F.caption_cta_email=this.value">
         <div class="form-hint">Email shown in captions. Defaults to contact email.</div>
       </div>
     </div>`;
@@ -1284,6 +1284,13 @@ function renderDays() {
 }
 
 function render() {
+  // Preserve focused input state before DOM wipe
+  const activeEl = document.activeElement;
+  const focusId  = activeEl && activeEl.id ? activeEl.id : null;
+  const focusSel = activeEl && activeEl.selectionStart != null
+    ? { start: activeEl.selectionStart, end: activeEl.selectionEnd }
+    : null;
+
   renderSidebar();
   const steps = [renderStep0, renderStep1, renderStep2, renderStep3, renderStep4GDrive, renderStep4, renderStep5];
   const nav = `<div class="form-nav">
@@ -1300,6 +1307,17 @@ function render() {
   }
   // Init Places autocomplete on business step
   if(step===1) setTimeout(initPlacesAutocomplete, 100);
+
+  // Restore focus + cursor position after DOM rebuild
+  if(focusId) {
+    const el = document.getElementById(focusId);
+    if(el) {
+      el.focus();
+      if(focusSel && el.setSelectionRange) {
+        el.setSelectionRange(focusSel.end, focusSel.end);
+      }
+    }
+  }
 }
 
 detectCountry();
