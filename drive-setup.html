@@ -86,7 +86,7 @@ h1{font-family:var(--serif);font-size:32px;line-height:1.15;color:var(--ink);mar
 </head>
 <body>
 <nav style="position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,250,244,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between">
-  <a href="https://posst.app"><img style="height:28px" src="https://posst.app/posst_logo_dark.png" alt="posst.app"></a>
+  <a href="https://posst.app"><img style="height:28px" src="https://raw.githubusercontent.com/posstapp/posstapp.github.io/main/posst_logo_dark.png" alt="posst.app"></a>
   <a style="font-size:13px;color:var(--ink-light);text-decoration:none" href="https://posst.app">← posst.app</a>
 </nav>
 
@@ -221,7 +221,7 @@ function render() {
     '<label class="form-label">Paste your main folder link *</label>' +
     '<input id="drive-url-input" class="form-input ' + (errors.driveUrl ? 'err' : '') + '" value="' + esc(driveUrl) + '" placeholder="https://drive.google.com/drive/folders/..." oninput="driveUrl=this.value;driveValidated=false;const s=document.getElementById(\'test-conn-status\');if(s)s.textContent=\'\'">' +
     (errors.driveUrl ? '<div class="form-error">' + errors.driveUrl + '</div>' : '') +
-    '<div class="form-hint">Right-click your main folder → Get link → share with posst-sheets-bot@posst-app.iam.gserviceaccount.com as Viewer</div>' +
+    '<div class="form-hint">Step 1: Right-click your folder in Google Drive → Share → Add posst-sheets-bot@posst-app.iam.gserviceaccount.com as Viewer → Click Send. Then paste the folder link above and click Test connection.</div>' +
     '<div style="margin-top:12px;display:flex;gap:10px;align-items:center">' +
     '<button onclick="testConnection()" style="background:white;border:1.5px solid var(--border);border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;color:var(--ink);transition:all .15s" id="test-conn-btn">🔗 Test connection</button>' +
     '<span id="test-conn-status" style="font-size:13px"></span>' +
