@@ -642,8 +642,14 @@ async function verifyOTP() {
 }
 
 function handleOTPInput(el, next_id) {
-  if(el.value.length===1&&next_id) $(next_id)?.focus();
+  el.value = el.value.replace(/[^0-9]/g,'').slice(-1);
   el.classList.toggle('filled', el.value.length===1);
+  if(el.value && next_id) $(next_id)?.focus();
+  if(el.value && !next_id) {
+    // 6th digit — auto verify
+    const digits = ['otp-1','otp-2','otp-3','otp-4','otp-5','otp-6'].map(id=>$(id)?.value||'').join('');
+    if(digits.length===6) verifyOTP();
+  }
 }
 
 // ── VALIDATION ─────────────────────────────────────────────
