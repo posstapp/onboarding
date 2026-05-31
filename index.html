@@ -1318,6 +1318,10 @@ function render() {
       }
     }
   }
+  // Auto-focus first OTP box when OTP screen appears
+  if(otpSent && !otpVerified && step === 0) {
+    setTimeout(() => { const el = document.getElementById('otp-1'); if(el && document.activeElement !== el) { el.focus(); } }, 80);
+  }
 }
 
 detectCountry();
