@@ -100,6 +100,7 @@ h1{font-family:var(--serif);font-size:32px;line-height:1.15;color:var(--ink);mar
 
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyGmzB2ym3jcb2f7MqWUBtMgIU1veoF_NLoDhRYhFWBrilZIaURPHkuP8g68UTjBxJ95g/exec';
+const VPS_URL = 'http://139.84.192.174:5679';
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 // State
@@ -110,6 +111,7 @@ let driveUrl = '';
 let categories = [{ name:'', day:'', subcategories:[''] }];
 let errors = {};
 let submitting = false;
+let driveValidated = false; // true after successful test connection
 
 const esc = s => !s ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const $ = id => document.getElementById(id);
@@ -126,18 +128,22 @@ async function init() {
     return;
   }
 
-  // Validate token via Apps Script
+  // Validate JWT token via VPS
   try {
-    const resp = await fetch(APPS_SCRIPT_URL, {
+    const resp = await fetch(VPS_URL + '/verify_token', {
       method: 'POST',
-      body: JSON.stringify({ action: 'validate_drive_token', client_id: clientId, token })
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token })
     });
     const result = await resp.json();
-    if (result.status !== 'success') {
-      showError('This link has expired or has already been used. Please contact chief@posst.app for a new link.');
+    if (!result.client_id) {
+      const msg = result.error === 'token_expired'
+        ? 'This setup link has expired (links are valid for 7 days). Please contact chief@posst.app for a new link.'
+        : 'This link is invalid. Please contact chief@posst.app for a new link.';
+      showError(msg);
       return;
     }
-    businessName = result.business_name || businessName;
+    clientId = result.client_id;
   } catch(e) {
     showError('Could not verify your link. Please check your connection and try again.');
     return;
@@ -213,9 +219,13 @@ function render() {
     // Folder URL
     '<div class="form-group">' +
     '<label class="form-label">Paste your main folder link *</label>' +
-    '<input id="drive-url-input" class="form-input ' + (errors.driveUrl ? 'err' : '') + '" value="' + esc(driveUrl) + '" placeholder="https://drive.google.com/drive/folders/..." oninput="driveUrl=this.value">' +
+    '<input id="drive-url-input" class="form-input ' + (errors.driveUrl ? 'err' : '') + '" value="' + esc(driveUrl) + '" placeholder="https://drive.google.com/drive/folders/..." oninput="driveUrl=this.value;driveValidated=false;const s=document.getElementById('test-conn-status');if(s)s.textContent=''">' +
     (errors.driveUrl ? '<div class="form-error">' + errors.driveUrl + '</div>' : '') +
-    '<div class="form-hint">Right-click your main folder → Get link → make sure it\'s set to "Anyone with the link can view"</div>' +
+    '<div class="form-hint">Right-click your main folder → Get link → share with posst-sheets-bot@posst-app.iam.gserviceaccount.com as Viewer</div>' +
+    '<div style="margin-top:12px;display:flex;gap:10px;align-items:center">' +
+    '<button onclick="testConnection()" style="background:white;border:1.5px solid var(--border);border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;color:var(--ink);transition:all .15s" id="test-conn-btn">🔗 Test connection</button>' +
+    '<span id="test-conn-status" style="font-size:13px"></span>' +
+    '</div>' +
     '</div>' +
 
     // Category builder
@@ -270,6 +280,8 @@ function validate() {
   errors = {};
   if (!driveUrl || !driveUrl.includes('drive.google.com')) {
     errors.driveUrl = 'Please paste a valid Google Drive folder link';
+  } else if (!driveValidated) {
+    errors.driveUrl = 'Please test the connection before saving';
   }
   const namedCats = categories.filter(c => c.name.trim());
   if (namedCats.length === 0) {
@@ -281,6 +293,36 @@ function validate() {
     if (cat.subcategories.length === 0) cat.subcategories = [''];
   });
   return Object.keys(errors).length === 0;
+}
+
+// ── TEST CONNECTION ───────────────────────────────────────────
+async function testConnection() {
+  const btn = document.getElementById('test-conn-btn');
+  const status = document.getElementById('test-conn-status');
+  if (!driveUrl || !driveUrl.includes('drive.google.com')) {
+    if(status) status.innerHTML = '<span style="color:var(--red)">⚠️ Please paste a valid Google Drive folder link first</span>';
+    return;
+  }
+  if(btn) { btn.disabled=true; btn.textContent='Checking…'; }
+  if(status) status.innerHTML = '';
+  driveValidated = false;
+  try {
+    const resp = await fetch(VPS_URL + '/validate_drive', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ drive_url: driveUrl })
+    });
+    const result = await resp.json();
+    if (result.valid) {
+      driveValidated = true;
+      if(status) status.innerHTML = '<span style="color:#16A34A;font-weight:600">✅ Connected — ' + (result.folder_name || 'folder found') + '</span>';
+    } else {
+      if(status) status.innerHTML = '<span style="color:var(--red)">❌ ' + (result.error || 'Could not access folder') + '</span>';
+    }
+  } catch(e) {
+    if(status) status.innerHTML = '<span style="color:var(--red)">❌ Connection error — please try again</span>';
+  }
+  if(btn) { btn.disabled=false; btn.textContent='🔗 Test connection'; }
 }
 
 // ── SUBMIT ────────────────────────────────────────────────────
