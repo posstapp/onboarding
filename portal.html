@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Account — posst.app</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#1648FF;--blue-dim:#E8EEFF;--blue-dark:#0F35CC;
+  --cream:#FFFAF4;--ink:#0F0E17;--ink-mid:#4A4860;--ink-light:#9896A8;
+  --border:#E4DFD6;--white:#FFFFFF;--green:#16A34A;--red:#DC2626;
+  --amber:#F59E0B;--purple:#7C3AED;
+  --serif:'DM Serif Display',Georgia,serif;
+  --sans:'DM Sans',system-ui,sans-serif;
+}
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+nav{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,250,244,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 40px;height:64px;display:flex;align-items:center}
+.nav-logo{height:28px}
+.page{max-width:520px;margin:0 auto;padding:96px 24px 60px}
+.step-tag{font-size:10px;font-weight:700;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.step-tag::before{content:'';width:16px;height:2px;background:var(--blue)}
+h1{font-family:var(--serif);font-size:30px;line-height:1.15;color:var(--ink);margin-bottom:8px}
+.page-desc{font-size:15px;color:var(--ink-mid);line-height:1.65;margin-bottom:28px}
+.form-group{margin-bottom:20px}
+.form-label{display:block;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.form-hint{font-size:12px;color:var(--ink-light);margin-top:5px;line-height:1.5}
+.form-error{font-size:12px;color:var(--red);margin-top:5px;font-weight:500}
+.form-input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:15px;font-family:var(--sans);color:var(--ink);background:white;outline:none;transition:border-color 0.15s}
+.form-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,72,255,0.08)}
+.form-input.err{border-color:var(--red)}
+.phone-row{display:flex;gap:8px}
+.phone-code{width:90px;flex-shrink:0}
+.btn{width:100%;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--blue);color:white}
+.btn-primary:hover{background:var(--blue-dark);transform:translateY(-1px);box-shadow:0 6px 20px rgba(22,72,255,0.25)}
+.btn-primary:disabled{background:#a0b4f5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-secondary{background:white;color:var(--blue);border:1.5px solid var(--blue)}
+.btn-secondary:hover{background:var(--blue-dim)}
+.otp-row{display:flex;gap:8px;justify-content:center;margin:20px 0}
+.otp-input{width:44px;height:52px;border:1.5px solid var(--border);border-radius:9px;font-size:22px;font-weight:600;text-align:center;font-family:var(--sans);color:var(--ink);background:white;outline:none;transition:border-color .15s}
+.otp-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,72,255,0.08)}
+.otp-input.err{border-color:var(--red)}
+.resend-row{text-align:center;margin-top:12px;font-size:13px;color:var(--ink-light)}
+.resend-btn{background:none;border:none;color:var(--blue);font-weight:600;cursor:pointer;font-family:var(--sans);font-size:13px;display:none}
+.spinner{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
+.spinner-dark{border-color:rgba(22,72,255,.2);border-top-color:var(--blue)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.info-box{border-radius:10px;padding:13px 16px;display:flex;gap:11px;align-items:flex-start;margin-bottom:18px}
+.info-box.blue{background:var(--blue-dim);border:1px solid rgba(22,72,255,0.15)}
+.info-box.amber{background:#FFFBEB;border:1px solid #FDE68A}
+.info-box.red{background:#FEF2F2;border:1px solid #FECACA}
+.info-box.green{background:#F0FDF4;border:1px solid #BBF7D0}
+.info-box-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.info-box-text{font-size:13px;line-height:1.6;color:var(--ink-mid)}
+.info-box.blue .info-box-text{color:#1e3a8a}
+.info-box.green .info-box-text{color:#166534}
+.info-box.amber .info-box-text{color:#92400e}
+.info-box.red .info-box-text{color:#991b1b}
+/* Dashboard option cards */
+.option-card{background:white;border:1.5px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:14px;cursor:pointer;transition:all .15s;display:flex;gap:16px;align-items:flex-start}
+.option-card:hover{border-color:var(--blue);box-shadow:0 4px 16px rgba(22,72,255,0.1)}
+.option-card.disabled{opacity:.5;cursor:not-allowed;pointer-events:none}
+.option-icon{font-size:28px;flex-shrink:0;margin-top:2px}
+.option-body{}
+.option-title{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:4px}
+.option-desc{font-size:13px;color:var(--ink-mid);line-height:1.55}
+.option-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:middle}
+.badge-coming{background:#f1f5f9;color:var(--ink-light)}
+.badge-pro{background:var(--blue-dim);color:var(--blue)}
+.divider{border:none;border-top:1px solid var(--border);margin:24px 0}
+.biz-name{font-size:13px;font-weight:600;color:var(--blue);background:var(--blue-dim);border-radius:6px;padding:3px 10px;display:inline-block;margin-bottom:16px}
+@media(max-width:520px){
+  nav{padding:0 20px}
+  .page{padding:84px 16px 40px}
+  h1{font-size:24px}
+}
+</style>
+</head>
+<body>
+<nav>
+  <a href="https://posst.app"><img class="nav-logo" src="https://posst.app/posst_logo_dark.png" alt="posst.app"></a>
+</nav>
+
+<div class="page">
+  <div id="app">
+    <div style="text-align:center;padding:60px 0">
+      <div class="spinner spinner-dark" style="width:32px;height:32px;display:inline-block"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyGmzB2ym3jcb2f7MqWUBtMgIU1veoF_NLoDhRYhFWBrilZIaURPHkuP8g68UTjBxJ95g/exec';
+const VPS_URL         = 'http://139.84.192.174:5679';
+const DRIVE_SETUP_URL = 'https://onboarding.posst.app/drive-setup.html';
+
+const PHONE_CODES = [
+  {code:'+61',label:'🇦🇺 +61'},{code:'+1',label:'🇺🇸 +1'},{code:'+44',label:'🇬🇧 +44'},
+  {code:'+64',label:'🇳🇿 +64'},{code:'+65',label:'🇸🇬 +65'},{code:'+91',label:'🇮🇳 +91'},
+  {code:'+971',label:'🇦🇪 +971'},{code:'+33',label:'🇫🇷 +33'},{code:'+49',label:'🇩🇪 +49'},
+];
+
+// State
+let stage = 'phone'; // phone | otp | dashboard
+let phoneCode = '+61';
+let phoneNumber = '';
+let otpSent = false;
+let otpTimer = null;
+let otpSeconds = 30;
+let errors = {};
+let busy = false;
+let clientData = null; // { client_id, business_name, plan, drive_intent, status }
+
+const esc = s => !s ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const $ = id => document.getElementById(id);
+
+// ── RENDER ────────────────────────────────────────────────────
+function render() {
+  if (stage === 'phone') renderPhone();
+  else if (stage === 'otp') renderOTP();
+  else if (stage === 'dashboard') renderDashboard();
+}
+
+function renderPhone() {
+  const codesHtml = PHONE_CODES.map(c =>
+    `<option value="${c.code}" ${phoneCode===c.code?'selected':''}>${c.label}</option>`
+  ).join('');
+
+  $('app').innerHTML = `
+    <div class="step-tag">My Account</div>
+    <h1>Welcome back</h1>
+    <p class="page-desc">Enter your mobile number to access your account.</p>
+    <div class="form-group">
+      <label class="form-label">Mobile number</label>
+      <div class="phone-row">
+        <select class="form-input phone-code" onchange="phoneCode=this.value">
+          ${codesHtml}
+        </select>
+        <input class="form-input ${errors.phone?'err':''}" style="flex:1" type="tel"
+          placeholder="04XX XXX XXX" value="${esc(phoneNumber)}"
+          oninput="phoneNumber=this.value"
+          onkeydown="if(event.key==='Enter')sendOTP()">
+      </div>
+      ${errors.phone ? `<div class="form-error">${errors.phone}</div>` : ''}
+    </div>
+    <button class="btn btn-primary" onclick="sendOTP()" ${busy?'disabled':''}>
+      ${busy?'<span class="spinner"></span>Sending...':'Send verification code →'}
+    </button>`;
+}
+
+function renderOTP() {
+  $('app').innerHTML = `
+    <div class="step-tag">Verification</div>
+    <h1>Enter your code</h1>
+    <p class="page-desc">We sent a 6-digit code to ${esc(phoneCode)} ${esc(phoneNumber)}</p>
+    <div class="otp-row">
+      ${[1,2,3,4,5,6].map(i=>`
+        <input class="otp-input ${errors.otp?'err':''}" id="otp-${i}" maxlength="1" type="tel"
+          oninput="otpMove(${i},this)"
+          onkeydown="otpBack(${i},event)">
+      `).join('')}
+    </div>
+    ${errors.otp ? `<div class="form-error" style="text-align:center">${errors.otp}</div>` : ''}
+    <div class="resend-row">
+      <span id="otp-timer">Resend in ${otpSeconds}s</span>
+      <button class="resend-btn" id="otp-resend" onclick="sendOTP()">Resend code</button>
+    </div>
+    <button class="btn btn-primary" onclick="verifyOTP()" ${busy?'disabled':''} style="margin-top:20px">
+      ${busy?'<span class="spinner"></span>Verifying...':'Verify →'}
+    </button>
+    <button class="btn btn-secondary" onclick="stage='phone';errors={};render()" style="margin-top:10px">
+      ← Change number
+    </button>`;
+
+  setTimeout(() => $('otp-1')?.focus(), 50);
+}
+
+function renderDashboard() {
+  const cd = clientData;
+  const isPro = cd.plan === 'Pro';
+  const isStd = cd.plan === 'Standard';
+  const needsDrive = isPro && (cd.drive_intent === 'later' || cd.drive_intent === 'no');
+
+  $('app').innerHTML = `
+    <div class="step-tag">My Account</div>
+    <h1>What would you like to do?</h1>
+    <div class="biz-name">📍 ${esc(cd.business_name)}</div>
+
+    ${needsDrive ? `
+    <div class="option-card" onclick="startDriveSetup()">
+      <div class="option-icon">📁</div>
+      <div class="option-body">
+        <div class="option-title">Connect Google Drive photos
+          <span class="option-badge badge-pro">Pro</span>
+        </div>
+        <div class="option-desc">Your Branding Agent is ready — connect your photo folder and your own images will appear in every post instead of AI-generated ones.</div>
+      </div>
+    </div>` : ''}
+
+    ${isPro && !needsDrive ? `
+    <div class="info-box green" style="margin-bottom:14px">
+      <span class="info-box-icon">✅</span>
+      <div class="info-box-text"><strong>Google Drive connected.</strong> Your Branding Agent is using your photos in every post.</div>
+    </div>` : ''}
+
+    ${isStd ? `
+    <div class="option-card disabled">
+      <div class="option-icon">⬆️</div>
+      <div class="option-body">
+        <div class="option-title">Upgrade to Pro
+          <span class="option-badge badge-coming">Coming soon</span>
+        </div>
+        <div class="option-desc">Get your Branding Agent, Content Theme Agent, and your own photos in every post. Email <a href="mailto:chief@posst.app" style="color:var(--blue)">chief@posst.app</a> to upgrade today.</div>
+      </div>
+    </div>` : ''}
+
+    <hr class="divider">
+
+    <div class="option-card" onclick="addBusiness()">
+      <div class="option-icon">➕</div>
+      <div class="option-body">
+        <div class="option-title">Add a new business</div>
+        <div class="option-desc">Set up posst.app for another business. You'll need a different mobile number for each business.</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;font-size:13px;color:var(--ink-light)">
+      Need help? <a href="mailto:chief@posst.app" style="color:var(--blue);font-weight:600">chief@posst.app</a>
+    </div>`;
+}
+
+// ── OTP HELPERS ───────────────────────────────────────────────
+function otpMove(i, el) {
+  el.value = el.value.slice(-1);
+  if (el.value && i < 6) $(`otp-${i+1}`)?.focus();
+  if (i === 6 && el.value) verifyOTP();
+}
+function otpBack(i, e) {
+  if (e.key === 'Backspace' && !$(`otp-${i}`)?.value && i > 1) $(`otp-${i-1}`)?.focus();
+}
+
+function startOTPTimer() {
+  otpSeconds = 30;
+  if (otpTimer) clearInterval(otpTimer);
+  otpTimer = setInterval(() => {
+    otpSeconds--;
+    const t = $('otp-timer'), b = $('otp-resend');
+    if (t) t.textContent = `Resend in ${otpSeconds}s`;
+    if (otpSeconds <= 0) {
+      clearInterval(otpTimer);
+      if (t) t.style.display = 'none';
+      if (b) b.style.display = 'inline';
+    }
+  }, 1000);
+}
+
+// ── SEND OTP ──────────────────────────────────────────────────
+async function sendOTP() {
+  if (busy) return;
+  errors = {};
+  if (!phoneNumber || phoneNumber.length < 6) {
+    errors.phone = 'Please enter a valid phone number';
+    render(); return;
+  }
+  busy = true; render();
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'send_otp', phone: phoneCode + phoneNumber })
+    });
+    const result = await resp.json();
+    if (result.status === 'success') {
+      stage = 'otp'; otpSent = true;
+      busy = false; render();
+      startOTPTimer();
+    } else {
+      errors.phone = result.message || 'Failed to send code. Please try again.';
+      busy = false; render();
+    }
+  } catch(e) {
+    errors.phone = 'Connection error. Please try again.';
+    busy = false; render();
+  }
+}
+
+// ── VERIFY OTP ────────────────────────────────────────────────
+async function verifyOTP() {
+  if (busy) return;
+  const digits = [1,2,3,4,5,6].map(i => $(`otp-${i}`)?.value || '').join('');
+  if (digits.length < 6) { errors.otp = 'Please enter all 6 digits'; render(); return; }
+  errors = {};
+  busy = true; render();
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'verify_otp', phone: phoneCode + phoneNumber, otp: digits })
+    });
+    const result = await resp.json();
+    if (result.status === 'success') {
+      // OTP verified — now lookup client by phone
+      await lookupClient(phoneCode + phoneNumber);
+    } else {
+      errors.otp = result.message || 'Incorrect code. Please try again.';
+      busy = false; render();
+    }
+  } catch(e) {
+    errors.otp = 'Connection error. Please try again.';
+    busy = false; render();
+  }
+}
+
+// ── LOOKUP CLIENT ─────────────────────────────────────────────
+async function lookupClient(phone) {
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'portal_lookup', phone })
+    });
+    const result = await resp.json();
+    if (result.status === 'success') {
+      clientData = result.data;
+      stage = 'dashboard';
+      busy = false; render();
+    } else {
+      // Not found — redirect to onboarding
+      window.location.href = 'https://onboarding.posst.app/?phone=' + encodeURIComponent(phone);
+    }
+  } catch(e) {
+    errors.otp = 'Could not load your account. Please try again.';
+    busy = false; render();
+  }
+}
+
+// ── START DRIVE SETUP ─────────────────────────────────────────
+async function startDriveSetup() {
+  if (busy) return;
+  busy = true;
+  // Show loading state on the card
+  $('app').innerHTML += '<div style="text-align:center;padding:16px"><span class="spinner spinner-dark"></span><span style="font-size:13px;color:var(--ink-mid);margin-left:8px">Preparing your setup link…</span></div>';
+
+  try {
+    const resp = await fetch(`${VPS_URL}/generate_token`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ client_id: clientData.client_id, purpose: 'drive_setup' })
+    });
+    const result = await resp.json();
+    if (result.token) {
+      const url = `${DRIVE_SETUP_URL}?token=${encodeURIComponent(result.token)}&business=${encodeURIComponent(clientData.business_name)}`;
+      window.location.href = url;
+    } else {
+      busy = false;
+      showError('Could not generate setup link. Please try again or contact chief@posst.app');
+    }
+  } catch(e) {
+    busy = false;
+    showError('Connection error. Please try again.');
+  }
+}
+
+// ── ADD BUSINESS ──────────────────────────────────────────────
+function addBusiness() {
+  // v1: phone already linked — show message
+  $('app').innerHTML = `
+    <div class="step-tag">Add Business</div>
+    <h1>Different number needed</h1>
+    <div class="info-box amber" style="margin-top:16px">
+      <span class="info-box-icon">📱</span>
+      <div class="info-box-text">
+        <strong>This number is already linked to ${esc(clientData.business_name)}.</strong><br>
+        Each business needs its own mobile number. Please use a different number to sign up your next business.
+      </div>
+    </div>
+    <a href="https://onboarding.posst.app" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none;margin-top:20px">
+      Start new business signup →
+    </a>
+    <button class="btn btn-secondary" onclick="stage='dashboard';render()" style="margin-top:10px">
+      ← Back to my account
+    </button>`;
+}
+
+function showError(msg) {
+  $('app').innerHTML = `
+    <div style="text-align:center;padding:40px 0">
+      <div style="font-size:40px;margin-bottom:16px">⚠️</div>
+      <p style="font-size:14px;color:var(--ink-mid);line-height:1.6;max-width:340px;margin:0 auto 20px">${msg}</p>
+      <button class="btn btn-secondary" onclick="stage='phone';errors={};render()" style="width:auto;padding:10px 24px">Try again</button>
+    </div>`;
+}
+
+render();
+</script>
+</body>
+</html>
