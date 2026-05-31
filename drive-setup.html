@@ -85,9 +85,9 @@ h1{font-family:var(--serif);font-size:32px;line-height:1.15;color:var(--ink);mar
 </style>
 </head>
 <body>
-<nav>
-  <a href="https://posst.app"><img class="nav-logo" src="https://posst.app/posst_logo_dark.png" alt="posst.app"></a>
-  <a class="nav-back" href="https://posst.app">← posst.app</a>
+<nav style="position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,250,244,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between">
+  <a href="https://posst.app"><img style="height:28px" src="https://posst.app/posst_logo_dark.png" alt="posst.app"></a>
+  <a style="font-size:13px;color:var(--ink-light);text-decoration:none" href="https://posst.app">← posst.app</a>
 </nav>
 
 <div class="page" id="page">
@@ -119,16 +119,16 @@ const $ = id => document.getElementById(id);
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
   const params = new URLSearchParams(location.search);
-  clientId    = params.get('client_id') || '';
-  token       = params.get('token') || '';
+  token        = params.get('token') || '';
   businessName = params.get('business') || '';
+  // client_id is extracted from JWT — not required in URL
 
-  if (!clientId || !token) {
+  if (!token) {
     showError('This link is incomplete. Please use the link from your setup email.');
     return;
   }
 
-  // Validate JWT token via VPS
+  // Validate JWT token via VPS — client_id comes back from verify
   try {
     const resp = await fetch(VPS_URL + '/verify_token', {
       method: 'POST',
