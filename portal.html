@@ -84,9 +84,9 @@ h1{font-family:var(--serif);font-size:30px;line-height:1.15;color:var(--ink);mar
 </style>
 </head>
 <body>
-<nav class="nav">
-  <a href="https://posst.app"><img class="nav-logo" src="https://posst.app/posst_logo_dark.png" alt="posst.app"></a>
-  <a class="nav-back" href="https://posst.app">← Back to home</a>
+<nav style="position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,250,244,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between">
+  <a href="https://posst.app"><img style="height:28px" src="https://posst.app/posst_logo_dark.png" alt="posst.app"></a>
+  <a style="font-size:13px;color:var(--ink-light);text-decoration:none" href="https://posst.app">← Back to home</a>
 </nav>
 
 <div class="page">
@@ -182,7 +182,7 @@ function renderOTP() {
       ${busy?"<span class='spinner'></span>Verifying...":"Verify & continue →"}
     </button>`;
 
-  setTimeout(() => $("otp-1")?.focus(), 50);
+  setTimeout(() => { const el = $("otp-1"); if(el){ el.focus(); el.value=''; } }, 80);
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────
@@ -238,9 +238,13 @@ function renderDashboard() {
 
 // ── OTP HELPERS ───────────────────────────────────────────────
 function handleOTPInput(el, nextId) {
-  el.value = el.value.slice(-1);
+  el.value = el.value.replace(/[^0-9]/g,"").slice(-1);
   if (el.value && nextId) $(nextId)?.focus();
-  if (!nextId && el.value) verifyOTP();
+  if (!nextId && el.value) {
+    // 6th digit entered — auto verify
+    const digits = [1,2,3,4,5,6].map(i => $("otp-"+i)?.value||"").join("");
+    if (digits.length === 6) verifyOTP();
+  }
 }
 function otpBack(i, e) {
   if (e.key === "Backspace" && !$(`otp-${i}`)?.value && i > 1) $(`otp-${i-1}`)?.focus();
