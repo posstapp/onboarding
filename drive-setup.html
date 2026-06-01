@@ -196,7 +196,7 @@ function render() {
     stepItem(2, 'Create category subfolders inside', 'Up to 7 — one per day, named after your services or content areas.') +
     stepItem(3, 'Inside each category, add subcategory folders', 'Drop your photos in these. <strong>Photos go in subcategory folders only.</strong>') +
     stepItem(4, 'Share the main folder with posst.app', 'Right-click → Share → add as Viewer: <span style="background:#f1f5f9;border-radius:5px;padding:2px 8px;font-family:monospace;font-size:10px">posst-sheets-bot@posst-app.iam.gserviceaccount.com</span>') +
-    stepItem(5, 'Paste the folder link below', 'Then name your categories below and submit.') +
+    stepItem(5, 'Paste the folder link below', 'Optionally name categories by day, then submit.') +
     '</div>' +
     '<div class="example-box">' +
     '<div class="example-label">Example — Dog Grooming</div>' +
@@ -234,7 +234,7 @@ function render() {
     '<div class="card-title" style="margin-bottom:0">Organise by day <span style="font-size:11px;font-weight:500;color:var(--blue);background:#eff6ff;padding:2px 8px;border-radius:20px;margin-left:8px">Optional</span></div>' +
     '<div style="font-size:11px;color:' + (catCount >= 7 ? 'var(--red)' : 'var(--ink-light)') + '">📁 ' + catCount + '/7 categories</div>' +
     '</div>' +
-    '<div style="font-size:12px;color:var(--ink-mid);line-height:1.6;margin-bottom:14px">Want certain photos on specific days? Fill in below — otherwise we&#39;ll rotate through all your photos automatically. You can always update this later.</div>' +
+    '<div style="font-size:12px;color:var(--ink-mid);line-height:1.6;margin-bottom:14px">Want certain photos on specific days? Fill in below — otherwise we'll rotate through all your photos automatically. You can always update this later.</div>' +
     (errors.categories ? '<div class="form-error" style="margin-bottom:12px">' + errors.categories + '</div>' : '') +
     catsHtml +
     (catCount < 7
@@ -284,9 +284,6 @@ function validate() {
     errors.driveUrl = 'Please test the connection before saving';
   }
   const namedCats = categories.filter(c => c.name.trim());
-  if (namedCats.length === 0) {
-    errors.categories = 'Please add at least one category with a name';
-  }
   // Clean empty subcategories
   categories.forEach(cat => {
     cat.subcategories = cat.subcategories.filter(s => s.trim());
