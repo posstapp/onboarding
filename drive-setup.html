@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Set up your photo library — posst.app</title>
+<link rel="icon" type="image/x-icon" href="https://posst.app/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="https://posst.app/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://posst.app/apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -23,7 +26,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,250,244,
 .step-tag{font-size:10px;font-weight:700;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .step-tag::before{content:'';width:16px;height:2px;background:var(--blue)}
 h1{font-family:var(--serif);font-size:32px;line-height:1.15;color:var(--ink);margin-bottom:8px}
-.page-desc{font-size:15px;color:var(--ink-mid);line-height:1.65;margin-bottom:28px}
+.page-desc{font-size:15px;color:var(--ink-mid);line-height:1.65;margin-bottom:16px}
 .form-group{margin-bottom:20px}
 .form-label{display:block;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px}
 .form-hint{font-size:12px;color:var(--ink-light);margin-top:5px;line-height:1.5}
@@ -111,7 +114,7 @@ let driveUrl = '';
 let categories = [{ name:'', day:'', subcategories:[''] }];
 let errors = {};
 let submitting = false;
-let driveValidated = false; // true after successful test connection
+let driveValidated = false;
 
 const esc = s => !s ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const $ = id => document.getElementById(id);
@@ -121,14 +124,12 @@ async function init() {
   const params = new URLSearchParams(location.search);
   token        = params.get('token') || '';
   businessName = params.get('business') || '';
-  // client_id is extracted from JWT — not required in URL
 
   if (!token) {
     showError('This link is incomplete. Please use the link from your setup email.');
     return;
   }
 
-  // Validate JWT token via VPS — client_id comes back from verify
   try {
     const resp = await fetch(VPS_URL + '/verify_token', {
       method: 'POST',
@@ -187,6 +188,12 @@ function render() {
     '<h1>Set up your photo library' + (businessName ? ', ' + businessName.split(' ')[0] : '') + '</h1>' +
     '<p class="page-desc">Connect your Google Drive photos and we\'ll use them automatically in your daily posts. If a folder is empty on posting day, we generate a matching AI image instead.</p>' +
 
+    // FIX 3: Coffee line
+    '<div class="info-box blue" style="margin-bottom:24px">' +
+    '<span class="info-box-icon">☕</span>' +
+    '<div class="info-box-text">This takes about a minute — grab a coffee while we get you set up.</div>' +
+    '</div>' +
+
     // Instructions card
     '<div class="card">' +
     '<div class="card-title">What you need to do</div>' +
@@ -213,8 +220,8 @@ function render() {
     '</div>' +
     '<div class="example-note">🖼 photos go inside subcategory folders only — not directly in Grooming, Before & After, or Happy Clients</div>' +
     '</div>' +
-    '</div>' + // end steps-grid
-    '</div>' + // end card
+    '</div>' +
+    '</div>' +
 
     // Folder URL
     '<div class="form-group">' +
@@ -234,7 +241,7 @@ function render() {
     '<div class="card-title" style="margin-bottom:0">Organise by day <span style="font-size:11px;font-weight:500;color:var(--blue);background:#eff6ff;padding:2px 8px;border-radius:20px;margin-left:8px">Optional</span></div>' +
     '<div style="font-size:11px;color:' + (catCount >= 7 ? 'var(--red)' : 'var(--ink-light)') + '">📁 ' + catCount + '/7 categories</div>' +
     '</div>' +
-    '<div style="font-size:12px;color:var(--ink-mid);line-height:1.6;margin-bottom:14px">Want certain photos on specific days? Fill in below — otherwise we&#39;ll rotate through all your photos automatically. You can always update this later.</div>' +
+    '<div style="font-size:12px;color:var(--ink-mid);line-height:1.6;margin-bottom:14px">Want certain photos on specific days? Fill in below — otherwise we\'ll rotate through all your photos automatically. You can always update this later.</div>' +
     (errors.categories ? '<div class="form-error" style="margin-bottom:12px">' + errors.categories + '</div>' : '') +
     catsHtml +
     (catCount < 7
@@ -265,10 +272,7 @@ function addCategory() {
   categories.push({ name:'', day:'', subcategories:[''] });
   render();
 }
-function removeCategory(ci) {
-  categories.splice(ci, 1);
-  render();
-}
+function removeCategory(ci) { categories.splice(ci, 1); render(); }
 function updateCategory(ci, val) { categories[ci].name = val; }
 function updateCategoryDay(ci, val) { categories[ci].day = val; }
 function addSubcategory(ci) { categories[ci].subcategories.push(''); render(); }
@@ -283,8 +287,6 @@ function validate() {
   } else if (!driveValidated) {
     errors.driveUrl = 'Please test the connection before saving';
   }
-  const namedCats = categories.filter(c => c.name.trim());
-  // Clean empty subcategories
   categories.forEach(cat => {
     cat.subcategories = cat.subcategories.filter(s => s.trim());
     if (cat.subcategories.length === 0) cat.subcategories = [''];
@@ -330,7 +332,6 @@ async function submitSetup() {
   submitting = true;
   render();
 
-  // Only include named categories with at least one subcategory
   const cleanCategories = categories
     .filter(c => c.name.trim())
     .map(c => ({
@@ -373,6 +374,7 @@ function showSuccess() {
     '<div class="success-icon">🎉</div>' +
     '<div class="success-title">Photo library connected!</div>' +
     '<p class="success-desc">Your Google Drive photos will be used in your next scheduled post. If a folder is empty on posting day, we\'ll generate a matching AI image automatically.</p>' +
+    '<p style="font-size:14px;color:var(--ink-mid);margin-top:16px">You can now close this window. posst.app will use your photos starting from your next scheduled post.</p>' +
     '</div>';
 }
 
@@ -386,7 +388,6 @@ function showError(msg) {
     '</div>';
 }
 
-// Start
 init();
 </script>
 </body>
