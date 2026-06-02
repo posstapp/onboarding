@@ -38,12 +38,13 @@ h1{font-family:var(--serif);font-size:30px;line-height:1.15;color:var(--ink);mar
 .phone-code{width:160px;flex-shrink:0;border-radius:9px 0 0 9px;border-right:none}
 .phone-num{border-radius:0 9px 9px 0;flex:1}
 /* OTP — identical to onboarding */
-.otp-wrap{display:flex;gap:10px;margin-bottom:12px}
-.otp-input{width:56px;height:56px;border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;text-align:center;font-family:var(--sans);color:var(--ink);outline:none;transition:all .15s;background:white}
+.otp-wrap{display:flex;gap:10px;margin-bottom:12px;position:relative}
+.otp-input{width:56px;height:56px;border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;text-align:center;font-family:var(--sans);color:var(--ink);outline:none;transition:all .15s;background:white;pointer-events:none}
 .otp-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,72,255,0.08)}
 .otp-input.err{border-color:var(--red)}
 .otp-timer{font-size:12px;color:var(--ink-light)}
 .otp-resend{font-size:12px;color:var(--blue);cursor:pointer;background:none;border:none;font-family:var(--sans);padding:0;display:none}
+.otp-hidden{position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;font-size:22px;border:none;outline:none;cursor:pointer;z-index:10;caret-color:transparent}
 /* Buttons */
 .btn-next{background:var(--blue);color:white;border:none;border-radius:10px;padding:13px 30px;font-size:14px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;width:100%;justify-content:center;margin-top:8px}
 .btn-next:hover{background:var(--blue-dark);transform:translateY(-1px);box-shadow:0 6px 20px rgba(22,72,255,0.25)}
@@ -170,7 +171,8 @@ function renderOTP() {
     <div class="form-group">
       <label class="form-label">Enter 6-digit code *</label>
       <div class="otp-wrap">
-        ${[1,2,3,4,5,6].map(i=>`<input class="otp-input ${errors.otp?"err":""}" id="otp-${i}" maxlength="1" type="tel" oninput="handleOTPInput(this,${i<6?"'otp-"+(i+1)+"'":null})" onkeydown="otpBack(${i},event)">`).join("")}
+        <input class="otp-hidden" id="otp-hidden" type="tel" inputmode="numeric" autocomplete="one-time-code" maxlength="6" oninput="handleOTPHiddenInput(this)" autofocus>
+        ${[1,2,3,4,5,6].map(i=>`<input class="otp-input ${errors.otp?'err':''}" id="otp-${i}" maxlength="1" type="tel" readonly>`).join("")}
       </div>
       ${errors.otp ? `<div class="form-error">${errors.otp}</div>` : ""}
       <div style="margin-top:8px;display:flex;align-items:center;gap:12px">
@@ -182,7 +184,7 @@ function renderOTP() {
       ${busy?"<span class='spinner'></span>Verifying...":"Verify & continue →"}
     </button>`;
 
-  setTimeout(() => { const el = $("otp-1"); if(el){ el.focus(); el.value=''; } }, 80);
+  setTimeout(() => { const el = $("otp-hidden"); if(el){ el.focus(); el.value=''; } }, 80);
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────
@@ -213,11 +215,11 @@ function renderDashboard() {
     </div>` : ""}
 
     ${isStd ? `
-    <div class="option-card disabled">
-      <div class="option-icon">⬆️</div>
+    <div class="option-card" onclick="startUpgrade()">
+      <div class="option-icon">&#x2B06;&#xFE0F;</div>
       <div class="option-body">
-        <div class="option-title">Upgrade to Pro <span class="option-badge badge-coming">Coming soon</span></div>
-        <div class="option-desc">Get your Branding Agent and Content Theme Agent. Email <a href="mailto:chief@posst.app" style="color:var(--blue)">chief@posst.app</a> to upgrade today.</div>
+        <div class="option-title">Upgrade to Pro <span class="option-badge badge-pro">Recommended</span></div>
+        <div class="option-desc">Use your own photos via Google Drive. Custom content themes per day of the week. Real photos outperform AI images every time.</div>
       </div>
     </div>` : ""}
 
@@ -241,10 +243,21 @@ function handleOTPInput(el, nextId) {
   el.value = el.value.replace(/[^0-9]/g,"").slice(-1);
   if (el.value && nextId) $(nextId)?.focus();
   if (!nextId && el.value) {
-    // 6th digit entered — auto verify
     const digits = [1,2,3,4,5,6].map(i => $("otp-"+i)?.value||"").join("");
     if (digits.length === 6) verifyOTP();
   }
+}
+
+function handleOTPHiddenInput(el) {
+  const val = el.value.replace(/[^0-9]/g,'').substring(0,6);
+  el.value = val;
+  [1,2,3,4,5,6].forEach((i) => {
+    const box = $("otp-"+i);
+    if(!box) return;
+    box.value = val[i-1] || '';
+    box.classList.toggle('filled', !!val[i-1]);
+  });
+  if(val.length === 6) verifyOTP();
 }
 function otpBack(i, e) {
   if (e.key === "Backspace" && !$(`otp-${i}`)?.value && i > 1) $(`otp-${i-1}`)?.focus();
@@ -296,7 +309,10 @@ async function sendOTP() {
 // ── VERIFY OTP ────────────────────────────────────────────────
 async function verifyOTP() {
   if (busy) return;
-  const digits = [1,2,3,4,5,6].map(i => $(`otp-${i}`)?.value || "").join("");
+  const hiddenInput = $("otp-hidden");
+  const digits = hiddenInput && hiddenInput.value.length === 6
+    ? hiddenInput.value
+    : [1,2,3,4,5,6].map(i => $(`otp-${i}`)?.value || "").join("");
   if (digits.length < 6) { errors.otp = "Please enter all 6 digits"; render(); return; }
   errors = {};
   busy = true; render();
@@ -368,6 +384,77 @@ async function startDriveSetup() {
 }
 
 // ── ADD BUSINESS ──────────────────────────────────────────────
+function startUpgrade() {
+  if (busy) return;
+  // Show confirmation screen
+  $("app").innerHTML = `
+    <div class="step-tag">Upgrade to Pro</div>
+    <h1>Upgrade to Pro</h1>
+    <p class="step-desc">You're upgrading from Standard to Pro. Here's what you'll get:</p>
+    <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="color:var(--blue);font-weight:700;font-size:13px">+</span>
+          <div><div style="font-size:13px;font-weight:600;color:var(--ink)">Your own photos via Google Drive</div><div style="font-size:12px;color:var(--ink-mid)">Real photos outperform AI images — connected automatically</div></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="color:var(--blue);font-weight:700;font-size:13px">+</span>
+          <div><div style="font-size:13px;font-weight:600;color:var(--ink)">Custom content theme per day</div><div style="font-size:12px;color:var(--ink-mid)">Service Spotlight on Monday, Tip Tuesday, and more</div></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="color:var(--blue);font-weight:700;font-size:13px">+</span>
+          <div><div style="font-size:13px;font-weight:600;color:var(--ink)">Everything in Standard</div><div style="font-size:12px;color:var(--ink-mid)">Daily posting, AI captions, review replies all continue</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="info-box green">
+      <span class="info-box-icon">&#x2705;</span>
+      <div class="info-box-text">After upgrading we'll send you a link to connect your Google Drive photo library.</div>
+    </div>
+    <button class="btn-next" onclick="confirmUpgrade()" id="upgrade-confirm-btn">Confirm upgrade to Pro &#x2192;</button>
+    <button class="btn-secondary" onclick="renderDashboard()" style="margin-top:10px">&#x2190; Cancel</button>
+  `;
+}
+
+async function confirmUpgrade() {
+  if (busy) return;
+  busy = true;
+  const btn = $("upgrade-confirm-btn");
+  if (btn) { btn.disabled = true; btn.innerHTML = "<span class='spinner'></span>Upgrading..."; }
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "handle_upgrade",
+        client_id: clientData.client_id,
+        phone: phoneCode + phoneNumber
+      })
+    });
+    const result = await resp.json();
+    if (result.status === "success") {
+      clientData.plan = "Pro";
+      $("app").innerHTML = `
+        <div class="step-tag">Upgraded!</div>
+        <h1>Welcome to Pro &#x1F389;</h1>
+        <p class="step-desc">Your plan has been upgraded. We've sent you an email with a link to connect your Google Drive photo library.</p>
+        <div class="info-box green">
+          <span class="info-box-icon">&#x2705;</span>
+          <div class="info-box-text"><strong>Check your email</strong> — your Drive setup link is on its way to ${esc(clientData.contact_email || "you")}.</div>
+        </div>
+        <button class="btn-next" onclick="renderDashboard()" style="margin-top:8px">&#x2190; Back to account</button>
+      `;
+    } else {
+      busy = false;
+      if (btn) { btn.disabled = false; btn.innerHTML = "Confirm upgrade to Pro &#x2192;"; }
+      alert(result.message || "Something went wrong. Please try again.");
+    }
+  } catch(e) {
+    busy = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = "Confirm upgrade to Pro &#x2192;"; }
+    alert("Connection error. Please try again.");
+  }
+}
+
 function addBusiness() {
   $("app").innerHTML = `
     <div class="step-tag">Add Business</div>
