@@ -761,13 +761,14 @@ function renderStepBridge() {
         <div class="bridge-score-top">
           ${(()=>{
             const s = googleScore;
-            const bg = s >= 80 ? '#16A34A' : s >= 60 ? 'var(--blue)' : '#D97706';
             const icon = s >= 80 ? '&#x1F3C6;' : s >= 60 ? '&#x1F4C8;' : '&#x26A0;&#xFE0F;';
-            return '<div class="bridge-score-badge" style="background:'+bg+';flex-direction:column;gap:2px;padding:8px;align-items:center;justify-content:center">' +
-              '<span style="font-size:22px;line-height:1.1">'+icon+'</span>' +
-              '<span class="bridge-score-num" style="font-size:18px;line-height:1;font-weight:800;color:#fff">'+scoreDisplay+'</span>' +
-              '<span class="bridge-score-denom" style="font-size:9px;color:rgba(255,255,255,0.75)">/100</span>' +
-              '</div>';
+            const color = s >= 80 ? '#16A34A' : s >= 60 ? '#1648FF' : '#D97706';
+            return '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">' +
+              '<span style="font-size:36px;line-height:1">'+icon+'</span>' +
+              '<div style="display:flex;flex-direction:column;line-height:1">' +
+              '<span style="font-size:28px;font-weight:800;color:'+color+'">'+scoreDisplay+'</span>' +
+              '<span style="font-size:11px;color:#9896A8">/100</span>' +
+              '</div></div>';
           })()}
           <div class="bridge-score-label">
             <strong>Your Google score</strong>
