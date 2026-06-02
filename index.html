@@ -787,6 +787,9 @@ function bridgeNext() {
 
 // ── STEP 2: Business ───────────────────────────────────────
 function renderStep1() {
+  // Auto-populate from GBP/bridge data if fields are empty
+  if(!F.business_name) F.business_name = sessionStorage.getItem('posst_business_name') || '';
+  if(!F.business_city) F.business_city = sessionStorage.getItem('posst_business_city') || '';
   const selectedGroup = BIZ_CATEGORIES.find(g => g.group === F.business_type_group);
   const typeOptions = selectedGroup ? selectedGroup.types : [];
   return `
