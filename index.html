@@ -561,6 +561,7 @@ function validate() {
   if(step===5) {
     if(isPro() && F.google_drive_intent==='now') {
       if(!F.google_drive_url.trim()) errors.google_drive_url='Please paste your Google Drive folder link';
+      else if(!driveValidated) errors.google_drive_url='Please test your connection before continuing';
     }
   }
   if(step===6) { if(!F.posting_time) errors.posting_time='Choose a posting time'; }
@@ -997,6 +998,55 @@ function addSubcategory(ci) { F.drive_categories[ci].subcategories.push(''); ren
 function removeSubcategory(ci,si) { F.drive_categories[ci].subcategories.splice(si,1); render(); }
 function updateSubcategory(ci,si,val) { F.drive_categories[ci].subcategories[si]=val; }
 
+// Drive connection state
+let driveValidated = false;
+let driveStructure = [];
+let driveAssignments = {};
+
+function updateDriveDay(folderName, day) {
+  driveAssignments[folderName] = day;
+  const cat = F.drive_categories.find(c => c.name === folderName);
+  if(cat) cat.day = day;
+}
+
+async function testDriveConnection() {
+  const url = F.google_drive_url.trim();
+  const statusEl = document.getElementById('drive-conn-status');
+  const btn = document.getElementById('drive-conn-btn');
+  if(!url || !url.includes('drive.google.com')) {
+    if(statusEl) statusEl.innerHTML = '<span style="color:var(--red)">\u26a0\ufe0f Please paste a valid Google Drive folder link first</span>';
+    return;
+  }
+  if(btn) { btn.disabled=true; btn.textContent='Checking\u2026'; }
+  if(statusEl) statusEl.innerHTML = '<span style="color:var(--ink-light)">\u2615 Grab a coffee \u2014 this can take up to a minute\u2026</span>';
+  driveValidated = false;
+  driveStructure = [];
+  try {
+    const resp = await fetch('https://connect.posst.app/validate_drive', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({drive_url: url})
+    });
+    const result = await resp.json();
+    if(result.valid) {
+      driveValidated = true;
+      driveStructure = result.structure || [];
+      F.drive_categories = driveStructure.map(cat => ({
+        name: cat.name,
+        day: driveAssignments[cat.name] || '',
+        subcategories: (cat.subcategories||[]).map(s => typeof s === 'string' ? s : s.name).filter(Boolean)
+      }));
+      if(statusEl) statusEl.innerHTML = '<span style="color:#16A34A;font-weight:600">\u2705 Connected \u2014 ' + (result.folder_name||'folder found') + '</span>';
+    } else {
+      if(statusEl) statusEl.innerHTML = '<span style="color:var(--red)">\u274c ' + (result.error||'Could not access folder. Check it is shared with posst-sheets-bot@posst-app.iam.gserviceaccount.com') + '</span>';
+    }
+  } catch(e) {
+    if(statusEl) statusEl.innerHTML = '<span style="color:var(--red)">\u274c Connection error \u2014 please try again</span>';
+  }
+  if(btn) { btn.disabled=false; btn.textContent='\ud83d\udd17 Test connection'; }
+  render();
+}
+
 // ── STEP 5: Google Drive (Pro only) ───────────────────────
 function renderStep4GDrive() {
   if(!isPro()) return '';
@@ -1027,19 +1077,54 @@ function renderStep4GDrive() {
   let intentResult = '';
   if(intent==='later') intentResult='<div class="info-box green"><span class="info-box-icon">&#9989;</span><div class="info-box-text"><strong>Noted!</strong> We&#39;ll use AI images until you&#39;re ready. After go live, we&#39;ll email you a setup link.</div></div>';
   else if(intent==='no') intentResult='<div class="info-box blue"><span class="info-box-icon">&#129302;</span><div class="info-box-text">No problem &mdash; AI generates high-quality images for every post. You can switch later.</div></div>';
-  else if(intent==='now') intentResult=
-    '<div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">'+
-    '<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px">Paste your main folder link</div>'+
-    '<input class="form-input '+(errors.google_drive_url?'err':'')+'" value="'+esc(F.google_drive_url)+'" placeholder="https://drive.google.com/drive/folders/..." oninput="F.google_drive_url=this.value">'+
-    (errors.google_drive_url?'<div class="form-error">'+errors.google_drive_url+'</div>':'')+
-    '</div>'+
-    '<div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">'+
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
-    '<div style="font-size:13px;font-weight:700;color:var(--ink)">Build your folder structure <span style="font-weight:400;color:var(--ink-light);font-size:11px">optional</span></div>'+
-    '<div style="font-size:11px;color:'+(catCount>=7?'var(--red)':'var(--ink-light)')+'">&#128193; '+catCount+'/7</div></div>'+
-    catsHtml+
-    (catCount<7?'<button onclick="addCategory()" style="width:100%;background:none;border:2px dashed var(--border);border-radius:10px;padding:12px;font-size:13px;color:var(--blue);cursor:pointer;font-family:var(--sans);font-weight:500">+ Add category</button>':'<div style="text-align:center;font-size:12px;color:var(--ink-light);padding:10px">Maximum 7 categories reached</div>')+
-    '</div>';
+  else if(intent==='now') {
+    const folderInput =
+      '<div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">'+
+      '<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px">Paste your main folder link</div>'+
+      '<input class="form-input '+(errors.google_drive_url?'err':'')+'" id="drive-url-input" value="'+esc(F.google_drive_url)+'" placeholder="https://drive.google.com/drive/folders/..." oninput="F.google_drive_url=this.value;driveValidated=false">'+
+      (errors.google_drive_url?'<div class="form-error">'+errors.google_drive_url+'</div>':'')+
+      '<div class="form-hint" style="margin-bottom:12px">Share the folder with <strong>posst-sheets-bot@posst-app.iam.gserviceaccount.com</strong> as Viewer first.</div>'+
+      '<div style="display:flex;gap:10px;align-items:center">'+
+      '<button id="drive-conn-btn" onclick="testDriveConnection()" style="background:white;border:1.5px solid var(--border);border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;color:var(--ink)">&#128279; Test connection</button>'+
+      '<span id="drive-conn-status" style="font-size:13px"></span>'+
+      '</div>'+
+      '</div>';
+
+    let structureHtml = '';
+    if(driveValidated && driveStructure.length > 0) {
+      const folderRows = driveStructure.map(cat => {
+        const subs = (cat.subcategories||[]).map(s => typeof s === 'string' ? s : s.name).filter(Boolean);
+        const subList = subs.length > 0
+          ? '<div style="padding-left:28px;margin-top:3px">' +
+            subs.map(s => '<div style="font-size:11px;color:var(--ink-light);padding:1px 0">&#128247; '+esc(s)+'</div>').join('') +
+            '</div>'
+          : '';
+        const currentDay = F.drive_categories.find(c=>c.name===cat.name)?.day || '';
+        return '<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">'+
+          '<div style="flex:1">'+
+          '<div style="font-size:13px;font-weight:600;color:var(--ink)">&#128193; '+esc(cat.name)+'</div>'+
+          subList+
+          '</div>'+
+          '<select onchange="updateDriveDay(\''+esc(cat.name)+'\',this.value)" style="font-size:12px;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:var(--sans);color:var(--ink);background:white;cursor:pointer">'+
+          '<option value="">Auto</option>'+
+          DAYS.map(d=>'<option value="'+d+'" '+(currentDay===d?'selected':'')+'>'+d+'</option>').join('')+
+          '</select>'+
+          '</div>';
+      }).join('');
+      structureHtml =
+        '<div style="background:white;border:1.5px solid #BBF7D0;border-radius:12px;padding:20px;margin-bottom:16px">'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'+
+        '<span style="font-size:16px">&#128195;</span>'+
+        '<div style="font-size:13px;font-weight:700;color:var(--ink)">We found these folders in your Drive</div>'+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--ink-mid);margin-bottom:12px">Assign a day to each folder, or leave on Auto to rotate.</div>'+
+        '<div>'+folderRows+'</div>'+
+        '</div>';
+    } else if(driveValidated && driveStructure.length === 0) {
+      structureHtml = '<div class="info-box amber"><span class="info-box-icon">&#9888;&#65039;</span><div class="info-box-text">No subfolders found. posst.app will pick photos automatically from your main folder.</div></div>';
+    }
+    intentResult = folderInput + structureHtml;
+  }
   return '<div class="step-header"><div class="step-tag">Step 6 of 8</div><h2 class="step-title">Bring your own photos</h2><p class="step-desc">Real photos consistently outperform AI images. As a Pro member, plug in your Google Drive library and we use them automatically.</p></div>'+
     '<div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:12px">How would you like to set this up?</div>'+
     driveIntentButtons(intent)+intentResult;
