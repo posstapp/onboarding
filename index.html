@@ -1276,10 +1276,18 @@ async function saveAndExit() {
   const phone = sessionStorage.getItem('posst_phone') || '';
   if(phone) {
     try {
-      await callAppsScript('saveProgress', { phone, step, form: F });
-      // Send re-engagement email — use caption email, contact email, or skip
-      const reEmail = F.contact_email || '';
+      const sid = sessionStorage.getItem('posst_session_id') || '';
       const reName = F.business_name || sessionStorage.getItem('posst_business_name') || '';
+      const reEmail = F.contact_email || '';
+      // Ensure prospect row exists before saving progress
+      await callAppsScript('updateProspect', {
+        session_id: sid,
+        phone: phone,
+        business_name: reName,
+        status: 'drop_off',
+        last_step_reached: 'step_' + step
+      });
+      await callAppsScript('saveProgress', { phone, step, form: F });
       if(reEmail) {
         callAppsScript('send_reengagement', {
           phone,
@@ -1359,6 +1367,18 @@ detectCountry();
     if (!sessionStorage.getItem('posst_session_id')) {
       sessionStorage.setItem('posst_session_id', 'S_' + Date.now() + '_' + Math.random().toString(36).substr(2,6));
     }
+    // Ensure prospect row exists in sheet (createProspect is idempotent)
+    var sid = sessionStorage.getItem('posst_session_id');
+    callAppsScript('createProspect', {
+      session_id:    sid,
+      business_name: params.get('bn') || '',
+      business_city: params.get('bc') || '',
+      business_type: params.get('bt') || '',
+      google_score:  params.get('gs') || '0',
+      review_count:  params.get('rc') || '0',
+      competitor_avg:params.get('ca') || '72',
+      search_volume: '0'
+    });
   }
 })();
 
