@@ -67,10 +67,11 @@ textarea.form-input{resize:vertical;min-height:100px}
 .phone-wrap{display:flex}
 .phone-code{width:160px;flex-shrink:0;border-radius:9px 0 0 9px;border-right:none}
 .phone-num{border-radius:0 9px 9px 0;flex:1}
-.otp-wrap{display:flex;gap:10px;margin-bottom:12px}
-.otp-input{width:56px;height:56px;border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;text-align:center;font-family:var(--sans);color:var(--ink);outline:none;transition:all 0.15s;background:white}
+.otp-wrap{display:flex;gap:10px;margin-bottom:12px;position:relative}
+.otp-input{width:56px;height:56px;border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;text-align:center;font-family:var(--sans);color:var(--ink);outline:none;transition:all 0.15s;background:white;pointer-events:none}
 .otp-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,72,255,0.08)}
 .otp-input.filled{border-color:var(--blue);background:var(--blue-dim)}
+.otp-hidden{position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;font-size:22px;border:none;outline:none;cursor:pointer;z-index:10;caret-color:transparent}
 .otp-resend{font-size:12px;color:var(--blue);cursor:pointer;background:none;border:none;font-family:var(--sans);padding:0}
 .otp-timer{font-size:12px;color:var(--ink-light)}
 .info-box{border-radius:10px;padding:13px 16px;display:flex;gap:11px;align-items:flex-start;margin-bottom:18px}
@@ -504,7 +505,10 @@ function startOTPTimer() {
   }, 1000);
 }
 async function verifyOTP() {
-  const digits = ['otp-1','otp-2','otp-3','otp-4','otp-5','otp-6'].map(id=>$(id)?.value||'').join('');
+  const hiddenInput = $('otp-hidden');
+  const digits = hiddenInput && hiddenInput.value.length === 6
+    ? hiddenInput.value
+    : ['otp-1','otp-2','otp-3','otp-4','otp-5','otp-6'].map(id=>$(id)?.value||'').join('');
   if(digits.length < 6) { errors.otp='Enter the 6-digit code'; render(); return; }
   const btn = document.querySelector('button[onclick="verifyOTP()"]');
   if(btn){ btn.disabled=true; btn.textContent='Verifying...'; }
@@ -533,7 +537,8 @@ async function verifyOTP() {
     } else {
       errors.otp=result.message||'Incorrect code. Please try again.';
       ['otp-1','otp-2','otp-3','otp-4','otp-5','otp-6'].forEach(id=>{const el=$(id);if(el){el.value='';el.classList.remove('filled');}});
-      $('otp-1')?.focus(); render();
+      const hiddenEl = $('otp-hidden'); if(hiddenEl) hiddenEl.value = '';
+      $('otp-hidden')?.focus(); render();
     }
   } catch(e) { errors.otp='Network error. Please try again.'; render(); }
 }
@@ -545,6 +550,22 @@ function handleOTPInput(el, next_id) {
     const digits = ['otp-1','otp-2','otp-3','otp-4','otp-5','otp-6'].map(id=>$(id)?.value||'').join('');
     if(digits.length===6) verifyOTP();
   }
+}
+
+function handleOTPHiddenInput(el) {
+  const val = el.value.replace(/[^0-9]/g,'').substring(0,6);
+  el.value = val;
+  // Distribute digits to visual boxes
+  ['otp-1','otp-2','otp-3','otp-4','otp-5','otp-6'].forEach((id, i) => {
+    const box = $(id);
+    if(!box) return;
+    box.value = val[i] || '';
+    box.classList.toggle('filled', !!val[i]);
+  });
+  // Highlight active box
+  const activeBox = $('otp-' + Math.min(val.length + 1, 6));
+  if(activeBox) activeBox.style.borderColor = 'var(--blue)';
+  if(val.length === 6) verifyOTP();
 }
 
 // ── VALIDATION ─────────────────────────────────────────────
@@ -690,12 +711,13 @@ function renderStep0() {
       <div class="form-group">
         <label class="form-label">Enter 6-digit code *</label>
         <div class="otp-wrap">
-          <input class="otp-input" id="otp-1" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-2')">
-          <input class="otp-input" id="otp-2" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-3')">
-          <input class="otp-input" id="otp-3" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-4')">
-          <input class="otp-input" id="otp-4" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-5')">
-          <input class="otp-input" id="otp-5" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-6')">
-          <input class="otp-input" id="otp-6" maxlength="1" type="tel" oninput="handleOTPInput(this,null)">
+          <input class="otp-hidden" id="otp-hidden" type="tel" inputmode="numeric" autocomplete="one-time-code" maxlength="6" oninput="handleOTPHiddenInput(this)" autofocus>
+          <input class="otp-input" id="otp-1" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-2')" readonly>
+          <input class="otp-input" id="otp-2" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-3')" readonly>
+          <input class="otp-input" id="otp-3" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-4')" readonly>
+          <input class="otp-input" id="otp-4" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-5')" readonly>
+          <input class="otp-input" id="otp-5" maxlength="1" type="tel" oninput="handleOTPInput(this,'otp-6')" readonly>
+          <input class="otp-input" id="otp-6" maxlength="1" type="tel" oninput="handleOTPInput(this,null)" readonly>
         </div>
         ${errors.otp?`<div class="form-error">${errors.otp}</div>`:''}
         <div style="margin-top:8px;display:flex;align-items:center;gap:12px">
@@ -1277,7 +1299,7 @@ function render() {
     if(el) { el.focus(); if(focusSel && el.setSelectionRange) el.setSelectionRange(focusSel.end, focusSel.end); }
   }
   if(otpSent && !otpVerified && step===0) {
-    setTimeout(() => { const el = document.getElementById('otp-1'); if(el && document.activeElement!==el) el.focus(); }, 80);
+    setTimeout(() => { const el = document.getElementById('otp-hidden'); if(el) el.focus(); }, 80);
   }
 }
 
