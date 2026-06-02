@@ -266,6 +266,17 @@ function render() {
       )
     ) +
 
+    '<div class="info-box amber">' +
+    '<span class="info-box-icon">&#9888;&#65039;</span>' +
+    '<div class="info-box-text">Category names must match your Google Drive folder names <strong>exactly</strong> (including capitalisation). We look up your folders by name.</div>' +
+    '</div>' +
+
+    '<button class="btn-submit" onclick="submitSetup()" ' + (submitting ? 'disabled' : '') + '>' +
+    (submitting ? '<span class="spinner"></span>Saving...' : 'Connect my photo library →') +
+    '</button>';
+}
+
+
 
 function stepItem(n, title, body) {
   return '<div class="step-item">' +
