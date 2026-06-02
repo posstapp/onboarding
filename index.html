@@ -443,7 +443,7 @@ const F = {
   ig_handle:'', ig_url:'', gbp_name:'', gbp_status:'',
   tier:'', posting_days:[], posting_time:'11:00',
   contact_email:'', business_type_group:'', business_type:'',
-  business_description:'', brand_keywords:'', caption_cta_email:'',
+  business_description:'', brand_keywords:'', caption_cta_email:'', caption_cta_phone:'',
   timezone:'', day_themes: {...DEFAULT_DAY_THEMES}, google_drive_url:'', drive_categories:[], google_drive_intent:'',
 };
 
@@ -642,7 +642,8 @@ async function submitForm() {
     business_phone: F.phone_code+' '+F.phone_number, business_type: F.business_type || 'Not specified',
     business_suburb: F.business_suburb, business_country: F.business_country, business_city: F.business_city,
     timezone: F.timezone, business_description: F.business_description, brand_keywords: F.brand_keywords,
-    caption_cta_email: F.caption_cta_email || F.contact_email, platforms: F.platforms,
+    caption_cta_email: F.caption_cta_email || F.contact_email,
+    caption_cta_phone: F.caption_cta_phone || (F.phone_code + ' ' + F.phone_number), platforms: F.platforms,
     fb_page_name: F.facebook_page_name, facebook_page_url: F.facebook_page_url,
     ig_handle: F.ig_handle, instagram_url: F.ig_url, gbp_name: F.gbp_name, gbp_status: F.gbp_status,
     posting_days: postingDaysObj, posting_time: F.posting_time, tier: F.tier,
@@ -761,11 +762,11 @@ function renderStepBridge() {
           ${(()=>{
             const s = googleScore;
             const bg = s >= 80 ? '#16A34A' : s >= 60 ? 'var(--blue)' : '#D97706';
-            const icon = s >= 80 ? '🏆' : s >= 60 ? '📈' : '⚠️';
-            return '<div class="bridge-score-badge" style="background:'+bg+';flex-direction:column;gap:0;padding:6px">' +
-              '<span style="font-size:18px;line-height:1">'+icon+'</span>' +
-              '<span class="bridge-score-num" style="font-size:16px;line-height:1">'+scoreDisplay+'</span>' +
-              '<span class="bridge-score-denom" style="font-size:9px">/100</span>' +
+            const icon = s >= 80 ? '&#x1F3C6;' : s >= 60 ? '&#x1F4C8;' : '&#x26A0;&#xFE0F;';
+            return '<div class="bridge-score-badge" style="background:'+bg+';flex-direction:column;gap:2px;padding:8px;align-items:center;justify-content:center">' +
+              '<span style="font-size:22px;line-height:1.1">'+icon+'</span>' +
+              '<span class="bridge-score-num" style="font-size:18px;line-height:1;font-weight:800;color:#fff">'+scoreDisplay+'</span>' +
+              '<span class="bridge-score-denom" style="font-size:9px;color:rgba(255,255,255,0.75)">/100</span>' +
               '</div>';
           })()}
           <div class="bridge-score-label">
@@ -908,7 +909,12 @@ function renderStep1() {
       <div class="form-group">
         <label class="form-label">Email for post captions <span class="form-label-opt">optional</span></label>
         <input class="form-input" value="${esc(F.caption_cta_email)}" placeholder="${esc(F.contact_email)||'bookings@yourbusiness.com'}" type="email" oninput="F.caption_cta_email=this.value">
-        <div class="form-hint">Email shown in captions. Defaults to contact email.</div>
+        <div class="form-hint">Booking or enquiry email shown in captions. Leave blank to use contact email above.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone for post captions <span class="form-label-opt">optional</span></label>
+        <input class="form-input" value="${esc(F.caption_cta_phone)}" placeholder="e.g. 0412 345 678" type="tel" oninput="F.caption_cta_phone=this.value">
+        <div class="form-hint">Phone number shown in post captions. Leave blank to omit.</div>
       </div>
     </div>`;
 }
@@ -1270,15 +1276,17 @@ async function saveAndExit() {
   if(phone) {
     try {
       await callAppsScript('saveProgress', { phone, step, form: F });
-      // Send re-engagement email if we have contact email
-      if(F.contact_email) {
+      // Send re-engagement email — use caption email, contact email, or skip
+      const reEmail = F.contact_email || '';
+      const reName = F.business_name || sessionStorage.getItem('posst_business_name') || '';
+      if(reEmail) {
         callAppsScript('send_reengagement', {
           phone,
-          email: F.contact_email,
-          business_name: F.business_name || sessionStorage.getItem('posst_business_name') || ''
+          email: reEmail,
+          business_name: reName
         }).catch(()=>{});
       }
-    } catch(e) {}
+    } catch(e) { console.warn('saveAndExit error:', e); }
   }
   // Show saved confirmation
   $('main-content').innerHTML = `
