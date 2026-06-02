@@ -1265,6 +1265,34 @@ function renderDays() {
   if(g) g.innerHTML = DAYS.map(d=>`<div class="day-chip ${F.posting_days.includes(d)?'selected':''}" onclick="toggleDay('${d}')">${d}</div>`).join('');
 }
 
+async function saveAndExit() {
+  const phone = sessionStorage.getItem('posst_phone') || '';
+  if(phone) {
+    try {
+      await callAppsScript('saveProgress', { phone, step, form: F });
+      // Send re-engagement email if we have contact email
+      if(F.contact_email) {
+        callAppsScript('send_reengagement', {
+          phone,
+          email: F.contact_email,
+          business_name: F.business_name || sessionStorage.getItem('posst_business_name') || ''
+        }).catch(()=>{});
+      }
+    } catch(e) {}
+  }
+  // Show saved confirmation
+  $('main-content').innerHTML = `
+    <div style="text-align:center;padding:60px 20px">
+      <div style="font-size:48px;margin-bottom:16px">&#x1F4BE;</div>
+      <div style="font-family:var(--serif);font-size:24px;color:var(--ink);margin-bottom:12px">Progress saved!</div>
+      <p style="font-size:14px;color:var(--ink-mid);line-height:1.7;max-width:360px;margin:0 auto 24px">
+        ${F.contact_email ? "We've sent you an email with a link to continue. " : ""}
+        Come back anytime and enter your phone number to pick up where you left off.
+      </p>
+      <a href="https://posst.app" style="display:inline-block;background:var(--blue);color:white;text-decoration:none;padding:12px 28px;border-radius:9px;font-size:14px;font-weight:600">Back to posst.app</a>
+    </div>`;
+}
+
 function render() {
   const activeEl = document.activeElement;
   const focusId  = activeEl && activeEl.id ? activeEl.id : null;
@@ -1275,9 +1303,12 @@ function render() {
   const isLastStep = step === 7;
   const nav = `<div class="form-nav">
     <button class="btn-back" onclick="back()">&#8592; ${step===0?'Back to home':'Back'}</button>
-    ${!isLastStep
-      ? `<button class="btn-next" onclick="next()">Continue &#8594;</button>`
-      : `<button class="btn-next" onclick="submitForm()">Submit &amp; connect accounts &#8594;</button>`}
+    <div style="display:flex;align-items:center;gap:12px">
+      ${step > 1 && step < 7 ? `<button onclick="saveAndExit()" style="background:none;border:none;font-size:12px;color:var(--ink-light);cursor:pointer;font-family:var(--sans);text-decoration:underline">Save &amp; continue later</button>` : ''}
+      ${!isLastStep
+        ? `<button class="btn-next" onclick="next()">Continue &#8594;</button>`
+        : `<button class="btn-next" onclick="submitForm()">Submit &amp; connect accounts &#8594;</button>`}
+    </div>
   </div>`;
   const logoHtml = '<img class="form-logo" src="https://raw.githubusercontent.com/posstapp/posstapp.github.io/main/posst_logo_final.png" alt="posst.app">';
   const resumed = sessionStorage.getItem('posst_resumed');
