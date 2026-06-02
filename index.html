@@ -520,7 +520,21 @@ async function verifyOTP() {
       var fullPhone = F.phone_code + F.phone_number;
       sessionStorage.setItem('posst_phone', fullPhone);
       var sid = sessionStorage.getItem('posst_session_id') || '';
-      callAppsScript('updateProspect', {session_id:sid, phone:fullPhone, status:'otp_verified', last_step_reached:'otp'});
+      // Create or update prospect with phone + any GBP data from session
+      // This covers both Path A (came via GBP search) and Path B (direct entry)
+      callAppsScript('createProspect', {
+        session_id:    sid,
+        phone:         fullPhone,
+        business_name: sessionStorage.getItem('posst_business_name') || '',
+        business_city: sessionStorage.getItem('posst_business_city') || '',
+        business_type: sessionStorage.getItem('posst_business_type') || '',
+        google_score:  sessionStorage.getItem('posst_google_score') || '0',
+        review_count:  sessionStorage.getItem('posst_review_count') || '0',
+        competitor_avg:sessionStorage.getItem('posst_competitor_avg') || '72',
+        search_volume: sessionStorage.getItem('posst_search_volume') || '0',
+        status:        'otp_verified',
+        last_step_reached: 'otp'
+      });
       // Try to load saved progress
       callAppsScript('loadProgress', {phone: fullPhone}).then(function(res) {
         if(res && res.success && res.step > 1 && res.form) {
@@ -1367,18 +1381,6 @@ detectCountry();
     if (!sessionStorage.getItem('posst_session_id')) {
       sessionStorage.setItem('posst_session_id', 'S_' + Date.now() + '_' + Math.random().toString(36).substr(2,6));
     }
-    // Ensure prospect row exists in sheet (createProspect is idempotent)
-    var sid = sessionStorage.getItem('posst_session_id');
-    callAppsScript('createProspect', {
-      session_id:    sid,
-      business_name: params.get('bn') || '',
-      business_city: params.get('bc') || '',
-      business_type: params.get('bt') || '',
-      google_score:  params.get('gs') || '0',
-      review_count:  params.get('rc') || '0',
-      competitor_avg:params.get('ca') || '72',
-      search_volume: '0'
-    });
   }
 })();
 
