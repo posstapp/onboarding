@@ -517,7 +517,19 @@ async function verifyOTP() {
       sessionStorage.setItem('posst_phone', fullPhone);
       var sid = sessionStorage.getItem('posst_session_id') || '';
       callAppsScript('updateProspect', {session_id:sid, phone:fullPhone, status:'otp_verified', last_step_reached:'otp'});
-      next();
+      // Try to load saved progress
+      callAppsScript('loadProgress', {phone: fullPhone}).then(function(res) {
+        if(res && res.success && res.step > 1 && res.form) {
+          // Restore saved form state
+          Object.assign(F, res.form);
+          step = res.step;
+          sessionStorage.setItem('posst_resumed', '1');
+          sessionStorage.setItem('posst_resume_name', res.business_name || '');
+          render(); window.scrollTo(0,0);
+        } else {
+          next();
+        }
+      }).catch(function() { next(); });
     } else {
       errors.otp=result.message||'Incorrect code. Please try again.';
       ['otp-1','otp-2','otp-3','otp-4','otp-5','otp-6'].forEach(id=>{const el=$(id);if(el){el.value='';el.classList.remove('filled');}});
@@ -572,8 +584,12 @@ function next() {
   if(!validate()) { render(); window.scrollTo(0,0); return; }
   if(step<7) {
     step++;
-    // Standard plan skips Google Drive step (step 5)
     if(step===5 && !isPro()) step++;
+    // Save progress after each step advance
+    const phone = sessionStorage.getItem('posst_phone') || '';
+    if(phone && step > 1) {
+      callAppsScript('saveProgress', { phone, step, form: F }).catch(()=>{});
+    }
     render(); window.scrollTo(0,0);
   }
 }
@@ -618,6 +634,8 @@ async function submitForm() {
     const pendingToken = result.pending_token || '';
     // Mark prospect as converted
     callAppsScript('convertProspect', { phone: sessionStorage.getItem('posst_phone') || '' });
+    sessionStorage.removeItem('posst_resumed');
+    sessionStorage.removeItem('posst_resume_name');
     let oauthPlatforms = [];
     if(hasFB()||hasIG()) oauthPlatforms.push('facebook','instagram');
     if(hasGBP()) oauthPlatforms.push('gbp');
@@ -1240,13 +1258,18 @@ function render() {
       : `<button class="btn-next" onclick="submitForm()">Submit &amp; connect accounts &#8594;</button>`}
   </div>`;
   const logoHtml = '<img class="form-logo" src="https://raw.githubusercontent.com/posstapp/posstapp.github.io/main/posst_logo_final.png" alt="posst.app">';
+  const resumed = sessionStorage.getItem('posst_resumed');
+  const resumeName = sessionStorage.getItem('posst_resume_name') || '';
+  const welcomeBackBanner = (resumed && step > 1)
+    ? '<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">&#x1F44B;</span><div><div style="font-size:13px;font-weight:700;color:#166534">Welcome back' + (resumeName ? ', ' + resumeName.split(' ')[0] : '') + '!</div><div style="font-size:12px;color:#166534;opacity:0.8">We saved your progress — pick up right where you left off.</div></div></div>'
+    : '';
   // Bridge step has its own CTA — no standard nav
   if(step===1) {
     $('main-content').innerHTML = logoHtml + steps[1]() + `<div class="form-nav"><button class="btn-back" onclick="back()">&#8592; Back</button></div>`;
   } else if(step===0) {
     $('main-content').innerHTML = logoHtml + steps[0]() + `<div class="form-nav"><button class="btn-back" onclick="back()">&#8592; Back to home</button></div>`;
   } else {
-    $('main-content').innerHTML = logoHtml + steps[step]()+nav;
+    $('main-content').innerHTML = logoHtml + welcomeBackBanner + steps[step]()+nav;
   }
   if(step===2) setTimeout(initPlacesAutocomplete, 100);
   if(focusId) {
