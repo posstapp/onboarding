@@ -102,6 +102,10 @@ h1{font-family:var(--serif);font-size:30px;line-height:1.15;color:var(--ink);mar
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyGmzB2ym3jcb2f7MqWUBtMgIU1veoF_NLoDhRYhFWBrilZIaURPHkuP8g68UTjBxJ95g/exec";
 const VPS_URL         = "https://connect.posst.app";
 const DRIVE_SETUP_URL = "https://posstapp.github.io/onboarding/drive-setup.html";
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAY_THEMES = ['Service Spotlight','Tip / Advice','Transformation Story','Seasonal / Local','Booking Nudge','Fun Fact','Community Love'];
+const DEFAULT_THEMES = {Mon:'Service Spotlight',Tue:'Tip / Advice',Wed:'Transformation Story',Thu:'Seasonal / Local',Fri:'Booking Nudge',Sat:'Fun Fact',Sun:'Community Love'};
+let proSetup = { dayThemes: {...DEFAULT_THEMES}, driveUrl: '', driveValidated: false, driveStructure: [], driveAssignments: {}, driveIntent: 'later' };
 const ONBOARDING_URL  = "https://posstapp.github.io/onboarding/";
 
 const COUNTRY_CODES = [
@@ -431,20 +435,11 @@ async function confirmUpgrade() {
       })
     });
     const result = await resp.json();
+    const result = await resp.json();
     if (result.status === "success") {
       clientData.plan = "Pro";
-      $("app").innerHTML = `
-        <div class="step-tag">Upgraded!</div>
-        <h1>Welcome to Pro &#x1F389;</h1>
-        <p class="step-desc">Your plan has been upgraded. We've sent you an email with a link to connect your Google Drive photo library.</p>
-        <div class="info-box green">
-          <span class="info-box-icon">&#x2705;</span>
-          <div class="info-box-text"><strong>Check your email</strong> — your Drive setup link is on its way to ${esc(clientData.contact_email || "you")}.</div>
-        </div>
-        <button class="btn-next" onclick="renderDashboard()" style="margin-top:8px">&#x2190; Back to account</button>
-      `;
-    } else {
-      busy = false;
+      proSetup = { dayThemes: {...DEFAULT_THEMES}, driveUrl: '', driveValidated: false, driveStructure: [], driveAssignments: {}, driveIntent: 'later' };
+      renderProSetup();
       if (btn) { btn.disabled = false; btn.innerHTML = "Confirm upgrade to Pro &#x2192;"; }
       alert(result.message || "Something went wrong. Please try again.");
     }
@@ -453,6 +448,143 @@ async function confirmUpgrade() {
     if (btn) { btn.disabled = false; btn.innerHTML = "Confirm upgrade to Pro &#x2192;"; }
     alert("Connection error. Please try again.");
   }
+}
+
+function renderProSetup() {
+  busy = false;
+  const themeRows = DAYS.map(d => {
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6">
+      <div style="font-size:12px;font-weight:700;color:#374151;width:36px">${d}</div>
+      <select onchange="proSetup.dayThemes['${d}']=this.value" style="flex:1;font-size:12px;padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:7px;font-family:inherit;color:#111827;background:white">
+        ${DAY_THEMES.map(t => `<option value="${t}" ${proSetup.dayThemes[d]===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+    </div>`;
+  }).join('');
+
+  const driveStructureHtml = proSetup.driveValidated && proSetup.driveStructure.length > 0
+    ? '<div style="background:white;border:1.5px solid #BBF7D0;border-radius:10px;padding:16px;margin-top:12px">' +
+      '<div style="font-size:13px;font-weight:700;color:#111827;margin-bottom:8px">&#128195; We found these folders in your Drive</div>' +
+      '<div style="font-size:11px;color:#6b7280;margin-bottom:10px">Assign a day to each folder, or leave on Auto.</div>' +
+      proSetup.driveStructure.map(cat => {
+        const currentDay = proSetup.driveAssignments[cat.name] || '';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6">' +
+          '<div style="flex:1;font-size:13px;font-weight:600;color:#111827">&#128193; ' + esc(cat.name) + '</div>' +
+          '<select onchange="proSetup.driveAssignments[''+esc(cat.name)+'']=this.value" style="font-size:12px;padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:7px;font-family:inherit;color:#111827;background:white">' +
+          '<option value="">Auto</option>' +
+          DAYS.map(d => '<option value="'+d+'" '+(currentDay===d?'selected':'')+'>'+d+'</option>').join('') +
+          '</select></div>';
+      }).join('') + '</div>'
+    : (proSetup.driveValidated
+      ? '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:12px;margin-top:10px;font-size:13px;color:#92400e">No subfolders found. posst.app will auto-discover from your main folder.</div>'
+      : '');
+
+  $("app").innerHTML = `
+    <div class="step-tag">Upgraded!</div>
+    <h1>Welcome to Pro &#x1F389;</h1>
+    <p class="step-desc" style="margin-bottom:20px">Set up your Pro features below — or skip and do it later.</p>
+
+    <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px">&#128197; Content themes by day</div>
+      <div style="font-size:12px;color:var(--ink-mid);margin-bottom:14px">Each day has a focus. Customise or leave as defaults.</div>
+      ${themeRows}
+    </div>
+
+    <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px">&#128247; Your photo library</div>
+      <div style="font-size:12px;color:var(--ink-mid);margin-bottom:12px">Connect your Google Drive folder. Share it with posst-sheets-bot@posst-app.iam.gserviceaccount.com as Viewer first.</div>
+      <div style="display:flex;gap:8px;margin-bottom:4px">
+        <input id="portal-drive-url" class="form-input" style="flex:1;font-size:13px" placeholder="https://drive.google.com/drive/folders/..." oninput="proSetup.driveUrl=this.value;proSetup.driveValidated=false;$('portal-drive-status').innerHTML=''">
+        <button onclick="testDriveInPortal()" id="portal-drive-btn" style="background:white;border:1.5px solid var(--border);border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">&#128279; Test</button>
+      </div>
+      <div id="portal-drive-status" style="font-size:12px;margin-top:6px"></div>
+      ${driveStructureHtml}
+    </div>
+
+    <button class="btn-next" onclick="saveProSetup()" id="pro-save-btn" style="width:100%">Save &amp; finish setup &#x2192;</button>
+    <button onclick="skipProSetup()" style="width:100%;margin-top:10px;background:none;border:none;font-size:13px;color:var(--ink-light);cursor:pointer;font-family:inherit;text-decoration:underline">Skip for now — I'll set this up later</button>
+  `;
+}
+
+async function testDriveInPortal() {
+  const url = proSetup.driveUrl.trim();
+  const status = $('portal-drive-status');
+  const btn = $('portal-drive-btn');
+  if (!url || !url.includes('drive.google.com')) {
+    if(status) status.innerHTML = '<span style="color:var(--red)">Please paste a valid Google Drive folder link</span>';
+    return;
+  }
+  if(btn) { btn.disabled=true; btn.textContent='Checking...'; }
+  if(status) status.innerHTML = '<span style="color:var(--ink-light)">&#x2615; Grab a coffee — this can take up to a minute...</span>';
+  proSetup.driveValidated = false;
+  try {
+    const resp = await fetch(VPS_URL + '/validate_drive', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({drive_url: url})
+    });
+    const result = await resp.json();
+    if (result.valid) {
+      proSetup.driveValidated = true;
+      proSetup.driveStructure = result.structure || [];
+      proSetup.driveAssignments = {};
+      if(status) status.innerHTML = '<span style="color:#16A34A;font-weight:600">&#x2705; Connected — ' + (result.folder_name||'folder found') + '</span>';
+    } else {
+      if(status) status.innerHTML = '<span style="color:var(--red)">&#x274C; ' + (result.error||'Could not access folder') + '</span>';
+    }
+  } catch(e) {
+    if(status) status.innerHTML = '<span style="color:var(--red)">&#x274C; Connection error — please try again</span>';
+  }
+  if(btn) { btn.disabled=false; btn.textContent='&#128279; Test'; }
+  renderProSetup();
+}
+
+async function saveProSetup() {
+  const btn = $('pro-save-btn');
+  if(btn) { btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Saving...'; }
+  try {
+    // Build drive categories from structure + day assignments
+    const driveCategories = proSetup.driveStructure.map(cat => ({
+      name: cat.name,
+      day: proSetup.driveAssignments[cat.name] || '',
+      subcategories: (cat.subcategories||[]).map(s => typeof s==='string' ? s : s.name).filter(Boolean)
+    }));
+    const driveIntent = proSetup.driveUrl ? 'now' : 'later';
+
+    // Save day themes + drive to sheet via Apps Script
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'save_pro_setup',
+        client_id: clientData.client_id,
+        day_themes: proSetup.dayThemes,
+        google_drive_url: proSetup.driveUrl,
+        drive_categories: JSON.stringify(driveCategories),
+        google_drive_intent: driveIntent
+      })
+    });
+    const result = await resp.json();
+    showProSetupComplete(driveIntent);
+  } catch(e) {
+    if(btn) { btn.disabled=false; btn.innerHTML='Save & finish setup &#x2192;'; }
+    alert('Connection error. Please try again.');
+  }
+}
+
+function skipProSetup() {
+  showProSetupComplete('later');
+}
+
+function showProSetupComplete(driveIntent) {
+  $("app").innerHTML = `
+    <div class="step-tag">All set!</div>
+    <h1>You're live on Pro &#x1F680;</h1>
+    <p class="step-desc">Your content themes are saved. ${driveIntent==='now' ? 'Your Google Drive is connected — photos will be used from your next post.' : 'You can connect your Google Drive anytime from your account.'}</p>
+    <div class="info-box green">
+      <span class="info-box-icon">&#x2705;</span>
+      <div class="info-box-text">We've also sent you a confirmation email with your Drive setup link in case you want to update it later.</div>
+    </div>
+    <button class="btn-next" onclick="renderDashboard()" style="margin-top:8px;width:100%">&#x2190; Back to account</button>
+  `;
 }
 
 function addBusiness() {
