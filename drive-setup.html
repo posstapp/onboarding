@@ -115,6 +115,14 @@ let categories = [{ name:'', day:'', subcategories:[''] }];
 let errors = {};
 let submitting = false;
 let driveValidated = false;
+let driveStructure = [];
+let driveAssignments = {};
+
+function updateDriveDay(folderName, day) {
+  driveAssignments[folderName] = day;
+  const cat = categories.find(c => c.name === folderName);
+  if(cat) cat.day = day;
+}
 
 const esc = s => !s ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const $ = id => document.getElementById(id);
@@ -229,28 +237,35 @@ function render() {
     '</div>' +
     '</div>' +
 
-    // Category builder
-    '<div class="card">' +
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
-    '<div class="card-title" style="margin-bottom:0">Organise by day <span style="font-size:11px;font-weight:500;color:var(--blue);background:#eff6ff;padding:2px 8px;border-radius:20px;margin-left:8px">Optional</span></div>' +
-    '<div style="font-size:11px;color:' + (catCount >= 7 ? 'var(--red)' : 'var(--ink-light)') + '">📁 ' + catCount + '/7 categories</div>' +
-    '</div>' +
-    '<div style="font-size:12px;color:var(--ink-mid);line-height:1.6;margin-bottom:14px">Want certain photos on specific days? Fill in below — otherwise we\'ll rotate through all your photos automatically. You can always update this later.</div>' +
-    (errors.categories ? '<div class="form-error" style="margin-bottom:12px">' + errors.categories + '</div>' : '') +
-    catsHtml +
-    (catCount < 7
-      ? '<button class="add-cat-btn" onclick="addCategory()">+ Add category</button>'
-      : '<div style="text-align:center;font-size:12px;color:var(--ink-light);padding:10px">Maximum 7 categories reached</div>') +
-    '</div>' +
 
-    '<div class="info-box amber">' +
-    '<span class="info-box-icon">⚠️</span>' +
-    '<div class="info-box-text">Category names must match your Google Drive folder names <strong>exactly</strong> (including capitalisation). We look up your folders by name.</div>' +
-    '</div>' +
+    // Detected folder structure (shown after successful test)
+    (driveValidated && driveStructure.length > 0 ?
+      '<div class="card" style="border-color:#BBF7D0">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">' +
+      '<span style="font-size:16px">&#128195;</span>' +
+      '<div class="card-title" style="margin-bottom:0">We found these folders in your Drive</div>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--ink-mid);margin-bottom:12px">Assign a day to each folder, or leave on Auto to rotate.</div>' +
+      driveStructure.map(cat => {
+        const subs = (cat.subcategories||[]).map(s => typeof s === 'string' ? s : s.name).filter(Boolean);
+        const subList = subs.length > 0
+          ? '<div style="padding-left:28px;margin-top:3px">' + subs.map(s => '<div style="font-size:11px;color:var(--ink-light);padding:1px 0">&#128247; ' + esc(s) + '</div>').join('') + '</div>'
+          : '';
+        const currentDay = categories.find(c=>c.name===cat.name)?.day || '';
+        return '<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">' +
+          '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--ink)">&#128193; ' + esc(cat.name) + '</div>' + subList + '</div>' +
+          '<select onchange="updateDriveDay(\'' + esc(cat.name) + '\',this.value)" style="font-size:12px;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:var(--sans);color:var(--ink);background:white;cursor:pointer">' +
+          '<option value="">Auto</option>' +
+          ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>'<option value="'+d+'" '+(currentDay===d?'selected':'')+'>'+d+'</option>').join('') +
+          '</select></div>';
+      }).join('') +
+      '</div>' :
+      (driveValidated && driveStructure.length === 0 ?
+        '<div class="info-box amber"><span class="info-box-icon">&#9888;&#65039;</span><div class="info-box-text">No subfolders found. posst.app will pick photos automatically from your main folder.</div></div>' :
+        ''
+      )
+    ) +
 
-    '<button class="btn-submit" onclick="submitSetup()" ' + (submitting ? 'disabled' : '') + '>' +
-    (submitting ? '<span class="spinner"></span>Saving...' : 'Connect my photo library →') +
-    '</button>';
 }
 
 function stepItem(n, title, body) {
@@ -308,7 +323,15 @@ async function testConnection() {
     const result = await resp.json();
     if (result.valid) {
       driveValidated = true;
+      driveStructure = result.structure || [];
+      categories = driveStructure.map(cat => ({
+        name: cat.name,
+        day: driveAssignments[cat.name] || '',
+        subcategories: (cat.subcategories||[]).map(s => typeof s === 'string' ? s : s.name).filter(Boolean)
+      }));
+      if(categories.length === 0) categories = [{ name:'', day:'', subcategories:[''] }];
       if(status) status.innerHTML = '<span style="color:#16A34A;font-weight:600">✅ Connected — ' + (result.folder_name || 'folder found') + '</span>';
+      render();
     } else {
       if(status) status.innerHTML = '<span style="color:var(--red)">❌ ' + (result.error || 'Could not access folder') + '</span>';
     }
