@@ -718,10 +718,16 @@ function renderStepBridge() {
       </div>
       <div class="bridge-card bridge-score-card">
         <div class="bridge-score-top">
-          <div class="bridge-score-badge">
-            <span class="bridge-score-num">${scoreDisplay}</span>
-            <span class="bridge-score-denom">/100</span>
-          </div>
+          ${(()=>{
+            const s = googleScore;
+            const bg = s >= 80 ? '#16A34A' : s >= 60 ? 'var(--blue)' : '#D97706';
+            const icon = s >= 80 ? '🏆' : s >= 60 ? '📈' : '⚠️';
+            return '<div class="bridge-score-badge" style="background:'+bg+';flex-direction:column;gap:0;padding:6px">' +
+              '<span style="font-size:18px;line-height:1">'+icon+'</span>' +
+              '<span class="bridge-score-num" style="font-size:16px;line-height:1">'+scoreDisplay+'</span>' +
+              '<span class="bridge-score-denom" style="font-size:9px">/100</span>' +
+              '</div>';
+          })()}
           <div class="bridge-score-label">
             <strong>Your Google score</strong>
             <span>vs top competitors in ${esc(businessCity)}</span>
