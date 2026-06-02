@@ -222,10 +222,11 @@ const OAUTH_BASE_URL  = 'https://connect.posst.app/connect';
 
 // ── APPS SCRIPT CALLER ─────────────────────────────────────
 function callAppsScript(action, data) {
+  // Send as text/plain to avoid CORS preflight — Apps Script accepts this
+  var payload = JSON.stringify(Object.assign({ action: action }, data));
   return fetch(APPS_SCRIPT_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: action, data: data })
+    body: payload
   })
   .then(function(r) { return r.json(); })
   .catch(function(err) { console.warn('Apps Script call failed (' + action + '):', err); return null; });
