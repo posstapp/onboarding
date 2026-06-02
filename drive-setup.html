@@ -188,12 +188,6 @@ function render() {
     '<h1>Set up your photo library' + (businessName ? ', ' + businessName.split(' ')[0] : '') + '</h1>' +
     '<p class="page-desc">Connect your Google Drive photos and we\'ll use them automatically in your daily posts. If a folder is empty on posting day, we generate a matching AI image instead.</p>' +
 
-    // FIX 3: Coffee line
-    '<div class="info-box blue" style="margin-bottom:24px">' +
-    '<span class="info-box-icon">☕</span>' +
-    '<div class="info-box-text">This takes about a minute — grab a coffee while we get you set up.</div>' +
-    '</div>' +
-
     // Instructions card
     '<div class="card">' +
     '<div class="card-title">What you need to do</div>' +
@@ -303,7 +297,7 @@ async function testConnection() {
     return;
   }
   if(btn) { btn.disabled=true; btn.textContent='Checking…'; }
-  if(status) status.innerHTML = '<span style="color:var(--ink-light)">⏳ Connecting to Google Drive — this can take up to a minute, hold tight…</span>';
+  if(status) status.innerHTML = '<span style="color:var(--ink-light)">☕ Grab a coffee — this can take up to a minute…</span>';
   driveValidated = false;
   try {
     const resp = await fetch(VPS_URL + '/validate_drive', {
