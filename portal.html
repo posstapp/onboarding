@@ -124,6 +124,9 @@ let otpSeconds = 30;
 let errors = {};
 let busy = false;
 let clientData = null;
+// clientData fields from portal_lookup:
+// client_id, business_name, plan, drive_intent
+// platforms (comma string), fb_connected, ig_connected, gbp_connected
 
 const esc = s => !s ? "" : String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 const $ = id => document.getElementById(id);
@@ -236,6 +239,29 @@ function renderDashboard() {
         <div class="option-desc">Set up posst.app for another business. You'll need a different mobile number for each business.</div>
       </div>
     </div>
+
+    ${(()=>{
+      const platforms = (cd.platforms || '').toLowerCase();
+      const wantsFB  = platforms.includes('facebook');
+      const wantsGBP = platforms.includes('gbp');
+      const hasFB    = cd.fb_connected  === true || cd.fb_connected  === 'true';
+      const hasGBP   = cd.gbp_connected === true || cd.gbp_connected === 'true';
+      const missing  = [];
+      if (wantsFB  && !hasFB)  missing.push({ key:'meta',   label:'Facebook & Instagram', icon:'📘', desc:'Required for posting to Facebook and Instagram.' });
+      if (wantsGBP && !hasGBP) missing.push({ key:'google', label:'Google Business Profile', icon:'📍', desc:'Required for posting to Google and review replies.' });
+      if (missing.length === 0) return '';
+      return '<div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:14px;padding:16px 20px;margin-bottom:14px">' +
+        '<div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px">&#x26A0;&#xFE0F; Complete your setup</div>' +
+        missing.map(m =>
+          '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #FDE68A">' +
+          '<div style="display:flex;gap:10px;align-items:center">' +
+          '<span style="font-size:20px">' + m.icon + '</span>' +
+          '<div><div style="font-size:13px;font-weight:600;color:#0F0E17">' + m.label + '</div>' +
+          '<div style="font-size:11px;color:#92400e">' + m.desc + '</div></div></div>' +
+          '<button onclick="connectPlatform('' + m.key + '')" style="background:#1648FF;color:white;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">Connect &#x2192;</button>' +
+          '</div>'
+        ).join('') + '</div>';
+    })()}
 
     <div style="text-align:center;margin-top:20px;font-size:13px;color:var(--ink-light)">
       Need help? <a href="mailto:chief@posst.app" style="color:var(--blue);font-weight:600">chief@posst.app</a>
@@ -435,11 +461,13 @@ async function confirmUpgrade() {
       })
     });
     const result = await resp.json();
-    const result = await resp.json();
     if (result.status === "success") {
       clientData.plan = "Pro";
       proSetup = { dayThemes: {...DEFAULT_THEMES}, driveUrl: '', driveValidated: false, driveStructure: [], driveAssignments: {}, driveIntent: 'later' };
+      busy = false;
       renderProSetup();
+    } else {
+      busy = false;
       if (btn) { btn.disabled = false; btn.innerHTML = "Confirm upgrade to Pro &#x2192;"; }
       alert(result.message || "Something went wrong. Please try again.");
     }
@@ -602,6 +630,15 @@ function addBusiness() {
       Start new business signup →
     </a>
     <button class="btn-secondary" onclick="stage='dashboard';render()">← Back to my account</button>`;
+}
+
+
+// ── CONNECT PLATFORM ─────────────────────────────────────────
+function connectPlatform(platform) {
+  if (busy) return;
+  // Redirect to OAuth connect page with client_id and platform hint
+  const connectUrl = VPS_URL + '/connect?client_id=' + encodeURIComponent(clientData.client_id) + '&platform=' + encodeURIComponent(platform);
+  window.location.href = connectUrl;
 }
 
 render();
