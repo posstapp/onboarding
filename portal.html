@@ -234,13 +234,28 @@ function renderDashboard() {
 
     <hr class="divider">
 
-    <div class="option-card" onclick="addPlatform()">
-      <div class="option-icon">📲</div>
-      <div class="option-body">
-        <div class="option-title">Add a platform</div>
-        <div class="option-desc">Connect Facebook, Instagram or Google Business Profile to your existing account.</div>
-      </div>
-    </div>
+    ${(()=>{
+      const _platforms = (cd.platforms || '').toLowerCase();
+      const _hasMeta = cd.fb_connected === true || cd.fb_connected === 'true';
+      const _hasGBP  = cd.gbp_connected === true || cd.gbp_connected === 'true';
+      const _missing = [];
+      if (!_hasMeta) _missing.push('Facebook & Instagram');
+      if (!_hasGBP)  _missing.push('Google Business Profile');
+      if (_missing.length === 0) return '';
+      const _label = _missing.length === 1
+        ? 'Add ' + _missing[0]
+        : 'Add a platform';
+      const _desc = _missing.length === 1
+        ? 'Connect ' + _missing[0] + ' to start posting and automating on this platform.'
+        : 'Connect ' + _missing.join(' or ') + ' to your existing account.';
+      return `<div class="option-card" onclick="addPlatform()">
+        <div class="option-icon">📲</div>
+        <div class="option-body">
+          <div class="option-title">${_label}</div>
+          <div class="option-desc">${_desc}</div>
+        </div>
+      </div>`;
+    })()}
 
     <div class="option-card" onclick="addBusiness()">
       <div class="option-icon">➕</div>
@@ -795,6 +810,7 @@ render();
 </script>
 </body>
 </html>
+
 
 
 
