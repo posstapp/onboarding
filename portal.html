@@ -234,6 +234,14 @@ function renderDashboard() {
 
     <hr class="divider">
 
+    <div class="option-card" onclick="addPlatform()">
+      <div class="option-icon">📲</div>
+      <div class="option-body">
+        <div class="option-title">Add a platform</div>
+        <div class="option-desc">Connect Facebook, Instagram or Google Business Profile to your existing account.</div>
+      </div>
+    </div>
+
     <div class="option-card" onclick="addBusiness()">
       <div class="option-icon">➕</div>
       <div class="option-body">
@@ -483,9 +491,9 @@ async function confirmUpgrade() {
 function renderProSetup() {
   busy = false;
   const themeRows = DAYS.map(d => {
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6">
-      <div style="font-size:12px;font-weight:700;color:#374151;width:36px">${d}</div>
-      <select onchange="proSetup.dayThemes['${d}']=this.value" style="flex:1;font-size:12px;padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:7px;font-family:inherit;color:#111827;background:white">
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:700;color:var(--ink);width:36px">${d}</div>
+      <select onchange="proSetup.dayThemes['${d}']=this.value" style="flex:1;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--sans);color:var(--ink);background:white;outline:none">
         ${DAY_THEMES.map(t => `<option value="${t}" ${proSetup.dayThemes[d]===t?'selected':''}>${t}</option>`).join('')}
       </select>
     </div>`;
@@ -617,6 +625,39 @@ function showProSetupComplete(driveIntent) {
   `;
 }
 
+function addPlatform() {
+  const cd = clientData;
+  const platforms = (cd.platforms || '').toLowerCase();
+  const ALL_PLATFORMS = [
+    { key: 'meta',   label: 'Facebook & Instagram', icon: '📘', needs: platforms.includes('facebook') || platforms.includes('instagram') },
+    { key: 'google', label: 'Google Business Profile', icon: '📍', needs: platforms.includes('gbp') }
+  ];
+
+  // Show all platforms — let user pick what to add
+  $("app").innerHTML = `
+    <div class="step-tag">Add Platform</div>
+    <h1>Connect a platform</h1>
+    <p class="step-desc">Select which platform you'd like to connect to your account.</p>
+    <div style="margin-bottom:20px">
+      <div class="option-card" onclick="connectPlatform('meta')">
+        <div class="option-icon">📘</div>
+        <div class="option-body">
+          <div class="option-title">Facebook & Instagram${cd.fb_connected ? ' <span style=\"color:#16A34A;font-size:12px\">✅ Connected</span>' : ''}</div>
+          <div class="option-desc">Post automatically to your Facebook Page and Instagram Business account.</div>
+        </div>
+      </div>
+      <div class="option-card" onclick="connectPlatform('google')">
+        <div class="option-icon">📍</div>
+        <div class="option-body">
+          <div class="option-title">Google Business Profile${cd.gbp_connected ? ' <span style=\"color:#16A34A;font-size:12px\">✅ Connected</span>' : ''}</div>
+          <div class="option-desc">Post to Google Maps and auto-reply to customer reviews.</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn-secondary" onclick="stage='dashboard';render()">&#x2190; Back</button>
+  `;
+}
+
 function addBusiness() {
   $("app").innerHTML = `
     <div class="step-tag">Add Business</div>
@@ -647,6 +688,7 @@ render();
 </script>
 </body>
 </html>
+
 
 
 
