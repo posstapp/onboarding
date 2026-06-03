@@ -799,17 +799,33 @@ function addBusiness() {
 
 
 // ── CONNECT PLATFORM ─────────────────────────────────────────
-function connectPlatform(platform) {
+async function connectPlatform(platform) {
   if (busy) return;
-  // Redirect to OAuth connect page with client_id and platform hint
-  const connectUrl = VPS_URL + '/connect?client_id=' + encodeURIComponent(clientData.client_id) + '&platform=' + encodeURIComponent(platform);
-  window.location.href = connectUrl;
+  busy = true;
+  try {
+    // Generate a fresh OAuth token via Apps Script
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'generate_oauth_token', client_id: clientData.client_id })
+    });
+    const result = await resp.json();
+    if (!result.token) throw new Error('No token returned');
+    const connectUrl = VPS_URL + '/connect?client_id=' + encodeURIComponent(clientData.client_id)
+      + '&token=' + encodeURIComponent(result.token)
+      + '&platform=' + encodeURIComponent(platform)
+      + '&business=' + encodeURIComponent(clientData.business_name || '');
+    window.location.href = connectUrl;
+  } catch(e) {
+    busy = false;
+    alert('Could not generate connection link. Please try again.');
+  }
 }
 
 render();
 </script>
 </body>
 </html>
+
 
 
 
