@@ -258,7 +258,7 @@ function renderDashboard() {
           '<span style="font-size:20px">' + m.icon + '</span>' +
           '<div><div style="font-size:13px;font-weight:600;color:#0F0E17">' + m.label + '</div>' +
           '<div style="font-size:11px;color:#92400e">' + m.desc + '</div></div></div>' +
-          '<button onclick="connectPlatform('' + m.key + '')" style="background:#1648FF;color:white;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">Connect &#x2192;</button>' +
+          '<button onclick="connectPlatform(\'' + m.key + '\')" style="background:#1648FF;color:white;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">Connect &#x2192;</button>' +
           '</div>'
         ).join('') + '</div>';
     })()}
@@ -645,3 +645,4 @@ render();
 </script>
 </body>
 </html>
+
