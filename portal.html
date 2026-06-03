@@ -625,37 +625,144 @@ function showProSetupComplete(driveIntent) {
   `;
 }
 
+// Platform add state
+let addPlatformData = { fb_page_name:'', fb_page_url:'', ig_handle:'', ig_url:'', gbp_name:'', gbp_status:'' };
+let addPlatformErrors = {};
+
 function addPlatform() {
   const cd = clientData;
-  const platforms = (cd.platforms || '').toLowerCase();
-  const ALL_PLATFORMS = [
-    { key: 'meta',   label: 'Facebook & Instagram', icon: '📘', needs: platforms.includes('facebook') || platforms.includes('instagram') },
-    { key: 'google', label: 'Google Business Profile', icon: '📍', needs: platforms.includes('gbp') }
-  ];
+  const hasMeta = cd.fb_connected === true || cd.fb_connected === 'true';
+  const hasGBP  = cd.gbp_connected === true || cd.gbp_connected === 'true';
 
-  // Show all platforms — let user pick what to add
+  const options = [];
+  if (!hasMeta) options.push({ key:'meta',   label:'Facebook & Instagram', icon:'📘', desc:'Post automatically to your Facebook Page and Instagram.' });
+  if (!hasGBP)  options.push({ key:'google', label:'Google Business Profile', icon:'📍', desc:'Post to Google and auto-reply to customer reviews.' });
+
+  if (options.length === 0) {
+    $("app").innerHTML = `
+      <div class="step-tag">All Connected</div>
+      <h1>You're all set!</h1>
+      <p class="step-desc">All available platforms are already connected to your account.</p>
+      <button class="btn-secondary" onclick="stage='dashboard';render()">&#x2190; Back to account</button>`;
+    return;
+  }
+
   $("app").innerHTML = `
     <div class="step-tag">Add Platform</div>
-    <h1>Connect a platform</h1>
-    <p class="step-desc">Select which platform you'd like to connect to your account.</p>
-    <div style="margin-bottom:20px">
-      <div class="option-card" onclick="connectPlatform('meta')">
-        <div class="option-icon">📘</div>
-        <div class="option-body">
-          <div class="option-title">Facebook & Instagram${cd.fb_connected ? ' <span style=\"color:#16A34A;font-size:12px\">✅ Connected</span>' : ''}</div>
-          <div class="option-desc">Post automatically to your Facebook Page and Instagram Business account.</div>
-        </div>
+    <h1>Which platform would you like to add?</h1>
+    <p class="step-desc">Select a platform to connect to your posst.app account.</p>
+    ${options.map(o => `
+    <div class="option-card" onclick="showAddPlatformForm('${o.key}')">
+      <div class="option-icon">${o.icon}</div>
+      <div class="option-body">
+        <div class="option-title">${o.label}</div>
+        <div class="option-desc">${o.desc}</div>
       </div>
-      <div class="option-card" onclick="connectPlatform('google')">
-        <div class="option-icon">📍</div>
-        <div class="option-body">
-          <div class="option-title">Google Business Profile${cd.gbp_connected ? ' <span style=\"color:#16A34A;font-size:12px\">✅ Connected</span>' : ''}</div>
-          <div class="option-desc">Post to Google Maps and auto-reply to customer reviews.</div>
-        </div>
-      </div>
-    </div>
-    <button class="btn-secondary" onclick="stage='dashboard';render()">&#x2190; Back</button>
+    </div>`).join('')}
+    <button class="btn-secondary" onclick="stage='dashboard';render()" style="margin-top:10px">&#x2190; Back</button>
   `;
+}
+
+function showAddPlatformForm(platform) {
+  addPlatformData = { fb_page_name:'', fb_page_url:'', ig_handle:'', ig_url:'', gbp_name:'', gbp_status:'' };
+  addPlatformErrors = {};
+  renderAddPlatformForm(platform);
+}
+
+function renderAddPlatformForm(platform) {
+  const fbFields = `
+    <div style="height:1px;background:var(--border);margin:20px 0"></div>
+    <div class="step-tag" style="margin-bottom:12px">Facebook details</div>
+    <div class="form-group">
+      <label class="form-label">Page name</label>
+      <input class="form-input" value="${esc(addPlatformData.fb_page_name)}" placeholder="Joe's Bakery" oninput="addPlatformData.fb_page_name=this.value">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Page URL *</label>
+      <input class="form-input ${addPlatformErrors.fb_page_url?'err':''}" value="${esc(addPlatformData.fb_page_url)}" placeholder="facebook.com/joesbakery" oninput="addPlatformData.fb_page_url=this.value">
+      ${addPlatformErrors.fb_page_url?`<div class="form-error">${addPlatformErrors.fb_page_url}</div>`:''}
+    </div>
+    <div style="height:1px;background:var(--border);margin:20px 0"></div>
+    <div class="step-tag" style="margin-bottom:12px">Instagram details</div>
+    <div class="form-group">
+      <label class="form-label">Instagram handle *</label>
+      <div style="display:flex;align-items:center">
+        <span style="padding:0 10px;height:44px;display:flex;align-items:center;background:#f7f4ef;border:1.5px solid ${addPlatformErrors.ig_handle?'#e53e3e':'var(--border)'};border-right:none;border-radius:8px 0 0 8px;font-size:15px;color:var(--ink-mid);font-weight:600">@</span>
+        <input class="form-input ${addPlatformErrors.ig_handle?'err':''}" style="border-radius:0 8px 8px 0;flex:1" value="${esc(addPlatformData.ig_handle)}" placeholder="joesbakery" oninput="addPlatformData.ig_handle=this.value.replace(/^@+/,'')">
+      </div>
+      ${addPlatformErrors.ig_handle?`<div class="form-error">${addPlatformErrors.ig_handle}</div>`:''}
+    </div>
+    <div class="form-group">
+      <label class="form-label">Profile URL <span class="form-label-opt">optional</span></label>
+      <input class="form-input" value="${esc(addPlatformData.ig_url)}" placeholder="instagram.com/joesbakery" oninput="addPlatformData.ig_url=this.value">
+    </div>`;
+
+  const gbpFields = `
+    <div style="height:1px;background:var(--border);margin:20px 0"></div>
+    <div class="step-tag" style="margin-bottom:12px">Google Business Profile</div>
+    <div class="form-group">
+      <label class="form-label">GBP listing name *</label>
+      <input class="form-input ${addPlatformErrors.gbp_name?'err':''}" value="${esc(addPlatformData.gbp_name)}" placeholder="Joe's Bakery Glen Waverley" oninput="addPlatformData.gbp_name=this.value">
+      ${addPlatformErrors.gbp_name?`<div class="form-error">${addPlatformErrors.gbp_name}</div>`:''}
+      <div class="form-hint">Exactly as it appears on Google Maps</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Verification status</label>
+      <select class="form-input form-select" onchange="addPlatformData.gbp_status=this.value">
+        <option value="">Select status...</option>
+        <option ${addPlatformData.gbp_status==='Already verified'?'selected':''}>Already verified</option>
+        <option ${addPlatformData.gbp_status==='Waiting for postcard'?'selected':''}>Waiting for postcard</option>
+        <option ${addPlatformData.gbp_status==='Not started yet'?'selected':''}>Not started yet</option>
+      </select>
+    </div>`;
+
+  const isMeta = platform === 'meta';
+  $("app").innerHTML = `
+    <div class="step-tag">Add Platform</div>
+    <h1>${isMeta ? 'Connect Facebook & Instagram' : 'Connect Google Business Profile'}</h1>
+    <p class="step-desc">${isMeta ? 'Enter your page details below, then connect via Facebook.' : 'Enter your GBP details below, then connect via Google.'}</p>
+    ${isMeta ? fbFields : gbpFields}
+    <button class="btn-next" onclick="submitAddPlatform('${platform}')" style="margin-top:24px">Continue to connect &#x2192;</button>
+    <button class="btn-secondary" onclick="addPlatform()" style="margin-top:10px">&#x2190; Back</button>
+  `;
+}
+
+async function submitAddPlatform(platform) {
+  addPlatformErrors = {};
+  if (platform === 'meta') {
+    if (!addPlatformData.fb_page_url.trim()) addPlatformErrors.fb_page_url = 'Required';
+    if (!addPlatformData.ig_handle.trim())   addPlatformErrors.ig_handle   = 'Required';
+  } else {
+    if (!addPlatformData.gbp_name.trim())    addPlatformErrors.gbp_name    = 'Required';
+  }
+  if (Object.keys(addPlatformErrors).length > 0) {
+    renderAddPlatformForm(platform);
+    return;
+  }
+
+  // Save details to sheet then redirect to OAuth
+  const busy_btn = document.querySelector('.btn-next');
+  if (busy_btn) { busy_btn.disabled = true; busy_btn.innerHTML = '<span class="spinner"></span>Saving...'; }
+
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'add_platform_details',
+        client_id: clientData.client_id,
+        platform: platform,
+        fb_page_name: addPlatformData.fb_page_name,
+        fb_page_url:  addPlatformData.fb_page_url,
+        ig_handle:    addPlatformData.ig_handle,
+        ig_url:       addPlatformData.ig_url,
+        gbp_name:     addPlatformData.gbp_name,
+        gbp_status:   addPlatformData.gbp_status,
+      })
+    });
+  } catch(e) { /* continue even if save fails */ }
+
+  // Redirect to OAuth
+  connectPlatform(platform);
 }
 
 function addBusiness() {
