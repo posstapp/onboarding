@@ -32,6 +32,12 @@ h1{font-family:var(--serif);font-size:30px;line-height:1.15;color:var(--ink);mar
 .form-group{margin-bottom:20px}
 .form-section{background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
 .section-label{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.days-theme-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:8px}
+.day-theme-card{border:1.5px solid var(--border);border-radius:10px;padding:10px 6px;background:white;text-align:center;transition:all 0.15s}
+.day-theme-card.active{border-color:var(--blue);background:var(--blue-dim)}
+.day-theme-name{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink);margin-bottom:6px}
+.day-theme-select{width:100%;font-size:10px;font-family:var(--sans);border:1px solid var(--border);border-radius:6px;padding:4px 6px;background:white;color:var(--ink);outline:none;cursor:pointer}
+.day-theme-card.active .day-theme-select{border-color:var(--blue)}
 .form-label{display:block;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px}
 .form-hint{font-size:12px;color:var(--ink-light);margin-top:5px;line-height:1.5}
 .form-error{font-size:12px;color:var(--red);margin-top:5px;font-weight:500}
@@ -505,14 +511,15 @@ async function confirmUpgrade() {
 
 function renderProSetup() {
   busy = false;
-  const themeRows = DAYS.map(d => {
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="font-size:12px;font-weight:700;color:var(--ink);width:36px">${d}</div>
-      <select onchange="proSetup.dayThemes['${d}']=this.value" style="flex:1;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--sans);color:var(--ink);background:white;outline:none">
-        ${DAY_THEMES.map(t => `<option value="${t}" ${proSetup.dayThemes[d]===t?'selected':''}>${t}</option>`).join('')}
-      </select>
-    </div>`;
-  }).join('');
+  const themeRows = `<div class="days-theme-grid">` +
+    DAYS.map(d => {
+      return `<div class="day-theme-card active">
+        <div class="day-theme-name">${d}</div>
+        <select class="day-theme-select" onchange="proSetup.dayThemes['${d}']=this.value">
+          ${DAY_THEMES.map(t => `<option value="${t}" ${proSetup.dayThemes[d]===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>`;
+    }).join('') + `</div>`;
 
   const driveStructureHtml = proSetup.driveValidated && proSetup.driveStructure.length > 0
     ? '<div style="background:white;border:1.5px solid #BBF7D0;border-radius:10px;padding:16px;margin-top:12px">' +
