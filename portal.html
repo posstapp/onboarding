@@ -2,828 +2,655 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Account — posst.app</title>
 <link rel="icon" href="https://posst.app/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="https://posst.app/favicon-32x32.png">
 <link rel="apple-touch-icon" href="https://posst.app/apple-touch-icon.png">
-<title>My Account — posst.app</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --blue:#1648FF;--blue-dim:#E8EEFF;--blue-dark:#0F35CC;
+  --blue:#1648FF;--blue-dim:#E8EEFF;--blue-dark:#0f35d4;
   --cream:#FFFAF4;--ink:#0F0E17;--ink-mid:#4A4860;--ink-light:#9896A8;
-  --border:#E4DFD6;--white:#FFFFFF;--green:#16A34A;--red:#DC2626;
-  --serif:"DM Serif Display",Georgia,serif;
-  --sans:"DM Sans",system-ui,sans-serif;
+  --border:#E4DFD6;--white:#FFFFFF;--green:#16A34A;--green-dim:#F0FDF4;
+  --red:#DC2626;--red-dim:#FEF2F2;--amber:#D97706;--amber-dim:#FFFBEB;
+  --sans:'DM Sans',system-ui,sans-serif;--serif:'DM Serif Display',Georgia,serif;
 }
-body{font-family:var(--sans);background:var(--cream);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
-/* Nav — identical to onboarding */
-.nav{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,250,244,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between}
-.nav-logo{height:28px}
-.nav-back{font-size:13px;color:var(--ink-light);text-decoration:none}
-.nav-back:hover{color:var(--blue)}
-.page{max-width:520px;margin:0 auto;padding:96px 24px 60px}
-.step-tag{font-size:10px;font-weight:700;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
-.step-tag::before{content:"";width:16px;height:2px;background:var(--blue)}
-h1{font-family:var(--serif);font-size:30px;line-height:1.15;color:var(--ink);margin-bottom:8px}
-.step-desc{font-size:15px;color:var(--ink-mid);line-height:1.65;margin-bottom:28px}
-/* Phone — identical to onboarding */
-.form-group{margin-bottom:20px}
-.form-section{background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
-.section-label{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px}
-.days-theme-grid{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
-.day-theme-card{display:flex;align-items:center;gap:12px;border:1.5px solid var(--border);border-radius:10px;padding:12px 16px;background:white;transition:all 0.15s}
-.day-theme-card.active{border-color:var(--blue);background:var(--blue-dim)}
-.day-theme-name{font-size:13px;font-weight:700;color:var(--ink);width:40px;flex-shrink:0}
-.day-theme-select{flex:1;font-size:13px;font-family:var(--sans);border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;background:white;color:var(--ink);outline:none;cursor:pointer}
-.day-theme-card.active .day-theme-select{border-color:var(--blue)}
-.form-label{display:block;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px}
-.form-hint{font-size:12px;color:var(--ink-light);margin-top:5px;line-height:1.5}
-.form-error{font-size:12px;color:var(--red);margin-top:5px;font-weight:500}
-.form-input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:15px;font-family:var(--sans);color:var(--ink);background:white;outline:none;transition:border-color 0.15s}
-.form-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,72,255,0.08)}
-.form-input.err{border-color:var(--red)}
-.form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239896A8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
-.phone-wrap{display:flex}
-.phone-code{width:160px;flex-shrink:0;border-radius:9px 0 0 9px;border-right:none}
-.phone-num{border-radius:0 9px 9px 0;flex:1}
-/* OTP — identical to onboarding */
-.otp-wrap{display:flex;gap:10px;margin-bottom:12px;position:relative}
-.otp-input{width:56px;height:56px;border:1.5px solid var(--border);border-radius:10px;font-size:22px;font-weight:600;text-align:center;font-family:var(--sans);color:var(--ink);outline:none;transition:all .15s;background:white;pointer-events:none}
-.otp-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,72,255,0.08)}
-.otp-input.err{border-color:var(--red)}
-.otp-timer{font-size:12px;color:var(--ink-light)}
-.otp-resend{font-size:12px;color:var(--blue);cursor:pointer;background:none;border:none;font-family:var(--sans);padding:0;display:none}
-.otp-hidden{position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;font-size:22px;border:none;outline:none;cursor:pointer;z-index:10;caret-color:transparent}
-/* Buttons */
-.btn-next{background:var(--blue);color:white;border:none;border-radius:10px;padding:13px 30px;font-size:14px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;width:100%;justify-content:center;margin-top:8px}
-.btn-next:hover{background:var(--blue-dark);transform:translateY(-1px);box-shadow:0 6px 20px rgba(22,72,255,0.25)}
-.btn-next:disabled{background:#a0b4f5;cursor:not-allowed;transform:none;box-shadow:none}
-.btn-secondary{background:white;color:var(--blue);border:1.5px solid var(--blue);border-radius:10px;padding:12px 30px;font-size:14px;font-weight:600;font-family:var(--sans);cursor:pointer;width:100%;margin-top:10px;transition:all .15s}
-.btn-secondary:hover{background:var(--blue-dim)}
-/* Info box */
-.info-box{border-radius:10px;padding:13px 16px;display:flex;gap:11px;align-items:flex-start;margin-bottom:18px}
-.info-box.green{background:#F0FDF4;border:1px solid #BBF7D0}
-.info-box.amber{background:#FFFBEB;border:1px solid #FDE68A}
-.info-box.red{background:#FEF2F2;border:1px solid #FECACA}
-.info-box-icon{font-size:16px;flex-shrink:0;margin-top:1px}
-.info-box-text{font-size:13px;line-height:1.6;color:var(--ink-mid)}
-.info-box.green .info-box-text{color:#166534}
-.info-box.amber .info-box-text{color:#92400e}
-/* Spinner */
-.spinner{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
-.spinner-dark{border-color:rgba(22,72,255,.2);border-top-color:var(--blue)}
+body{font-family:var(--sans);background:var(--cream);color:var(--ink);min-height:100vh}
+
+/* ── NAV ── */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;height:60px;background:rgba(255,250,244,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.nav-logo img{height:28px;display:block}
+.nav-right{display:flex;align-items:center;gap:12px}
+.nav-name{font-size:13px;font-weight:600;color:var(--ink-mid)}
+.nav-signout{font-size:12px;color:var(--ink-light);cursor:pointer;text-decoration:underline;background:none;border:none;font-family:var(--sans)}
+
+/* ── LAYOUT ── */
+.page{padding:80px 16px 40px;max-width:600px;margin:0 auto}
+
+/* ── LOADING ── */
+.loading{text-align:center;padding:80px 20px}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 16px}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* Dashboard cards */
-.option-card{background:white;border:1.5px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:14px;cursor:pointer;transition:all .15s;display:flex;gap:16px;align-items:flex-start}
-.option-card:hover{border-color:var(--blue);box-shadow:0 4px 16px rgba(22,72,255,0.1)}
-.option-card.disabled{opacity:.5;cursor:not-allowed;pointer-events:none}
-.option-icon{font-size:28px;flex-shrink:0;margin-top:2px}
-.option-title{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:4px}
-.option-desc{font-size:13px;color:var(--ink-mid);line-height:1.55}
-.option-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:middle}
-.badge-coming{background:#f1f5f9;color:var(--ink-light)}
-.badge-pro{background:var(--blue-dim);color:var(--blue)}
-.divider{border:none;border-top:1px solid var(--border);margin:24px 0}
-.biz-name{font-size:13px;font-weight:600;color:var(--blue);background:var(--blue-dim);border-radius:6px;padding:3px 10px;display:inline-block;margin-bottom:16px}
-@media(max-width:520px){
-  .nav{padding:0 20px}
-  .page{padding:84px 16px 40px}
-  h1{font-size:24px}
-  .otp-input{width:44px;height:50px;font-size:20px}
-}
+.loading-text{font-size:14px;color:var(--ink-mid)}
+
+/* ── ACCOUNT HEADER ── */
+.acct-header{background:var(--blue);border-radius:16px;padding:24px;margin-bottom:20px;color:white}
+.acct-biz{font-family:var(--serif);font-size:22px;margin-bottom:6px}
+.acct-meta{font-size:12px;opacity:0.75;display:flex;align-items:center;gap:8px}
+.acct-badge{display:inline-block;background:rgba(255,255,255,0.2);padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:0.5px}
+.acct-badge.pro{background:rgba(255,255,255,0.25)}
+
+/* ── SECTION CARD ── */
+.card{background:var(--white);border:1px solid var(--border);border-radius:14px;margin-bottom:14px;overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;user-select:none}
+.card-header-left{display:flex;align-items:center;gap:10px}
+.card-icon{font-size:18px;width:32px;text-align:center}
+.card-title{font-size:14px;font-weight:700;color:var(--ink)}
+.card-subtitle{font-size:12px;color:var(--ink-light);margin-top:2px}
+.card-chevron{font-size:12px;color:var(--ink-light);transition:transform 0.2s}
+.card-chevron.open{transform:rotate(180deg)}
+.card-body{padding:0 20px 20px;display:none}
+.card-body.open{display:block}
+.card-divider{height:1px;background:var(--border);margin:0 20px}
+
+/* ── STATUS PILLS ── */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px}
+.pill-green{background:var(--green-dim);color:var(--green)}
+.pill-blue{background:var(--blue-dim);color:var(--blue)}
+.pill-amber{background:var(--amber-dim);color:var(--amber)}
+.pill-red{background:var(--red-dim);color:var(--red)}
+
+/* ── PLATFORM ROWS ── */
+.platform-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.platform-row:last-child{border-bottom:none}
+.platform-info{display:flex;align-items:center;gap:10px}
+.platform-icon{font-size:18px}
+.platform-name{font-size:13px;font-weight:600;color:var(--ink)}
+.platform-status{font-size:11px;color:var(--ink-light);margin-top:1px}
+
+/* ── SCHEDULE GRID ── */
+.days-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.day-toggle{width:40px;height:40px;border-radius:10px;border:1.5px solid var(--border);background:white;font-size:11px;font-weight:700;color:var(--ink-light);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-family:var(--sans)}
+.day-toggle.active{border-color:var(--blue);background:var(--blue-dim);color:var(--blue)}
+.time-row{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+
+/* ── THEME ROWS ── */
+.theme-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.theme-row:last-child{border-bottom:none}
+.theme-day{font-size:13px;font-weight:700;color:var(--ink);width:40px;flex-shrink:0}
+
+/* ── FORM ELEMENTS ── */
+.form-input{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--sans);color:var(--ink);background:white;outline:none;transition:border-color 0.15s}
+.form-input:focus{border-color:var(--blue)}
+.form-select{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--sans);color:var(--ink);background:white;outline:none;cursor:pointer}
+.form-label{font-size:12px;font-weight:600;color:var(--ink-mid);margin-bottom:6px;display:block}
+.form-hint{font-size:11px;color:var(--ink-light);margin-top:4px}
+.form-group{margin-bottom:14px}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;border:none;transition:all 0.15s;text-decoration:none}
+.btn-primary{background:var(--blue);color:white}
+.btn-primary:hover{background:var(--blue-dark)}
+.btn-secondary{background:white;color:var(--ink);border:1.5px solid var(--border)}
+.btn-secondary:hover{border-color:var(--blue);color:var(--blue)}
+.btn-danger{background:var(--red-dim);color:var(--red);border:1.5px solid #FECACA}
+.btn-success{background:var(--green-dim);color:var(--green);border:1.5px solid #BBF7D0}
+.btn-full{width:100%;justify-content:center;padding:12px}
+.btn-sm{padding:7px 14px;font-size:12px}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+
+/* ── INFO BOXES ── */
+.info-box{border-radius:10px;padding:12px 16px;font-size:13px;line-height:1.6;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px}
+.info-box-green{background:var(--green-dim);border:1px solid #BBF7D0;color:#166534}
+.info-box-amber{background:var(--amber-dim);border:1px solid #FDE68A;color:#92400e}
+.info-box-blue{background:var(--blue-dim);border:1px solid #BFDBFE;color:#1e40af}
+.info-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+
+/* ── SAVE ROW ── */
+.save-row{display:flex;align-items:center;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+.save-msg{font-size:12px;color:var(--green);font-weight:600;display:none}
+.save-msg.show{display:block}
+
+/* ── DANGER ZONE ── */
+.danger-zone{background:var(--red-dim);border:1px solid #FECACA;border-radius:14px;padding:20px;margin-top:8px}
+.danger-title{font-size:13px;font-weight:700;color:var(--red);margin-bottom:8px}
+.danger-desc{font-size:12px;color:#991b1b;line-height:1.6;margin-bottom:14px}
+.danger-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+/* ── SPINNER IN BTN ── */
+.btn-spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,0.4);border-top-color:white;border-radius:50%;animation:spin .6s linear infinite;display:none}
+.btn-spinner.show{display:block}
+
+/* ── DRIVE STATUS ── */
+.drive-connected{background:var(--green-dim);border:1px solid #BBF7D0;border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.drive-url{font-size:11px;color:var(--ink-light);margin-top:3px;word-break:break-all}
+
+/* ── FOOTER ── */
+.footer{text-align:center;padding:32px 16px;font-size:11px;color:var(--ink-light)}
+.footer a{color:var(--blue);text-decoration:none}
 </style>
 </head>
 <body>
-<nav style="position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,250,244,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between">
-  <a href="https://posst.app"><img style="height:28px" src="https://raw.githubusercontent.com/posstapp/posstapp.github.io/main/posst_logo_dark.png" alt="posst.app"></a>
-  <a style="font-size:13px;color:var(--ink-light);text-decoration:none" href="https://posst.app">← Back to home</a>
+
+<nav class="nav">
+  <a href="https://posst.app" class="nav-logo">
+    <img src="https://posst.app/posst_logo_dark.png" alt="posst.app">
+  </a>
+  <div class="nav-right">
+    <span class="nav-name" id="nav-biz-name"></span>
+    <button class="nav-signout" onclick="signOut()">Sign out</button>
+  </div>
 </nav>
 
-<div class="page">
-  <div id="app">
-    <div style="text-align:center;padding:60px 0">
-      <div class="spinner spinner-dark" style="width:32px;height:32px;display:inline-block"></div>
-    </div>
+<div class="page" id="page">
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading your account...</div>
   </div>
+  <div id="dashboard" style="display:none"></div>
+</div>
+
+<div class="footer">
+  <a href="https://posst.app">posst.app</a> &nbsp;·&nbsp;
+  <a href="mailto:chief@posst.app">chief@posst.app</a>
 </div>
 
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyGmzB2ym3jcb2f7MqWUBtMgIU1veoF_NLoDhRYhFWBrilZIaURPHkuP8g68UTjBxJ95g/exec";
-const VPS_URL         = "https://connect.posst.app";
-const DRIVE_SETUP_URL = "https://posstapp.github.io/onboarding/drive-setup.html";
-const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const VPS_URL = "https://connect.posst.app";
+
 const DAY_THEMES = ['Service Spotlight','Tip / Advice','Transformation Story','Seasonal / Local','Booking Nudge','Fun Fact','Community Love'];
-const DEFAULT_THEMES = {Mon:'Service Spotlight',Tue:'Tip / Advice',Wed:'Transformation Story',Thu:'Seasonal / Local',Fri:'Booking Nudge',Sat:'Fun Fact',Sun:'Community Love'};
-let proSetup = { dayThemes: {...DEFAULT_THEMES}, driveUrl: '', driveValidated: false, driveStructure: [], driveAssignments: {}, driveIntent: 'later' };
-const ONBOARDING_URL  = "https://posstapp.github.io/onboarding/";
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const ALL_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-const COUNTRY_CODES = [
-  {d:"+61",n:"🇦🇺 Australia"},{d:"+1",n:"🇺🇸 USA/Canada"},{d:"+44",n:"🇬🇧 UK"},
-  {d:"+64",n:"🇳🇿 New Zealand"},{d:"+65",n:"🇸🇬 Singapore"},{d:"+91",n:"🇮🇳 India"},
-  {d:"+971",n:"🇦🇪 UAE"},{d:"+33",n:"🇫🇷 France"},{d:"+49",n:"🇩🇪 Germany"},
-];
-
-// State
-let stage = "phone"; // phone | otp | dashboard
-let phoneCode = "+61";
-let phoneNumber = "";
-let otpSent = false;
-let otpTimer = null;
-let otpSeconds = 30;
-let errors = {};
-let busy = false;
 let clientData = null;
-// clientData fields from portal_lookup:
-// client_id, business_name, plan, drive_intent
-// platforms (comma string), fb_connected, ig_connected, gbp_connected
+let phone = '';
+let busy = false;
 
-const esc = s => !s ? "" : String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-const $ = id => document.getElementById(id);
+// ── INIT ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  // Get phone from URL or sessionStorage
+  const params = new URLSearchParams(window.location.search);
+  phone = params.get('phone') || sessionStorage.getItem('posst_portal_phone') || '';
 
-function render() {
-  if (stage === "phone") renderPhone();
-  else if (stage === "otp") renderOTP();
-  else if (stage === "dashboard") renderDashboard();
+  if (!phone) {
+    // No phone — redirect to login
+    window.location.href = 'https://onboarding.posst.app?mode=login';
+    return;
+  }
+  sessionStorage.setItem('posst_portal_phone', phone);
+
+  await loadAccount();
+});
+
+async function loadAccount() {
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'portal_lookup', phone })
+    });
+    const result = await resp.json();
+
+    if (result.status !== 'success') {
+      showError('Account not found. Please sign in again.');
+      return;
+    }
+
+    clientData = result.data;
+    document.getElementById('nav-biz-name').textContent = clientData.business_name || '';
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    renderDashboard();
+  } catch(e) {
+    showError('Connection error. Please try again.');
+  }
 }
 
-// ── PHONE STAGE ───────────────────────────────────────────────
-function renderPhone() {
-  const codesHtml = COUNTRY_CODES.map(c =>
-    `<option value="${c.d}" ${phoneCode===c.d?"selected":""}>${c.d} ${c.n}</option>`
-  ).join("");
-
-  $("app").innerHTML = `
-    <div class="step-tag">My Account</div>
-    <h1>Welcome back</h1>
-    <p class="step-desc">Enter your mobile number to access your account.</p>
-    <div class="form-group">
-      <label class="form-label">Phone number *</label>
-      <div class="phone-wrap">
-        <select class="form-input form-select phone-code" onchange="phoneCode=this.value">${codesHtml}</select>
-        <input class="form-input phone-num ${errors.phone?"err":""}" type="tel"
-          placeholder="412 345 678" value="${esc(phoneNumber)}"
-          oninput="phoneNumber=this.value"
-          onkeydown="if(event.key==='Enter')sendOTP()">
-      </div>
-      ${errors.phone ? `<div class="form-error">${errors.phone}</div>` : ""}
-      <div class="form-hint">We'll send a 6-digit code to verify your number.</div>
-    </div>
-    <button class="btn-next" onclick="sendOTP()" ${busy?"disabled":""}>
-      ${busy?"<span class='spinner'></span>Sending...":"Send verification code →"}
-    </button>`;
+function showError(msg) {
+  document.getElementById('loading').innerHTML = `<p style="color:var(--red);font-size:14px">${msg}</p><br><a href="https://onboarding.posst.app?mode=login" class="btn btn-primary btn-sm">Sign in again</a>`;
 }
 
-// ── OTP STAGE ─────────────────────────────────────────────────
-function renderOTP() {
-  $("app").innerHTML = `
-    <div class="step-tag">Verification</div>
-    <h1>Enter your code</h1>
-    <div class="info-box green">
-      <span class="info-box-icon">✅</span>
-      <div class="info-box-text">Code sent to <strong>${esc(phoneCode)} ${esc(phoneNumber)}</strong> via SMS.
-        <button onclick="stage='phone';otpSent=false;errors={};render()" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:12px;padding:0;margin-left:6px;font-family:var(--sans)">Change number</button>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Enter 6-digit code *</label>
-      <div class="otp-wrap">
-        <input class="otp-hidden" id="otp-hidden" type="tel" inputmode="numeric" autocomplete="one-time-code" maxlength="6" oninput="handleOTPHiddenInput(this)" autofocus>
-        ${[1,2,3,4,5,6].map(i=>`<input class="otp-input ${errors.otp?'err':''}" id="otp-${i}" maxlength="1" type="tel" readonly>`).join("")}
-      </div>
-      ${errors.otp ? `<div class="form-error">${errors.otp}</div>` : ""}
-      <div style="margin-top:8px;display:flex;align-items:center;gap:12px">
-        <span class="otp-timer" id="otp-timer">Resend in ${otpSeconds}s</span>
-        <button class="otp-resend" id="otp-resend" onclick="sendOTP()">Resend code</button>
-      </div>
-    </div>
-    <button class="btn-next" onclick="verifyOTP()" ${busy?"disabled":""}>
-      ${busy?"<span class='spinner'></span>Verifying...":"Verify & continue →"}
-    </button>`;
-
-  setTimeout(() => { const el = $("otp-hidden"); if(el){ el.focus(); el.value=''; } }, 80);
+function signOut() {
+  sessionStorage.removeItem('posst_portal_phone');
+  window.location.href = 'https://posst.app';
 }
 
-// ── DASHBOARD ─────────────────────────────────────────────────
+// ── RENDER DASHBOARD ──────────────────────────────────────
 function renderDashboard() {
   const cd = clientData;
-  const isPro = cd.plan === "Pro";
-  const isStd = cd.plan === "Standard";
-  const needsDrive = isPro && !cd.google_drive_url && (cd.drive_intent === "later" || cd.drive_intent === "no" || cd.drive_intent === "" || !cd.drive_intent);
+  const isPro = (cd.plan || '').toLowerCase() === 'pro';
+  const isActive = cd.status === 'Active';
 
-  $("app").innerHTML = `
-    <div class="step-tag">My Account</div>
-    <h1>What would you like to do?</h1>
-    <div class="biz-name">📍 ${esc(cd.business_name)}</div>
+  // Parse posting days
+  const postingDays = (cd.posting_days || 'Mon,Tue,Wed,Thu,Fri,Sat,Sun').split(',').map(d => d.trim());
 
-    ${needsDrive ? `
-    <div class="option-card" onclick="startDriveSetup()">
-      <div class="option-icon">📁</div>
-      <div class="option-body">
-        <div class="option-title">Connect Google Drive photos <span class="option-badge badge-pro">Pro</span></div>
-        <div class="option-desc">Your Branding Agent is ready — connect your photo folder and your own images will appear in every post.</div>
-      </div>
-    </div>` : ""}
+  // Parse platforms
+  const platforms = (cd.platforms || '').toLowerCase().split(',').map(p => p.trim()).filter(Boolean);
+  const hasFB = platforms.some(p => p.includes('facebook'));
+  const hasIG = platforms.some(p => p.includes('instagram'));
+  const hasGBP = platforms.some(p => p.includes('gbp') || p.includes('google'));
 
-    ${isPro && !needsDrive ? `
-    <div class="info-box green" style="margin-bottom:14px">
-      <span class="info-box-icon">✅</span>
-      <div class="info-box-text"><strong>Google Drive connected.</strong> Your Branding Agent is active.</div>
-    </div>` : ""}
+  // Parse day themes from notes
+  let dayThemes = {};
+  try { const n = JSON.parse(cd.notes || '{}'); dayThemes = n.day_themes || {}; } catch(e) {}
+  const defaultThemes = {Mon:'Service Spotlight',Tue:'Tip / Advice',Wed:'Transformation Story',Thu:'Seasonal / Local',Fri:'Booking Nudge',Sat:'Fun Fact',Sun:'Community Love'};
+  DAYS.forEach(d => { if (!dayThemes[d]) dayThemes[d] = defaultThemes[d]; });
 
-    ${isStd ? `
-    <div class="option-card" onclick="startUpgrade()">
-      <div class="option-icon">&#x2B06;&#xFE0F;</div>
-      <div class="option-body">
-        <div class="option-title">Upgrade to Pro <span class="option-badge badge-pro">Recommended</span></div>
-        <div class="option-desc">Use your own photos via Google Drive. Custom content themes per day of the week. Real photos outperform AI images every time.</div>
-      </div>
-    </div>` : ""}
-
-    <hr class="divider">
-
-    ${(()=>{
-      const _platforms = (cd.platforms || '').toLowerCase();
-      const _hasMeta = cd.fb_connected === true || cd.fb_connected === 'true';
-      const _hasGBP  = cd.gbp_connected === true || cd.gbp_connected === 'true';
-      const _missing = [];
-      if (!_hasMeta) _missing.push('Facebook & Instagram');
-      if (!_hasGBP)  _missing.push('Google Business Profile');
-      if (_missing.length === 0) return '';
-      const _label = _missing.length === 1
-        ? 'Add ' + _missing[0]
-        : 'Add a platform';
-      const _desc = _missing.length === 1
-        ? 'Connect ' + _missing[0] + ' to start posting and automating on this platform.'
-        : 'Connect ' + _missing.join(' or ') + ' to your existing account.';
-      return `<div class="option-card" onclick="addPlatform()">
-        <div class="option-icon">📲</div>
-        <div class="option-body">
-          <div class="option-title">${_label}</div>
-          <div class="option-desc">${_desc}</div>
-        </div>
-      </div>`;
-    })()}
-
-    <div class="option-card" onclick="addBusiness()">
-      <div class="option-icon">➕</div>
-      <div class="option-body">
-        <div class="option-title">Add a new business</div>
-        <div class="option-desc">Set up posst.app for another business. You'll need a different mobile number for each business.</div>
+  const html = `
+    <!-- Account Header -->
+    <div class="acct-header">
+      <div class="acct-biz">${esc(cd.business_name || 'Your Business')}</div>
+      <div class="acct-meta">
+        <span class="acct-badge ${isPro?'pro':''}">${isPro?'PRO':'STANDARD'}</span>
+        <span>📍 ${esc(cd.business_city || '')}</span>
+        ${isActive ? '<span>✅ Active</span>' : '<span>⏳ Setting up</span>'}
       </div>
     </div>
 
-    ${(()=>{
-      const platforms = (cd.platforms || '').toLowerCase();
-      const wantsFB  = platforms.includes('facebook');
-      const wantsGBP = platforms.includes('gbp');
-      const hasFB    = cd.fb_connected  === true || cd.fb_connected  === 'true';
-      const hasGBP   = cd.gbp_connected === true || cd.gbp_connected === 'true';
-      const missing  = [];
-      if (wantsFB  && !hasFB)  missing.push({ key:'meta',   label:'Facebook & Instagram', icon:'📘', desc:'Required for posting to Facebook and Instagram.' });
-      if (wantsGBP && !hasGBP) missing.push({ key:'google', label:'Google Business Profile', icon:'📍', desc:'Required for posting to Google and review replies.' });
-      if (missing.length === 0) return '';
-      return '<div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:14px;padding:16px 20px;margin-bottom:14px">' +
-        '<div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px">&#x26A0;&#xFE0F; Complete your setup</div>' +
-        missing.map(m =>
-          '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #FDE68A">' +
-          '<div style="display:flex;gap:10px;align-items:center">' +
-          '<span style="font-size:20px">' + m.icon + '</span>' +
-          '<div><div style="font-size:13px;font-weight:600;color:#0F0E17">' + m.label + '</div>' +
-          '<div style="font-size:11px;color:#92400e">' + m.desc + '</div></div></div>' +
-          '<button onclick="connectPlatform(\'' + m.key + '\')" style="background:#1648FF;color:white;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">Connect &#x2192;</button>' +
-          '</div>'
-        ).join('') + '</div>';
-    })()}
-
-    <div style="text-align:center;margin-top:20px;font-size:13px;color:var(--ink-light)">
-      Need help? <a href="mailto:chief@posst.app" style="color:var(--blue);font-weight:600">chief@posst.app</a>
-    </div>`;
-}
-
-// ── OTP HELPERS ───────────────────────────────────────────────
-function handleOTPInput(el, nextId) {
-  el.value = el.value.replace(/[^0-9]/g,"").slice(-1);
-  if (el.value && nextId) $(nextId)?.focus();
-  if (!nextId && el.value) {
-    const digits = [1,2,3,4,5,6].map(i => $("otp-"+i)?.value||"").join("");
-    if (digits.length === 6) verifyOTP();
-  }
-}
-
-function handleOTPHiddenInput(el) {
-  const val = el.value.replace(/[^0-9]/g,'').substring(0,6);
-  el.value = val;
-  [1,2,3,4,5,6].forEach((i) => {
-    const box = $("otp-"+i);
-    if(!box) return;
-    box.value = val[i-1] || '';
-    box.classList.toggle('filled', !!val[i-1]);
-  });
-  if(val.length === 6) verifyOTP();
-}
-function otpBack(i, e) {
-  if (e.key === "Backspace" && !$(`otp-${i}`)?.value && i > 1) $(`otp-${i-1}`)?.focus();
-}
-function startOTPTimer() {
-  otpSeconds = 30;
-  if (otpTimer) clearInterval(otpTimer);
-  otpTimer = setInterval(() => {
-    otpSeconds--;
-    const t = $("otp-timer"), b = $("otp-resend");
-    if (t) t.textContent = `Resend in ${otpSeconds}s`;
-    if (otpSeconds <= 0) {
-      clearInterval(otpTimer);
-      if (t) t.style.display = "none";
-      if (b) b.style.display = "inline";
-    }
-  }, 1000);
-}
-
-// ── SEND OTP ──────────────────────────────────────────────────
-async function sendOTP() {
-  if (busy) return;
-  errors = {};
-  if (!phoneNumber || phoneNumber.length < 6) {
-    errors.phone = "Please enter a valid phone number";
-    render(); return;
-  }
-  busy = true; render();
-  try {
-    const resp = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "send_otp", phone: phoneCode + phoneNumber })
-    });
-    const result = await resp.json();
-    if (result.status === "success") {
-      stage = "otp"; otpSent = true;
-      busy = false; render();
-      startOTPTimer();
-    } else {
-      errors.phone = result.message || "Failed to send code. Please try again.";
-      busy = false; render();
-    }
-  } catch(e) {
-    errors.phone = "Connection error. Please try again.";
-    busy = false; render();
-  }
-}
-
-// ── VERIFY OTP ────────────────────────────────────────────────
-async function verifyOTP() {
-  if (busy) return;
-  const hiddenInput = $("otp-hidden");
-  const digits = hiddenInput && hiddenInput.value.length === 6
-    ? hiddenInput.value
-    : [1,2,3,4,5,6].map(i => $(`otp-${i}`)?.value || "").join("");
-  if (digits.length < 6) { errors.otp = "Please enter all 6 digits"; render(); return; }
-  errors = {};
-  busy = true; render();
-  try {
-    const resp = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "verify_otp", phone: phoneCode + phoneNumber, otp: digits })
-    });
-    const result = await resp.json();
-    if (result.status === "success") {
-      await lookupClient(phoneCode + phoneNumber);
-    } else {
-      errors.otp = result.message || "Incorrect code. Please try again.";
-      busy = false; render();
-    }
-  } catch(e) {
-    errors.otp = "Connection error. Please try again.";
-    busy = false; render();
-  }
-}
-
-// ── LOOKUP CLIENT ─────────────────────────────────────────────
-async function lookupClient(phone) {
-  try {
-    const resp = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "portal_lookup", phone })
-    });
-    const result = await resp.json();
-    if (result.status === "success") {
-      clientData = result.data;
-      stage = "dashboard";
-      busy = false; render();
-    } else {
-      // Not found — new customer
-      window.location.href = ONBOARDING_URL + "?phone=" + encodeURIComponent(phone);
-    }
-  } catch(e) {
-    errors.otp = "Could not load your account. Please try again.";
-    busy = false; render();
-  }
-}
-
-// ── DRIVE SETUP ───────────────────────────────────────────────
-async function startDriveSetup() {
-  if (busy) return;
-  busy = true;
-  const btn = document.querySelector(".option-card");
-  if (btn) btn.style.opacity = "0.6";
-  try {
-    const resp = await fetch(VPS_URL + "/generate_token", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ client_id: clientData.client_id, purpose: "drive_setup" })
-    });
-    const result = await resp.json();
-    if (result.token) {
-      window.location.href = DRIVE_SETUP_URL + "?token=" + encodeURIComponent(result.token) + "&business=" + encodeURIComponent(clientData.business_name);
-    } else {
-      busy = false;
-      if (btn) btn.style.opacity = "1";
-      alert("Could not generate setup link. Please try again or contact chief@posst.app");
-    }
-  } catch(e) {
-    busy = false;
-    if (btn) btn.style.opacity = "1";
-    alert("Connection error. Please try again.");
-  }
-}
-
-// ── ADD BUSINESS ──────────────────────────────────────────────
-function startUpgrade() {
-  if (busy) return;
-  // Show confirmation screen
-  $("app").innerHTML = `
-    <div class="step-tag">Upgrade to Pro</div>
-    <h1>Upgrade to Pro</h1>
-    <p class="step-desc">You're upgrading from Standard to Pro. Here's what you'll get:</p>
-    <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <div style="display:flex;gap:10px;align-items:flex-start">
-          <span style="color:var(--blue);font-weight:700;font-size:13px">+</span>
-          <div><div style="font-size:13px;font-weight:600;color:var(--ink)">Your own photos via Google Drive</div><div style="font-size:12px;color:var(--ink-mid)">Real photos outperform AI images — connected automatically</div></div>
+    <!-- Plan & Billing -->
+    <div class="card" id="card-plan">
+      <div class="card-header" onclick="toggleCard('plan')">
+        <div class="card-header-left">
+          <div class="card-icon">💳</div>
+          <div>
+            <div class="card-title">Plan & Billing</div>
+            <div class="card-subtitle">${isPro ? 'Pro plan' : 'Standard plan'} · 30-day free trial</div>
+          </div>
         </div>
-        <div style="display:flex;gap:10px;align-items:flex-start">
-          <span style="color:var(--blue);font-weight:700;font-size:13px">+</span>
-          <div><div style="font-size:13px;font-weight:600;color:var(--ink)">Custom content theme per day</div><div style="font-size:12px;color:var(--ink-mid)">Service Spotlight on Monday, Tip Tuesday, and more</div></div>
-        </div>
-        <div style="display:flex;gap:10px;align-items:flex-start">
-          <span style="color:var(--blue);font-weight:700;font-size:13px">+</span>
-          <div><div style="font-size:13px;font-weight:600;color:var(--ink)">Everything in Standard</div><div style="font-size:12px;color:var(--ink-mid)">Daily posting, AI captions, review replies all continue</div></div>
+        <div class="card-chevron" id="chevron-plan">▼</div>
+      </div>
+      <div class="card-divider"></div>
+      <div class="card-body" id="body-plan">
+        <div style="padding-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div>
+              <div style="font-size:16px;font-weight:700;color:var(--ink)">${isPro ? 'Pro' : 'Standard'}</div>
+              <div style="font-size:12px;color:var(--ink-light);margin-top:2px">${isPro ? 'A$34.99/month' : 'A$24.99/month'} · no setup fee</div>
+            </div>
+            <span class="pill ${isPro?'pill-blue':'pill-green'}">${isPro?'✦ Pro':'Standard'}</span>
+          </div>
+          ${!isPro ? `
+          <div class="info-box info-box-blue">
+            <span class="info-icon">⚡</span>
+            <div><strong>Upgrade to Pro</strong> — use your own photos via Google Drive and set custom content themes per day. Real photos get 3-5x more engagement.</div>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="startUpgrade()">Upgrade to Pro ✦</button>
+          ` : ''}
+          <div style="margin-top:${isPro?'0':'12px'}">
+            <div class="info-box info-box-amber" style="margin-bottom:0">
+              <span class="info-icon">💳</span>
+              <div>Billing managed by Stripe. Card details and invoices available once billing is active. <a href="mailto:chief@posst.app" style="color:var(--amber)">Contact us</a> for billing queries.</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <button class="btn-next" onclick="confirmUpgrade()" id="upgrade-confirm-btn">Confirm upgrade to Pro &#x2192;</button>
-    <button class="btn-secondary" onclick="renderDashboard()" style="margin-top:10px">&#x2190; Cancel</button>
+    <!-- Posting Schedule -->
+    <div class="card" id="card-schedule">
+      <div class="card-header" onclick="toggleCard('schedule')">
+        <div class="card-header-left">
+          <div class="card-icon">📅</div>
+          <div>
+            <div class="card-title">Posting Schedule</div>
+            <div class="card-subtitle">${postingDays.join(', ')} · ${esc(cd.posting_time || '11:00')} ${esc(cd.timezone || 'Australia/Melbourne')}</div>
+          </div>
+        </div>
+        <div class="card-chevron" id="chevron-schedule">▼</div>
+      </div>
+      <div class="card-divider"></div>
+      <div class="card-body" id="body-schedule">
+        <div style="padding-top:16px">
+          <div class="form-label">Posting days</div>
+          <div class="days-grid" id="sched-days">
+            ${ALL_DAYS.map(d => `<button class="day-toggle ${postingDays.includes(d)?'active':''}" onclick="toggleSchedDay('${d}',this)">${d}</button>`).join('')}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Posting time</label>
+            <div class="time-row">
+              <input type="time" id="sched-time" class="form-input" style="max-width:160px" value="${cd.posting_time||'11:00'}">
+              <span style="font-size:12px;color:var(--ink-light)">in your local timezone</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Timezone</label>
+            <select id="sched-tz" class="form-select">
+              ${['Australia/Melbourne','Australia/Sydney','Australia/Brisbane','Australia/Perth','Australia/Adelaide','Australia/Darwin','Australia/Hobart','Pacific/Auckland','Asia/Singapore','Asia/Kolkata','America/New_York','America/Los_Angeles','Europe/London'].map(tz => `<option value="${tz}" ${(cd.timezone||'Australia/Melbourne')===tz?'selected':''}>${tz}</option>`).join('')}
+            </select>
+          </div>
+          <div class="save-row">
+            <button class="btn btn-primary btn-sm" onclick="saveSchedule(this)">
+              <span class="btn-spinner" id="sched-spinner"></span>
+              Save changes
+            </button>
+            <span class="save-msg" id="sched-msg">✅ Schedule updated!</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Platforms -->
+    <div class="card" id="card-platforms">
+      <div class="card-header" onclick="toggleCard('platforms')">
+        <div class="card-header-left">
+          <div class="card-icon">📱</div>
+          <div>
+            <div class="card-title">Platforms</div>
+            <div class="card-subtitle">${[hasFB?'Facebook':'',hasIG?'Instagram':'',hasGBP?'GBP':''].filter(Boolean).join(', ') || 'None connected'}</div>
+          </div>
+        </div>
+        <div class="card-chevron" id="chevron-platforms">▼</div>
+      </div>
+      <div class="card-divider"></div>
+      <div class="card-body" id="body-platforms">
+        <div style="padding-top:4px">
+          ${hasFB ? `<div class="platform-row"><div class="platform-info"><span class="platform-icon">📘</span><div><div class="platform-name">Facebook</div><div class="platform-status">${esc(cd.fb_page_name||'Connected')}</div></div></div><span class="pill pill-green">✓ Connected</span></div>` : ''}
+          ${hasIG ? `<div class="platform-row"><div class="platform-info"><span class="platform-icon">📸</span><div><div class="platform-name">Instagram</div><div class="platform-status">${esc(cd.ig_handle||'Connected')}</div></div></div><span class="pill pill-green">✓ Connected</span></div>` : ''}
+          ${hasGBP ? `<div class="platform-row"><div class="platform-info"><span class="platform-icon">🗺️</span><div><div class="platform-name">Google Business</div><div class="platform-status">${cd.gbp_connected?'Connected':'Pending API access'}</div></div></div><span class="pill ${cd.gbp_connected?'pill-green':'pill-amber'}">${cd.gbp_connected?'✓ Connected':'⏳ Pending'}</span></div>` : ''}
+          ${!hasFB && !hasIG && !hasGBP ? '<p style="font-size:13px;color:var(--ink-light);padding:12px 0">No platforms connected yet.</p>' : ''}
+          <div style="margin-top:14px">
+            ${!hasFB ? `<button class="btn btn-secondary btn-sm" style="margin-right:8px;margin-bottom:8px" onclick="addPlatform('meta')">+ Add Facebook</button>` : ''}
+            ${!hasGBP ? `<button class="btn btn-secondary btn-sm" style="margin-bottom:8px" onclick="addPlatform('google')">+ Add Google Business</button>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    ${isPro ? `
+    <!-- Photo Library (Pro) -->
+    <div class="card" id="card-drive">
+      <div class="card-header" onclick="toggleCard('drive')">
+        <div class="card-header-left">
+          <div class="card-icon">📷</div>
+          <div>
+            <div class="card-title">Photo Library</div>
+            <div class="card-subtitle">${cd.google_drive_url ? 'Google Drive connected' : 'Not connected'}</div>
+          </div>
+        </div>
+        <div class="card-chevron" id="chevron-drive">▼</div>
+      </div>
+      <div class="card-divider"></div>
+      <div class="card-body" id="body-drive">
+        <div style="padding-top:16px">
+          ${cd.google_drive_url ? `
+          <div class="drive-connected">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--green)">✅ Drive connected</div>
+              <div class="drive-url">${esc(cd.google_drive_url)}</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="changeDrive()">Change</button>
+          </div>` : `
+          <div class="info-box info-box-amber">
+            <span class="info-icon">📷</span>
+            <div>Connect your Google Drive photo folder so we use your real photos in every post. Share the folder with <strong>posst-sheets-bot@posst-app.iam.gserviceaccount.com</strong> as Viewer first.</div>
+          </div>`}
+          <div class="form-group" id="drive-input-group" style="${cd.google_drive_url?'display:none':''}">
+            <label class="form-label">Google Drive folder URL</label>
+            <div style="display:flex;gap:8px">
+              <input id="drive-url-input" class="form-input" style="flex:1" placeholder="https://drive.google.com/drive/folders/...">
+              <button class="btn btn-secondary btn-sm" onclick="testDrivePortal()">Test</button>
+            </div>
+            <div id="drive-test-status" style="font-size:12px;margin-top:6px"></div>
+          </div>
+          ${cd.google_drive_url ? `<button class="btn btn-secondary btn-sm" onclick="showDriveInput()">Connect different folder</button>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Themes (Pro) -->
+    <div class="card" id="card-themes">
+      <div class="card-header" onclick="toggleCard('themes')">
+        <div class="card-header-left">
+          <div class="card-icon">🎨</div>
+          <div>
+            <div class="card-title">Content Themes</div>
+            <div class="card-subtitle">Custom theme per day of the week</div>
+          </div>
+        </div>
+        <div class="card-chevron" id="chevron-themes">▼</div>
+      </div>
+      <div class="card-divider"></div>
+      <div class="card-body" id="body-themes">
+        <div style="padding-top:4px">
+          ${DAYS.map(d => `
+          <div class="theme-row">
+            <div class="theme-day">${d}</div>
+            <select class="form-select" id="theme-${d}" style="flex:1">
+              ${DAY_THEMES.map(t => `<option value="${t}" ${dayThemes[d]===t?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </div>`).join('')}
+          <div class="save-row">
+            <button class="btn btn-primary btn-sm" onclick="saveThemes(this)">
+              <span class="btn-spinner" id="themes-spinner"></span>
+              Save themes
+            </button>
+            <span class="save-msg" id="themes-msg">✅ Themes updated!</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    ` : ''}
+
+    <!-- Danger Zone -->
+    <div class="danger-zone">
+      <div class="danger-title">⚠️ Account Actions</div>
+      <div class="danger-desc">Need to pause or cancel? We'll handle it within 24 hours. Your data is retained for 30 days after cancellation.</div>
+      <div class="danger-actions">
+        <a href="mailto:chief@posst.app?subject=Pause posting — ${esc(cd.business_name||'')}" class="btn btn-secondary btn-sm">Pause posting</a>
+        <a href="mailto:chief@posst.app?subject=Cancel account — ${esc(cd.business_name||'')}" class="btn btn-danger btn-sm">Cancel account</a>
+      </div>
+    </div>
   `;
+
+  document.getElementById('dashboard').innerHTML = html;
 }
 
-async function confirmUpgrade() {
+// ── HELPERS ───────────────────────────────────────────────
+function esc(s) { return !s ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toggleCard(id) {
+  const body = document.getElementById('body-'+id);
+  const chev = document.getElementById('chevron-'+id);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+}
+
+// ── SCHEDULE ──────────────────────────────────────────────
+let schedDays = (clientData?.posting_days || 'Mon,Tue,Wed,Thu,Fri,Sat,Sun').split(',').map(d=>d.trim());
+
+function toggleSchedDay(day, btn) {
+  // Re-init schedDays from current buttons
+  if (!window._schedDays) {
+    window._schedDays = (clientData?.posting_days || 'Mon,Tue,Wed,Thu,Fri,Sat,Sun').split(',').map(d=>d.trim());
+  }
+  const idx = window._schedDays.indexOf(day);
+  if (idx > -1) {
+    if (window._schedDays.length > 1) { // keep at least 1 day
+      window._schedDays.splice(idx,1);
+      btn.classList.remove('active');
+    }
+  } else {
+    window._schedDays.push(day);
+    btn.classList.add('active');
+  }
+}
+
+async function saveSchedule(btn) {
   if (busy) return;
   busy = true;
-  const btn = $("upgrade-confirm-btn");
-  if (btn) { btn.disabled = true; btn.innerHTML = "<span class='spinner'></span>Upgrading..."; }
+  const spinner = document.getElementById('sched-spinner');
+  const msg = document.getElementById('sched-msg');
+  spinner.classList.add('show');
+  btn.disabled = true;
+
+  const days = window._schedDays || (clientData?.posting_days||'Mon,Tue,Wed,Thu,Fri,Sat,Sun').split(',').map(d=>d.trim());
+  const time = document.getElementById('sched-time').value || '11:00';
+  const tz = document.getElementById('sched-tz').value || 'Australia/Melbourne';
+
   try {
     const resp = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify({
-        action: "handle_upgrade",
+        action: 'update_schedule',
         client_id: clientData.client_id,
-        phone: phoneCode + phoneNumber
+        posting_days: days.join(','),
+        posting_time: time,
+        timezone: tz
       })
     });
     const result = await resp.json();
-    if (result.status === "success") {
-      clientData.plan = "Pro";
-      proSetup = { dayThemes: {...DEFAULT_THEMES}, driveUrl: '', driveValidated: false, driveStructure: [], driveAssignments: {}, driveIntent: 'later' };
-      busy = false;
-      renderProSetup();
-    } else {
-      busy = false;
-      if (btn) { btn.disabled = false; btn.innerHTML = "Confirm upgrade to Pro &#x2192;"; }
-      alert(result.message || "Something went wrong. Please try again.");
+    if (result.status === 'success') {
+      clientData.posting_days = days.join(',');
+      clientData.posting_time = time;
+      clientData.timezone = tz;
+      msg.classList.add('show');
+      setTimeout(() => msg.classList.remove('show'), 3000);
+      // Update subtitle
+      const sub = document.querySelector('#card-schedule .card-subtitle');
+      if (sub) sub.textContent = `${days.join(', ')} · ${time} ${tz}`;
     }
-  } catch(e) {
-    busy = false;
-    if (btn) { btn.disabled = false; btn.innerHTML = "Confirm upgrade to Pro &#x2192;"; }
-    alert("Connection error. Please try again.");
-  }
-}
-
-function renderProSetup() {
+  } catch(e) {}
+  spinner.classList.remove('show');
+  btn.disabled = false;
   busy = false;
-  const themeRows = `<div class="days-theme-grid">` +
-    DAYS.map(d => {
-      return `<div class="day-theme-card active">
-        <div class="day-theme-name">${d}</div>
-        <select class="day-theme-select" onchange="proSetup.dayThemes['${d}']=this.value">
-          ${DAY_THEMES.map(t => `<option value="${t}" ${(proSetup.dayThemes[d]||'')===t?'selected':''}>${t}</option>`).join('')}
-        </select>
-      </div>`;
-    }).join('') + `</div>`;
-
-  const driveStructureHtml = proSetup.driveValidated && proSetup.driveStructure.length > 0
-    ? '<div style="background:white;border:1.5px solid #BBF7D0;border-radius:10px;padding:16px;margin-top:12px">' +
-      '<div style="font-size:13px;font-weight:700;color:#111827;margin-bottom:8px">&#128195; We found these folders in your Drive</div>' +
-      '<div style="font-size:11px;color:#6b7280;margin-bottom:10px">Assign a day to each folder, or leave on Auto.</div>' +
-      proSetup.driveStructure.map(cat => {
-        const currentDay = proSetup.driveAssignments[cat.name] || '';
-        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6">' +
-          '<div style="flex:1;font-size:13px;font-weight:600;color:#111827">&#128193; ' + esc(cat.name) + '</div>' +
-          '<select onchange="proSetup.driveAssignments[\''+esc(cat.name)+'\']=this.value" style="font-size:12px;padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:7px;font-family:inherit;color:#111827;background:white">' +
-          '<option value="">Auto</option>' +
-          DAYS.map(d => '<option value="'+d+'" '+(currentDay===d?'selected':'')+'>'+d+'</option>').join('') +
-          '</select></div>';
-      }).join('') + '</div>'
-    : (proSetup.driveValidated
-      ? '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:12px;margin-top:10px;font-size:13px;color:#92400e">No subfolders found. posst.app will auto-discover from your main folder.</div>'
-      : '');
-
-  $("app").innerHTML = `
-    <div class="step-tag">Upgraded!</div>
-    <h1>Welcome to Pro &#x1F389;</h1>
-    <p class="step-desc" style="margin-bottom:20px">Set up your Pro features below — or skip and do it later.</p>
-
-    <div class="form-section">
-      <div class="section-label">&#128197; Content themes by day</div>
-      <div class="form-hint" style="margin-bottom:14px">Each day has a focus. Customise or leave as defaults.</div>
-      ${themeRows}
-    </div>
-
-    <div class="form-section">
-      <div class="section-label">&#128247; Your photo library</div>
-      <div class="form-hint" style="margin-bottom:12px">Connect your Google Drive folder. Share it with posst-sheets-bot@posst-app.iam.gserviceaccount.com as Viewer first.</div>
-      <div style="display:flex;gap:8px;margin-bottom:4px">
-        <input id="portal-drive-url" class="form-input" style="flex:1;font-size:13px" placeholder="https://drive.google.com/drive/folders/..." oninput="proSetup.driveUrl=this.value;proSetup.driveValidated=false;$('portal-drive-status').innerHTML=''">
-        <button onclick="testDriveInPortal()" id="portal-drive-btn" style="background:white;border:1.5px solid var(--border);border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">&#128279; Test</button>
-      </div>
-      <div id="portal-drive-status" style="font-size:12px;margin-top:6px"></div>
-      ${driveStructureHtml}
-    </div>
-
-    <button class="btn-next" onclick="saveProSetup()" id="pro-save-btn" style="width:100%">Save &amp; finish setup &#x2192;</button>
-    <button onclick="skipProSetup()" style="width:100%;margin-top:10px;background:none;border:none;font-size:13px;color:var(--ink-light);cursor:pointer;font-family:inherit;text-decoration:underline">Skip for now — I'll set this up later</button>
-  `;
 }
 
-async function testDriveInPortal() {
-  const url = proSetup.driveUrl.trim();
-  const status = $('portal-drive-status');
-  const btn = $('portal-drive-btn');
-  if (!url || !url.includes('drive.google.com')) {
-    if(status) status.innerHTML = '<span style="color:var(--red)">Please paste a valid Google Drive folder link</span>';
-    return;
-  }
-  if(btn) { btn.disabled=true; btn.textContent='Checking...'; }
-  if(status) status.innerHTML = '<span style="color:var(--ink-light)">&#x2615; Grab a coffee — this can take up to a minute...</span>';
-  proSetup.driveValidated = false;
-  try {
-    const resp = await fetch(VPS_URL + '/validate_drive', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({drive_url: url})
-    });
-    const result = await resp.json();
-    if (result.valid) {
-      proSetup.driveValidated = true;
-      proSetup.driveStructure = result.structure || [];
-      proSetup.driveAssignments = {};
-      if(status) status.innerHTML = '<span style="color:#16A34A;font-weight:600">&#x2705; Connected — ' + (result.folder_name||'folder found') + '</span>';
-    } else {
-      if(status) status.innerHTML = '<span style="color:var(--red)">&#x274C; ' + (result.error||'Could not access folder') + '</span>';
-    }
-  } catch(e) {
-    if(status) status.innerHTML = '<span style="color:var(--red)">&#x274C; Connection error — please try again</span>';
-  }
-  if(btn) { btn.disabled=false; btn.textContent='&#128279; Test'; }
-  renderProSetup();
-}
+// ── THEMES ────────────────────────────────────────────────
+async function saveThemes(btn) {
+  if (busy) return;
+  busy = true;
+  const spinner = document.getElementById('themes-spinner');
+  const msg = document.getElementById('themes-msg');
+  spinner.classList.add('show');
+  btn.disabled = true;
 
-async function saveProSetup() {
-  const btn = $('pro-save-btn');
-  if(btn) { btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Saving...'; }
-  try {
-    // Build drive categories from structure + day assignments
-    const driveCategories = proSetup.driveStructure.map(cat => ({
-      name: cat.name,
-      day: proSetup.driveAssignments[cat.name] || '',
-      subcategories: (cat.subcategories||[]).map(s => typeof s==='string' ? s : s.name).filter(Boolean)
-    }));
-    const driveIntent = proSetup.driveUrl ? 'now' : 'later';
+  const themes = {};
+  DAYS.forEach(d => {
+    const sel = document.getElementById('theme-'+d);
+    if (sel) themes[d] = sel.value;
+  });
 
-    // Save day themes + drive to sheet via Apps Script
+  try {
     const resp = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       body: JSON.stringify({
         action: 'save_pro_setup',
         client_id: clientData.client_id,
-        day_themes: proSetup.dayThemes,
-        google_drive_url: proSetup.driveUrl,
-        drive_categories: JSON.stringify(driveCategories),
-        google_drive_intent: driveIntent
+        day_themes: themes
       })
     });
     const result = await resp.json();
-    showProSetupComplete(driveIntent);
-  } catch(e) {
-    if(btn) { btn.disabled=false; btn.innerHTML='Save & finish setup &#x2192;'; }
-    alert('Connection error. Please try again.');
-  }
+    if (result.status === 'success') {
+      msg.classList.add('show');
+      setTimeout(() => msg.classList.remove('show'), 3000);
+    }
+  } catch(e) {}
+  spinner.classList.remove('show');
+  btn.disabled = false;
+  busy = false;
 }
 
-function skipProSetup() {
-  showProSetupComplete('later');
+// ── DRIVE ─────────────────────────────────────────────────
+function showDriveInput() {
+  const g = document.getElementById('drive-input-group');
+  if (g) g.style.display = 'block';
 }
 
-function showProSetupComplete(driveIntent) {
-  $("app").innerHTML = `
-    <div class="step-tag">All set!</div>
-    <h1>You're live on Pro &#x1F680;</h1>
-    <p class="step-desc">Your content themes are saved. ${driveIntent==='now' ? 'Your Google Drive is connected — photos will be used from your next post.' : 'You can connect your Google Drive anytime from your account.'}</p>
-    <div class="info-box green">
-      <span class="info-box-icon">&#x2705;</span>
-      <div class="info-box-text">We've also sent you a confirmation email with your Drive setup link in case you want to update it later.</div>
-    </div>
-    <button class="btn-next" onclick="renderDashboard()" style="margin-top:8px;width:100%">&#x2190; Back to account</button>
-  `;
-}
-
-// Platform add state
-let addPlatformData = { fb_page_name:'', fb_page_url:'', ig_handle:'', ig_url:'', gbp_name:'', gbp_status:'' };
-let addPlatformErrors = {};
-
-function addPlatform() {
-  const cd = clientData;
-  const hasMeta = cd.fb_connected === true || cd.fb_connected === 'true';
-  const hasGBP  = cd.gbp_connected === true || cd.gbp_connected === 'true';
-
-  const options = [];
-  if (!hasMeta) options.push({ key:'meta',   label:'Facebook & Instagram', icon:'📘', desc:'Post automatically to your Facebook Page and Instagram.' });
-  if (!hasGBP)  options.push({ key:'google', label:'Google Business Profile', icon:'📍', desc:'Post to Google and auto-reply to customer reviews.' });
-
-  if (options.length === 0) {
-    $("app").innerHTML = `
-      <div class="step-tag">All Connected</div>
-      <h1>You're all set!</h1>
-      <p class="step-desc">All available platforms are already connected to your account.</p>
-      <button class="btn-secondary" onclick="stage='dashboard';render()">&#x2190; Back to account</button>`;
+async function testDrivePortal() {
+  const url = document.getElementById('drive-url-input').value.trim();
+  const status = document.getElementById('drive-test-status');
+  if (!url || !url.includes('drive.google.com')) {
+    status.innerHTML = '<span style="color:var(--red)">Please paste a valid Google Drive folder link</span>';
     return;
   }
-
-  $("app").innerHTML = `
-    <div class="step-tag">Add Platform</div>
-    <h1>Which platform would you like to add?</h1>
-    <p class="step-desc">Select a platform to connect to your posst.app account.</p>
-    ${options.map(o => `
-    <div class="option-card" onclick="showAddPlatformForm('${o.key}')">
-      <div class="option-icon">${o.icon}</div>
-      <div class="option-body">
-        <div class="option-title">${o.label}</div>
-        <div class="option-desc">${o.desc}</div>
-      </div>
-    </div>`).join('')}
-    <button class="btn-secondary" onclick="stage='dashboard';render()" style="margin-top:10px">&#x2190; Back</button>
-  `;
-}
-
-function showAddPlatformForm(platform) {
-  addPlatformData = { fb_page_name:'', fb_page_url:'', ig_handle:'', ig_url:'', gbp_name:'', gbp_status:'' };
-  addPlatformErrors = {};
-  renderAddPlatformForm(platform);
-}
-
-function renderAddPlatformForm(platform) {
-  const fbFields = `
-    <div style="height:1px;background:var(--border);margin:20px 0"></div>
-    <div class="step-tag" style="margin-bottom:12px">Facebook details</div>
-    <div class="form-group">
-      <label class="form-label">Page name</label>
-      <input class="form-input" value="${esc(addPlatformData.fb_page_name)}" placeholder="Joe's Bakery" oninput="addPlatformData.fb_page_name=this.value">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Page URL *</label>
-      <input class="form-input ${addPlatformErrors.fb_page_url?'err':''}" value="${esc(addPlatformData.fb_page_url)}" placeholder="facebook.com/joesbakery" oninput="addPlatformData.fb_page_url=this.value">
-      ${addPlatformErrors.fb_page_url?`<div class="form-error">${addPlatformErrors.fb_page_url}</div>`:''}
-    </div>
-    <div style="height:1px;background:var(--border);margin:20px 0"></div>
-    <div class="step-tag" style="margin-bottom:12px">Instagram details</div>
-    <div class="form-group">
-      <label class="form-label">Instagram handle *</label>
-      <div style="display:flex;align-items:center">
-        <span style="padding:0 10px;height:44px;display:flex;align-items:center;background:#f7f4ef;border:1.5px solid ${addPlatformErrors.ig_handle?'#e53e3e':'var(--border)'};border-right:none;border-radius:8px 0 0 8px;font-size:15px;color:var(--ink-mid);font-weight:600">@</span>
-        <input class="form-input ${addPlatformErrors.ig_handle?'err':''}" style="border-radius:0 8px 8px 0;flex:1" value="${esc(addPlatformData.ig_handle)}" placeholder="joesbakery" oninput="addPlatformData.ig_handle=this.value.replace(/^@+/,'')">
-      </div>
-      ${addPlatformErrors.ig_handle?`<div class="form-error">${addPlatformErrors.ig_handle}</div>`:''}
-    </div>
-    <div class="form-group">
-      <label class="form-label">Profile URL <span class="form-label-opt">optional</span></label>
-      <input class="form-input" value="${esc(addPlatformData.ig_url)}" placeholder="instagram.com/joesbakery" oninput="addPlatformData.ig_url=this.value">
-    </div>`;
-
-  const gbpFields = `
-    <div style="height:1px;background:var(--border);margin:20px 0"></div>
-    <div class="step-tag" style="margin-bottom:12px">Google Business Profile</div>
-    <div class="form-group">
-      <label class="form-label">GBP listing name *</label>
-      <input class="form-input ${addPlatformErrors.gbp_name?'err':''}" value="${esc(addPlatformData.gbp_name)}" placeholder="Joe's Bakery Glen Waverley" oninput="addPlatformData.gbp_name=this.value">
-      ${addPlatformErrors.gbp_name?`<div class="form-error">${addPlatformErrors.gbp_name}</div>`:''}
-      <div class="form-hint">Exactly as it appears on Google Maps</div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Verification status</label>
-      <select class="form-input form-select" onchange="addPlatformData.gbp_status=this.value">
-        <option value="">Select status...</option>
-        <option ${addPlatformData.gbp_status==='Already verified'?'selected':''}>Already verified</option>
-        <option ${addPlatformData.gbp_status==='Waiting for postcard'?'selected':''}>Waiting for postcard</option>
-        <option ${addPlatformData.gbp_status==='Not started yet'?'selected':''}>Not started yet</option>
-      </select>
-    </div>`;
-
-  const isMeta = platform === 'meta';
-  $("app").innerHTML = `
-    <div class="step-tag">Add Platform</div>
-    <h1>${isMeta ? 'Connect Facebook & Instagram' : 'Connect Google Business Profile'}</h1>
-    <p class="step-desc">${isMeta ? 'Enter your page details below, then connect via Facebook.' : 'Enter your GBP details below, then connect via Google.'}</p>
-    ${isMeta ? fbFields : gbpFields}
-    <button class="btn-next" onclick="submitAddPlatform('${platform}')" style="margin-top:24px">Continue to connect &#x2192;</button>
-    <button class="btn-secondary" onclick="addPlatform()" style="margin-top:10px">&#x2190; Back</button>
-  `;
-}
-
-async function submitAddPlatform(platform) {
-  addPlatformErrors = {};
-  if (platform === 'meta') {
-    if (!addPlatformData.fb_page_url.trim()) addPlatformErrors.fb_page_url = 'Required';
-    if (!addPlatformData.ig_handle.trim())   addPlatformErrors.ig_handle   = 'Required';
-  } else {
-    if (!addPlatformData.gbp_name.trim())    addPlatformErrors.gbp_name    = 'Required';
-  }
-  if (Object.keys(addPlatformErrors).length > 0) {
-    renderAddPlatformForm(platform);
-    return;
-  }
-
-  // Save details to sheet then redirect to OAuth
-  const busy_btn = document.querySelector('.btn-next');
-  if (busy_btn) { busy_btn.disabled = true; busy_btn.innerHTML = '<span class="spinner"></span>Saving...'; }
-
+  status.innerHTML = '<span style="color:var(--ink-light)">Checking...</span>';
   try {
-    await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({
-        action: 'add_platform_details',
-        client_id: clientData.client_id,
-        platform: platform,
-        fb_page_name: addPlatformData.fb_page_name,
-        fb_page_url:  addPlatformData.fb_page_url,
-        ig_handle:    addPlatformData.ig_handle,
-        ig_url:       addPlatformData.ig_url,
-        gbp_name:     addPlatformData.gbp_name,
-        gbp_status:   addPlatformData.gbp_status,
-      })
+    const resp = await fetch(VPS_URL + '/validate_drive', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({drive_url: url})
     });
-  } catch(e) { /* continue even if save fails */ }
-
-  // Redirect to OAuth
-  connectPlatform(platform);
+    const result = await resp.json();
+    if (result.valid) {
+      status.innerHTML = '<span style="color:var(--green);font-weight:600">✅ Connected — ' + (result.folder_name||'folder found') + '</span>';
+      // Save to sheet
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'update_drive_setup',
+          client_id: clientData.client_id,
+          google_drive_url: url,
+          drive_categories: '[]',
+          google_drive_intent: 'now'
+        })
+      });
+      clientData.google_drive_url = url;
+      renderDashboard();
+    } else {
+      status.innerHTML = '<span style="color:var(--red)">❌ ' + (result.error||'Could not access folder') + '</span>';
+    }
+  } catch(e) {
+    status.innerHTML = '<span style="color:var(--red)">Connection error</span>';
+  }
 }
 
-function addBusiness() {
-  $("app").innerHTML = `
-    <div class="step-tag">Add Business</div>
-    <h1>Different number needed</h1>
-    <div class="info-box amber" style="margin-top:16px">
-      <span class="info-box-icon">📱</span>
-      <div class="info-box-text">
-        <strong>This number is already linked to ${esc(clientData.business_name)}.</strong><br>
-        Each business needs its own mobile number. Please use a different number to sign up your next business.
-      </div>
-    </div>
-    <a href="${ONBOARDING_URL}" class="btn-next" style="text-decoration:none;margin-top:20px">
-      Start new business signup →
-    </a>
-    <button class="btn-secondary" onclick="stage='dashboard';render()">← Back to my account</button>`;
+function changeDrive() { showDriveInput(); }
+
+// ── UPGRADE ───────────────────────────────────────────────
+function startUpgrade() {
+  // Show upgrade confirmation
+  const dashboard = document.getElementById('dashboard');
+  const upgradeHtml = `
+    <div style="text-align:center;padding:20px 0 10px">
+      <div style="font-size:32px;margin-bottom:12px">✦</div>
+      <h2 style="font-family:var(--serif);font-size:24px;margin-bottom:8px">Upgrade to Pro</h2>
+      <p style="font-size:14px;color:var(--ink-mid);margin-bottom:24px;line-height:1.6">Get your own photos in every post and custom content themes per day.<br><strong>A$34.99/month</strong> · no setup fee · cancel anytime</p>
+      <button class="btn btn-primary btn-full" id="upgrade-confirm-btn" onclick="confirmUpgrade(this)" style="margin-bottom:10px">Confirm upgrade to Pro ✦</button>
+      <button class="btn btn-secondary btn-full" onclick="renderDashboard()">Cancel</button>
+    </div>`;
+  dashboard.innerHTML = upgradeHtml;
 }
 
+async function confirmUpgrade(btn) {
+  if (busy) return;
+  busy = true;
+  btn.disabled = true;
+  btn.textContent = 'Upgrading...';
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'handle_upgrade', client_id: clientData.client_id })
+    });
+    const result = await resp.json();
+    if (result.status === 'success') {
+      clientData.plan = 'Pro';
+      renderProSetup();
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Confirm upgrade to Pro ✦';
+      alert('Upgrade failed. Please try again.');
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Confirm upgrade to Pro ✦';
+  }
+  busy = false;
+}
 
-// ── CONNECT PLATFORM ─────────────────────────────────────────
-async function connectPlatform(platform) {
+// ── ADD PLATFORM ──────────────────────────────────────────
+async function addPlatform(platform) {
   if (busy) return;
   busy = true;
   try {
-    // Generate a fresh OAuth token via Apps Script
     const resp = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'generate_oauth_token', client_id: clientData.client_id })
     });
     const result = await resp.json();
-    if (!result.token) throw new Error('No token returned');
-
-    // For GBP: pass platforms=gbp so connect page skips Meta step and goes straight to Google
-    // For Meta: pass actual platforms from client data
-    const platformsParam = platform === 'google'
-      ? 'gbp'
-      : (clientData.platforms || 'facebook');
-
+    if (!result.token) throw new Error('No token');
+    const platformsParam = platform === 'google' ? 'gbp' : 'facebook,instagram';
     const connectUrl = VPS_URL + '/connect?client_id=' + encodeURIComponent(clientData.client_id)
       + '&token=' + encodeURIComponent(result.token)
       + '&platforms=' + encodeURIComponent(platformsParam)
@@ -836,13 +663,129 @@ async function connectPlatform(platform) {
   }
 }
 
-render();
+// ── PRO SETUP (after upgrade) ────────────────────────────
+function renderProSetup() {
+  const defaultThemes = {Mon:'Service Spotlight',Tue:'Tip / Advice',Wed:'Transformation Story',Thu:'Seasonal / Local',Fri:'Booking Nudge',Sat:'Fun Fact',Sun:'Community Love'};
+  let proSetup = { dayThemes: {...defaultThemes}, driveUrl: '', driveValidated: false, driveStructure: [], driveAssignments: {} };
+
+  const themeRows = `<div class="days-theme-grid">` +
+    DAYS.map(d => {
+      return `<div class="day-theme-card active">
+        <div class="day-theme-name">${d}</div>
+        <select class="day-theme-select" onchange="proSetup.dayThemes['${d}']=this.value">
+          ${DAY_THEMES.map(t => `<option value="${t}" ${(proSetup.dayThemes[d]||'')===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>`;
+    }).join('') + `</div>`;
+
+  window.proSetup = proSetup;
+
+  document.getElementById('dashboard').innerHTML = `
+    <div class="step-tag" style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--blue);margin-bottom:8px">Upgraded!</div>
+    <h1 style="font-family:var(--serif);font-size:28px;margin-bottom:6px">Welcome to Pro 🎉</h1>
+    <p style="font-size:14px;color:var(--ink-mid);margin-bottom:24px">Set up your Pro features below — or skip and do it later.</p>
+
+    <div class="form-section" style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px">📅 Content themes by day</div>
+      <div style="font-size:12px;color:var(--ink-mid);margin-bottom:14px">Each day has a focus. Customise or leave as defaults.</div>
+      <div class="days-theme-grid" style="display:flex;flex-direction:column;gap:8px">
+        ${DAYS.map(d => `
+        <div class="day-theme-card active" style="display:flex;align-items:center;gap:12px;border:1.5px solid var(--blue);border-radius:10px;padding:12px 16px;background:var(--blue-dim)">
+          <div style="font-size:13px;font-weight:700;color:var(--ink);width:40px;flex-shrink:0">${d}</div>
+          <select class="form-select" onchange="window.proSetup.dayThemes['${d}']=this.value">
+            ${DAY_THEMES.map(t => `<option value="${t}" ${defaultThemes[d]===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="form-section" style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px">📷 Your photo library</div>
+      <div style="font-size:12px;color:var(--ink-mid);margin-bottom:12px">Connect your Google Drive folder. Share it with posst-sheets-bot@posst-app.iam.gserviceaccount.com as Viewer first.</div>
+      <div style="display:flex;gap:8px;margin-bottom:4px">
+        <input id="portal-drive-url" class="form-input" style="flex:1;font-size:13px" placeholder="https://drive.google.com/drive/folders/..." oninput="window.proSetup.driveUrl=this.value;window.proSetup.driveValidated=false;document.getElementById('portal-drive-status').innerHTML=''">
+        <button onclick="testDriveInPortal()" id="portal-drive-btn" class="btn btn-secondary btn-sm">🔗 Test</button>
+      </div>
+      <div id="portal-drive-status" style="font-size:12px;margin-top:6px"></div>
+    </div>
+
+    <button class="btn btn-primary btn-full" onclick="saveProSetup()" id="pro-save-btn" style="margin-bottom:10px">Save & finish setup →</button>
+    <button onclick="skipProSetup()" class="btn btn-secondary btn-full">Skip for now — I'll set this up later</button>
+  `;
+}
+
+async function testDriveInPortal() {
+  const url = (document.getElementById('portal-drive-url')?.value||'').trim();
+  const status = document.getElementById('portal-drive-status');
+  const btn = document.getElementById('portal-drive-btn');
+  if (!url || !url.includes('drive.google.com')) {
+    if(status) status.innerHTML = '<span style="color:var(--red)">Please paste a valid Google Drive folder link</span>';
+    return;
+  }
+  if(btn) { btn.disabled=true; btn.textContent='Checking...'; }
+  if(status) status.innerHTML = '<span style="color:var(--ink-light)">☕ Grab a coffee — this can take up to a minute...</span>';
+  window.proSetup.driveValidated = false;
+  try {
+    const resp = await fetch(VPS_URL + '/validate_drive', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({drive_url: url})
+    });
+    const result = await resp.json();
+    if (result.valid) {
+      window.proSetup.driveValidated = true;
+      window.proSetup.driveStructure = result.structure || [];
+      if(status) status.innerHTML = '<span style="color:var(--green);font-weight:600">✅ Connected — ' + (result.folder_name||'folder found') + '</span>';
+    } else {
+      if(status) status.innerHTML = '<span style="color:var(--red)">❌ ' + (result.error||'Could not access folder') + '</span>';
+    }
+  } catch(e) {
+    if(status) status.innerHTML = '<span style="color:var(--red)">❌ Connection error</span>';
+  }
+  if(btn) { btn.disabled=false; btn.textContent='🔗 Test'; }
+}
+
+async function saveProSetup() {
+  const btn = document.getElementById('pro-save-btn');
+  if(btn) { btn.disabled=true; btn.textContent='Saving...'; }
+  try {
+    const driveCategories = (window.proSetup.driveStructure||[]).map(cat => ({
+      name: cat.name, day: window.proSetup.driveAssignments?.[cat.name] || '', subcategories: (cat.subcategories||[]).map(s => typeof s==='string'?s:s.name).filter(Boolean)
+    }));
+    const driveIntent = window.proSetup.driveUrl ? 'now' : 'later';
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'save_pro_setup',
+        client_id: clientData.client_id,
+        day_themes: window.proSetup.dayThemes,
+        google_drive_url: window.proSetup.driveUrl,
+        drive_categories: JSON.stringify(driveCategories),
+        google_drive_intent: driveIntent
+      })
+    });
+    clientData.plan = 'Pro';
+    if (window.proSetup.driveUrl) clientData.google_drive_url = window.proSetup.driveUrl;
+    showProSetupComplete(driveIntent);
+  } catch(e) {
+    if(btn) { btn.disabled=false; btn.textContent='Save & finish setup →'; }
+    alert('Connection error. Please try again.');
+  }
+}
+
+function skipProSetup() {
+  clientData.plan = 'Pro';
+  renderDashboard();
+}
+
+function showProSetupComplete(driveIntent) {
+  document.getElementById('dashboard').innerHTML = `
+    <div style="text-align:center;padding:40px 20px">
+      <div style="font-size:48px;margin-bottom:16px">🎉</div>
+      <h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">You're all set on Pro!</h2>
+      <p style="font-size:14px;color:var(--ink-mid);margin-bottom:24px;line-height:1.6">${driveIntent==='now'?'Your photo library is connected. Real photos will be used in your next posts.':'Your Pro features are active. You can connect your photo library anytime from your account.'}</p>
+      <button class="btn btn-primary" onclick="renderDashboard()">Go to my account →</button>
+    </div>`;
+}
 </script>
 </body>
 </html>
-
-
-
-
-
-
