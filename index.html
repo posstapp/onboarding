@@ -539,6 +539,11 @@ async function verifyOTP() {
       // Try to load saved progress
       callAppsScript('loadProgress', {phone: fullPhone}).then(function(res) {
         if(res && res.success && res.step > 1 && res.form) {
+          // If client is Active, send them to portal instead of resuming onboarding
+          if(res.status === 'Active' || res.status === 'Provisioning') {
+            window.location.href = 'https://onboarding.posst.app/portal.html';
+            return;
+          }
           // Restore saved form state
           Object.assign(F, res.form);
           step = res.step;
