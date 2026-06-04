@@ -30,6 +30,8 @@ h1{font-family:var(--serif);font-size:30px;line-height:1.15;color:var(--ink);mar
 .step-desc{font-size:15px;color:var(--ink-mid);line-height:1.65;margin-bottom:28px}
 /* Phone — identical to onboarding */
 .form-group{margin-bottom:20px}
+.form-section{background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+.section-label{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px}
 .form-label{display:block;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px}
 .form-hint{font-size:12px;color:var(--ink-light);margin-top:5px;line-height:1.5}
 .form-error{font-size:12px;color:var(--red);margin-top:5px;font-weight:500}
@@ -463,10 +465,7 @@ function startUpgrade() {
         </div>
       </div>
     </div>
-    <div class="info-box green">
-      <span class="info-box-icon">&#x2705;</span>
-      <div class="info-box-text">After upgrading we'll send you a link to connect your Google Drive photo library.</div>
-    </div>
+
     <button class="btn-next" onclick="confirmUpgrade()" id="upgrade-confirm-btn">Confirm upgrade to Pro &#x2192;</button>
     <button class="btn-secondary" onclick="renderDashboard()" style="margin-top:10px">&#x2190; Cancel</button>
   `;
@@ -537,15 +536,15 @@ function renderProSetup() {
     <h1>Welcome to Pro &#x1F389;</h1>
     <p class="step-desc" style="margin-bottom:20px">Set up your Pro features below — or skip and do it later.</p>
 
-    <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
-      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px">&#128197; Content themes by day</div>
-      <div style="font-size:12px;color:var(--ink-mid);margin-bottom:14px">Each day has a focus. Customise or leave as defaults.</div>
+    <div class="form-section">
+      <div class="section-label">&#128197; Content themes by day</div>
+      <div class="form-hint" style="margin-bottom:14px">Each day has a focus. Customise or leave as defaults.</div>
       ${themeRows}
     </div>
 
-    <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
-      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px">&#128247; Your photo library</div>
-      <div style="font-size:12px;color:var(--ink-mid);margin-bottom:12px">Connect your Google Drive folder. Share it with posst-sheets-bot@posst-app.iam.gserviceaccount.com as Viewer first.</div>
+    <div class="form-section">
+      <div class="section-label">&#128247; Your photo library</div>
+      <div class="form-hint" style="margin-bottom:12px">Connect your Google Drive folder. Share it with posst-sheets-bot@posst-app.iam.gserviceaccount.com as Viewer first.</div>
       <div style="display:flex;gap:8px;margin-bottom:4px">
         <input id="portal-drive-url" class="form-input" style="flex:1;font-size:13px" placeholder="https://drive.google.com/drive/folders/..." oninput="proSetup.driveUrl=this.value;proSetup.driveValidated=false;$('portal-drive-status').innerHTML=''">
         <button onclick="testDriveInPortal()" id="portal-drive-btn" style="background:white;border:1.5px solid var(--border);border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">&#128279; Test</button>
