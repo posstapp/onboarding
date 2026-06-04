@@ -32,11 +32,11 @@ h1{font-family:var(--serif);font-size:30px;line-height:1.15;color:var(--ink);mar
 .form-group{margin-bottom:20px}
 .form-section{background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
 .section-label{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px}
-.days-theme-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:8px}
-.day-theme-card{border:1.5px solid var(--border);border-radius:10px;padding:10px 6px;background:white;text-align:center;transition:all 0.15s}
+.days-theme-grid{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.day-theme-card{display:flex;align-items:center;gap:12px;border:1.5px solid var(--border);border-radius:10px;padding:12px 16px;background:white;transition:all 0.15s}
 .day-theme-card.active{border-color:var(--blue);background:var(--blue-dim)}
-.day-theme-name{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink);margin-bottom:6px}
-.day-theme-select{width:100%;font-size:10px;font-family:var(--sans);border:1px solid var(--border);border-radius:6px;padding:4px 6px;background:white;color:var(--ink);outline:none;cursor:pointer}
+.day-theme-name{font-size:13px;font-weight:700;color:var(--ink);width:40px;flex-shrink:0}
+.day-theme-select{flex:1;font-size:13px;font-family:var(--sans);border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;background:white;color:var(--ink);outline:none;cursor:pointer}
 .day-theme-card.active .day-theme-select{border-color:var(--blue)}
 .form-label{display:block;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px}
 .form-hint{font-size:12px;color:var(--ink-light);margin-top:5px;line-height:1.5}
@@ -516,7 +516,7 @@ function renderProSetup() {
       return `<div class="day-theme-card active">
         <div class="day-theme-name">${d}</div>
         <select class="day-theme-select" onchange="proSetup.dayThemes['${d}']=this.value">
-          ${DAY_THEMES.map(t => `<option value="${t}" ${proSetup.dayThemes[d]===t?'selected':''}>${t}</option>`).join('')}
+          ${DAY_THEMES.map(t => `<option value="${t}" ${(proSetup.dayThemes[d]||'')===t?'selected':''}>${t}</option>`).join('')}
         </select>
       </div>`;
     }).join('') + `</div>`;
