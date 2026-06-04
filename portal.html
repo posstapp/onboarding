@@ -201,7 +201,7 @@ function renderDashboard() {
   const cd = clientData;
   const isPro = cd.plan === "Pro";
   const isStd = cd.plan === "Standard";
-  const needsDrive = isPro && (cd.drive_intent === "later" || cd.drive_intent === "no" || cd.drive_intent === "");
+  const needsDrive = isPro && !cd.google_drive_url && (cd.drive_intent === "later" || cd.drive_intent === "no" || cd.drive_intent === "" || !cd.drive_intent);
 
   $("app").innerHTML = `
     <div class="step-tag">My Account</div>
@@ -810,10 +810,18 @@ async function connectPlatform(platform) {
     });
     const result = await resp.json();
     if (!result.token) throw new Error('No token returned');
+
+    // For GBP: pass platforms=gbp so connect page skips Meta step and goes straight to Google
+    // For Meta: pass actual platforms from client data
+    const platformsParam = platform === 'google'
+      ? 'gbp'
+      : (clientData.platforms || 'facebook');
+
     const connectUrl = VPS_URL + '/connect?client_id=' + encodeURIComponent(clientData.client_id)
       + '&token=' + encodeURIComponent(result.token)
-      + '&platform=' + encodeURIComponent(platform)
-      + '&business=' + encodeURIComponent(clientData.business_name || '');
+      + '&platforms=' + encodeURIComponent(platformsParam)
+      + '&business=' + encodeURIComponent(clientData.business_name || '')
+      + '&email=' + encodeURIComponent(clientData.email || '');
     window.location.href = connectUrl;
   } catch(e) {
     busy = false;
