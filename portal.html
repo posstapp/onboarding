@@ -503,7 +503,9 @@ async function saveSchedule(btn) {
   spinner.classList.add('show');
   btn.disabled = true;
 
-  const days = window._schedDays || (clientData?.posting_days||'Mon,Tue,Wed,Thu,Fri,Sat,Sun').split(',').map(d=>d.trim());
+  const DAY_ORDER = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const rawDays = window._schedDays || (clientData?.posting_days||'Mon,Tue,Wed,Thu,Fri,Sat,Sun').split(',').map(d=>d.trim());
+  const days = DAY_ORDER.filter(d => rawDays.includes(d));
   const time = document.getElementById('sched-time').value || '11:00';
   const tz = document.getElementById('sched-tz').value || 'Australia/Melbourne';
 
