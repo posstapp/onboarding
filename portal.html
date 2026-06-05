@@ -219,6 +219,7 @@ function signOut() {
 
 // ── RENDER DASHBOARD ──────────────────────────────────────
 function renderDashboard() {
+  window._schedDays = null; // reset so toggleSchedDay re-reads from clientData
   const cd = clientData;
   const isPro = (cd.plan || '').toLowerCase() === 'pro';
   const isActive = cd.status === 'Active';
@@ -475,20 +476,23 @@ function toggleCard(id) {
 let schedDays = (clientData?.posting_days || 'Mon,Tue,Wed,Thu,Fri,Sat,Sun').split(',').map(d=>d.trim());
 
 function toggleSchedDay(day, btn) {
-  // Re-init schedDays from current buttons
+  // Always read from buttons directly to avoid stale state
   if (!window._schedDays) {
     window._schedDays = (clientData?.posting_days || 'Mon,Tue,Wed,Thu,Fri,Sat,Sun').split(',').map(d=>d.trim());
   }
   const idx = window._schedDays.indexOf(day);
   if (idx > -1) {
-    if (window._schedDays.length > 1) { // keep at least 1 day
-      window._schedDays.splice(idx,1);
+    if (window._schedDays.length > 1) {
+      window._schedDays.splice(idx, 1);
       btn.classList.remove('active');
     }
   } else {
     window._schedDays.push(day);
     btn.classList.add('active');
   }
+  // Update subtitle live
+  const sub = document.querySelector('#card-schedule .card-subtitle');
+  if (sub) sub.textContent = window._schedDays.join(', ') + ' · ' + (clientData.posting_time||'11:00') + ' ' + (clientData.timezone||'Australia/Melbourne');
 }
 
 async function saveSchedule(btn) {
@@ -519,6 +523,7 @@ async function saveSchedule(btn) {
       clientData.posting_days = days.join(',');
       clientData.posting_time = time;
       clientData.timezone = tz;
+      window._schedDays = [...days]; // keep in sync
       msg.classList.add('show');
       setTimeout(() => msg.classList.remove('show'), 3000);
       // Update subtitle
