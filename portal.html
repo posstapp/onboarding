@@ -159,6 +159,7 @@ body{font-family:var(--sans);background:var(--cream);color:var(--ink);min-height
 
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyGmzB2ym3jcb2f7MqWUBtMgIU1veoF_NLoDhRYhFWBrilZIaURPHkuP8g68UTjBxJ95g/exec";
+const POSST_API_URL = "https://connect.posst.app/api";
 const VPS_URL = "https://connect.posst.app";
 
 const DAY_THEMES = ['Service Spotlight','Tip / Advice','Transformation Story','Seasonal / Local','Booking Nudge','Fun Fact','Community Love'];
@@ -187,9 +188,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 async function loadAccount() {
   try {
-    const resp = await fetch(APPS_SCRIPT_URL, {
+    const resp = await fetch(POSST_API_URL + '/portal_lookup', {
       method: 'POST',
-      body: JSON.stringify({ action: 'portal_lookup', phone })
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ phone })
     });
     const result = await resp.json();
 
@@ -510,15 +512,10 @@ async function saveSchedule(btn) {
   const tz = document.getElementById('sched-tz').value || 'Australia/Melbourne';
 
   try {
-    const resp = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({
-        action: 'update_schedule',
-        client_id: clientData.client_id,
-        posting_days: days.join(','),
-        posting_time: time,
-        timezone: tz
-      })
+    const resp = await fetch(POSST_API_URL + '/client/' + clientData.client_id + '/schedule', {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ posting_days: days.join(','), posting_time: time, timezone: tz })
     });
     const result = await resp.json();
     if (result.status === 'success') {
@@ -554,13 +551,10 @@ async function saveThemes(btn) {
   });
 
   try {
-    const resp = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({
-        action: 'save_pro_setup',
-        client_id: clientData.client_id,
-        day_themes: themes
-      })
+    const resp = await fetch(POSST_API_URL + '/client/' + clientData.client_id + '/themes', {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ day_themes: themes })
     });
     const result = await resp.json();
     if (result.status === 'success') {
@@ -639,9 +633,10 @@ async function confirmUpgrade(btn) {
   btn.disabled = true;
   btn.textContent = 'Upgrading...';
   try {
-    const resp = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'handle_upgrade', client_id: clientData.client_id })
+    const resp = await fetch(POSST_API_URL + '/client/' + clientData.client_id + '/plan', {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ plan: 'Pro' })
     });
     const result = await resp.json();
     if (result.status === 'success') {
@@ -664,9 +659,10 @@ async function addPlatform(platform) {
   if (busy) return;
   busy = true;
   try {
-    const resp = await fetch(APPS_SCRIPT_URL, {
+    const resp = await fetch(POSST_API_URL + '/client/' + clientData.client_id + '/pending_token', {
       method: 'POST',
-      body: JSON.stringify({ action: 'generate_oauth_token', client_id: clientData.client_id })
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({})
     });
     const result = await resp.json();
     if (!result.token) throw new Error('No token');
@@ -833,17 +829,16 @@ async function saveProSetup() {
       name: cat.name, day: window.proSetup.driveAssignments?.[cat.name] || '', subcategories: (cat.subcategories||[]).map(s => typeof s==='string'?s:s.name).filter(Boolean)
     }));
     const driveIntent = window.proSetup.driveUrl ? 'now' : 'later';
-    await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({
-        action: 'save_pro_setup',
-        client_id: clientData.client_id,
-        day_themes: window.proSetup.dayThemes,
-        google_drive_url: window.proSetup.driveUrl,
-        drive_categories: JSON.stringify(driveCategories),
-        google_drive_intent: driveIntent
-      })
+    await fetch(POSST_API_URL + '/client/' + clientData.client_id + '/themes', {
+      method: 'PATCH', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ day_themes: window.proSetup.dayThemes })
     });
+    if (window.proSetup.driveUrl) {
+      await fetch(POSST_API_URL + '/client/' + clientData.client_id + '/drive', {
+        method: 'PATCH', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ google_drive_url: window.proSetup.driveUrl, drive_categories: driveCategories, google_drive_intent: driveIntent })
+      });
+    }
     clientData.plan = 'Pro';
     if (window.proSetup.driveUrl) clientData.google_drive_url = window.proSetup.driveUrl;
     showProSetupComplete(driveIntent);
