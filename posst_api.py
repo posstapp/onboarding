@@ -228,16 +228,22 @@ def pause_client(client_id):
 @app.route('/api/portal_lookup', methods=['POST'])
 def portal_lookup():
     d = request.json or {}
-    phone = d.get('phone', '').strip().replace(' ', '')
-    if not phone:
+    phone_raw = d.get('phone', '').strip()
+    if not phone_raw:
         return err('Phone required')
-    # Try with + prefix and without
-    result = sb.table('clients').select('*').eq('phone', phone).execute()
-    if not result.data:
-        # Try stripping leading apostrophe (legacy sheet format)
-        result = sb.table('clients').select('*').eq('phone', "'" + phone).execute()
-    if not result.data:
+    # Normalize — remove all spaces for comparison
+    phone = phone_raw.replace(' ', '')
+    # Fetch all clients and compare normalized phones
+    result = sb.table('clients').select('*').execute()
+    client = None
+    for row in result.data:
+        stored = (row.get('phone') or '').replace(' ', '').lstrip("'")
+        if stored == phone:
+            client = row
+            break
+    if not client:
         return jsonify({'status': 'not_found'})
+    result = type('R', (), {'data': [client]})()
     client = result.data[0]
     return ok({
         'client_id':        client['client_id'],
