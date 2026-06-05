@@ -79,7 +79,7 @@ def err(message, code=400):
 # ── HEALTH ────────────────────────────────────────────────────
 @app.route('/health')
 def health():
-    return ok(version='1.2', service='posst-api')
+    return ok(version='1.3', service='posst-api')
 
 # ── CLIENT CRUD ───────────────────────────────────────────────
 @app.route('/api/client', methods=['POST'])
@@ -670,6 +670,87 @@ def otp_verify():
         return jsonify({'status': 'error', 'code': 'LOCKED', 'message': f'Too many wrong attempts. Locked for {LOCKOUT_MINS} minutes.'}), 429
     remaining = MAX_VERIFY_TRIES - rec.get('count', 0)
     return jsonify({'status': 'error', 'code': 'WRONG_CODE', 'message': f'Incorrect code. {remaining} attempt{"s" if remaining != 1 else ""} remaining.'}), 400
+
+
+# ── SEARCH VOLUME (DataForSEO) ───────────────────────────────
+DATAFORSEO_LOGIN    = os.environ.get('DATAFORSEO_LOGIN', '')
+DATAFORSEO_PASSWORD = os.environ.get('DATAFORSEO_PASSWORD', '')
+
+SEARCH_PROXY = {
+    'dog grooming':  {'metro': 3200,  'regional': 800},
+    'pet grooming':  {'metro': 3200,  'regional': 800},
+    'hair salon':    {'metro': 12400, 'regional': 2800},
+    'hairdresser':   {'metro': 12400, 'regional': 2800},
+    'restaurant':    {'metro': 28000, 'regional': 5400},
+    'cafe':          {'metro': 18000, 'regional': 3200},
+    'coffee':        {'metro': 18000, 'regional': 3200},
+    'plumber':       {'metro': 8900,  'regional': 1800},
+    'electrician':   {'metro': 7200,  'regional': 1400},
+    'dentist':       {'metro': 9800,  'regional': 2100},
+    'gym':           {'metro': 14000, 'regional': 2800},
+    'fitness':       {'metro': 14000, 'regional': 2800},
+    'mechanic':      {'metro': 6800,  'regional': 1600},
+    'physiotherapy': {'metro': 5400,  'regional': 1200},
+    'real estate':   {'metro': 22000, 'regional': 4800},
+    'default':       {'metro': 5000,  'regional': 1200},
+}
+
+AU_LOCATION_CODES = {
+    'melbourne': 21167, 'sydney': 21173, 'brisbane': 21171,
+    'perth': 21174, 'adelaide': 21170, 'canberra': 21168,
+    'hobart': 21175, 'darwin': 21169, 'gold coast': 21171,
+    'newcastle': 21173, 'geelong': 21167, 'townsville': 21171,
+}
+
+def get_proxy_volume(keyword, is_metro):
+    k = keyword.lower()
+    match = SEARCH_PROXY['default']
+    for key in SEARCH_PROXY:
+        if key != 'default' and key in k:
+            match = SEARCH_PROXY[key]
+    return match['metro'] if is_metro else match['regional']
+
+def get_location_code(city):
+    city_lower = (city or '').lower()
+    for k, code in AU_LOCATION_CODES.items():
+        if k in city_lower:
+            return code
+    return 2036  # Australia default
+
+@app.route('/api/search_volume', methods=['POST'])
+def search_volume():
+    d = request.json or {}
+    keyword  = d.get('keyword', '')
+    city     = d.get('city', '')
+    is_metro = d.get('is_metro', True)
+    if not keyword:
+        return err('keyword required')
+
+    # Try DataForSEO if credentials available
+    if DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD:
+        try:
+            import base64 as _b64, urllib.request, urllib.parse
+            credentials = _b64.b64encode(f'{DATAFORSEO_LOGIN}:{DATAFORSEO_PASSWORD}'.encode()).decode()
+            location_code = get_location_code(city)
+            payload_data = json.dumps([{'keywords': [keyword], 'location_code': location_code, 'language_code': 'en'}]).encode()
+            req = urllib.request.Request(
+                'https://api.dataforseo.com/v3/keywords_data/google_ads/search_volume/live',
+                data=payload_data,
+                headers={'Authorization': f'Basic {credentials}', 'Content-Type': 'application/json'}
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                result = json.loads(resp.read())
+                if result.get('status_code') == 20000:
+                    tasks = result.get('tasks', [])
+                    if tasks and tasks[0].get('result'):
+                        vol = tasks[0]['result'][0].get('search_volume', 0) if tasks[0]['result'][0] else 0
+                        return ok(volume=vol, source='dataforseo')
+        except Exception as e:
+            log.warning(f'DataForSEO error: {e}')
+
+    # Fallback to proxy volumes
+    volume = get_proxy_volume(keyword, is_metro)
+    return ok(volume=volume, source='proxy')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5680, debug=False)
