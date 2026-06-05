@@ -568,5 +568,48 @@ def health():
     return {'status': 'ok', 'service': 'posst-oauth', 'version': '4.0'}, 200
 
 
+
+# ── CORS PROXY ────────────────────────────────────────────────
+# Forwards browser calls to posst-api with proper CORS headers
+# Allows complete retirement of Apps Script for data operations
+
+def cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PATCH, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
+
+@app.route('/proxy/<path:path>', methods=['GET', 'POST', 'PATCH', 'OPTIONS'])
+def proxy(path):
+    if request.method == 'OPTIONS':
+        return cors_headers(app.make_response(''))
+
+    try:
+        method = request.method
+        url    = f'http://127.0.0.1:5680/api/{path}'
+        data   = request.get_json(silent=True)
+        params = request.args
+
+        if method == 'GET':
+            resp = requests.get(url, params=params, timeout=15)
+        elif method == 'POST':
+            resp = requests.post(url, json=data, timeout=15)
+        elif method == 'PATCH':
+            resp = requests.patch(url, json=data, timeout=15)
+        else:
+            return cors_headers(app.make_response(('Method not allowed', 405)))
+
+        response = app.make_response(resp.text)
+        response.status_code = resp.status_code
+        response.content_type = 'application/json'
+        return cors_headers(response)
+
+    except Exception as e:
+        log.error(f'Proxy error for {path}: {e}')
+        response = app.make_response(json.dumps({'status': 'error', 'message': str(e)}))
+        response.status_code = 500
+        response.content_type = 'application/json'
+        return cors_headers(response)
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
