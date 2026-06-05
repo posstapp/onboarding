@@ -1345,10 +1345,9 @@ async function saveAndExit() {
       });
       await callAppsScript('saveProgress', { phone, step, form: F });
       if(reEmail) {
-        callAppsScript('send_reengagement', {
-          phone,
-          email: reEmail,
-          business_name: reName
+        fetch(PROXY_URL + '/email/reengagement', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ email: reEmail, business_name: reName })
         }).catch(()=>{});
       }
     } catch(e) { console.warn('saveAndExit error:', e); }
