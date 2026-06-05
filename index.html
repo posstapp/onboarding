@@ -222,14 +222,49 @@ const OAUTH_BASE_URL  = 'https://connect.posst.app/connect';
 
 // ── APPS SCRIPT CALLER ─────────────────────────────────────
 function callAppsScript(action, data) {
-  // Send as text/plain to avoid CORS preflight — Apps Script accepts this
+  // Route data/prospect actions to posst-api, keep email/SEO on Apps Script
+  var posstApiActions = ['createProspect','updateProspect','saveProgress','loadProgress','convertProspect','portal_lookup'];
+  if (posstApiActions.includes(action)) {
+    return callPosstApi(action, data || {});
+  }
   var payload = JSON.stringify(Object.assign({ action: action }, data));
-  return fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    body: payload
-  })
-  .then(function(r) { return r.json(); })
-  .catch(function(err) { console.warn('Apps Script call failed (' + action + '):', err); return null; });
+  return fetch(APPS_SCRIPT_URL, { method: 'POST', body: payload })
+    .then(function(r) { return r.json(); })
+    .catch(function(err) { console.warn('Apps Script call failed (' + action + '):', err); return null; });
+}
+
+function callPosstApi(action, data) {
+  var phone = (data && data.phone) || '';
+  var base = POSST_API_URL;
+  if (action === 'portal_lookup') {
+    return fetch(base + '/portal_lookup', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ phone: phone })
+    }).then(function(r) { return r.json(); }).catch(function() { return {status:'error'}; });
+  }
+  if (action === 'loadProgress') {
+    return fetch(base + '/prospect/progress?phone=' + encodeURIComponent(phone))
+      .then(function(r) { return r.json(); }).catch(function() { return {success:false}; });
+  }
+  if (action === 'saveProgress') {
+    return fetch(base + '/prospect/progress', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ phone: phone, step: data.step, form: data.form })
+    }).then(function(r) { return r.json(); }).catch(function() { return {}; });
+  }
+  if (action === 'createProspect' || action === 'updateProspect') {
+    return fetch(base + '/prospect', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    }).then(function(r) { return r.json(); }).catch(function() { return {}; });
+  }
+  if (action === 'convertProspect') {
+    return fetch(base + '/prospect/convert', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ phone: phone })
+    }).then(function(r) { return r.json(); }).catch(function() { return {}; });
+  }
+  return Promise.resolve({});
 }
 
 // ── BRIDGE HELPERS ─────────────────────────────────────────
