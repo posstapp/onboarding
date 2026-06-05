@@ -552,8 +552,9 @@ async function verifyOTP() {
             sessionStorage.setItem('posst_resume_name', res.business_name || '');
             render(); window.scrollTo(0,0);
           } else {
-          next();
-        }
+            next();
+          }
+        }).catch(function() { next(); });
       }).catch(function() { next(); });
     } else {
       errors.otp=result.message||'Incorrect code. Please try again.';
