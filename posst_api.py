@@ -79,7 +79,7 @@ def err(message, code=400):
 # ── HEALTH ────────────────────────────────────────────────────
 @app.route('/health')
 def health():
-    return ok(version='1.1', service='posst-api')
+    return ok(version='1.2', service='posst-api')
 
 # ── CLIENT CRUD ───────────────────────────────────────────────
 @app.route('/api/client', methods=['POST'])
@@ -547,6 +547,129 @@ def run_campaigns():
     if EMAIL_AVAILABLE:
         send_internal_alert('Daily Campaigns Complete', str(results), 'info')
     return ok(results=results)
+
+
+# ── OTP SYSTEM ────────────────────────────────────────────────
+import re as _re
+import time as _time
+
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN  = os.environ.get('TWILIO_AUTH_TOKEN', '')
+TWILIO_VERIFY_SID  = os.environ.get('TWILIO_VERIFY_SID', '')
+
+MAX_OTP_PER_PHONE = 20
+MAX_OTP_PER_IP    = 20
+MAX_VERIFY_TRIES  = 10
+LOCKOUT_MINS      = 60
+
+ALLOWED_CODES = ['+61','+91','+1','+44','+971','+65','+64','+27','+49','+33',
+                 '+39','+34','+31','+353','+46','+47','+45','+41','+48','+966',
+                 '+974','+973','+968','+965','+20','+234','+254','+55','+52',
+                 '+60','+63','+66','+84','+81','+82','+852','+92','+880','+94']
+
+_otp_rate = {}
+_otp_attempts = {}
+
+def _check_rate(key, max_per_hour):
+    now = _time.time()
+    rec = _otp_rate.get(key, {})
+    if now > rec.get('window_end', 0):
+        _otp_rate[key] = {'count': 1, 'window_end': now + 3600}
+        return True
+    if rec['count'] >= max_per_hour:
+        return False
+    _otp_rate[key]['count'] += 1
+    return True
+
+def _is_locked(phone):
+    rec = _otp_attempts.get(phone, {})
+    if rec.get('locked_until', 0) > _time.time():
+        return True, rec.get('locked_until', 0)
+    return False, 0
+
+def _inc_attempts(phone):
+    rec = _otp_attempts.get(phone, {'count': 0, 'locked_until': 0})
+    rec['count'] = rec.get('count', 0) + 1
+    if rec['count'] >= MAX_VERIFY_TRIES:
+        rec['locked_until'] = _time.time() + LOCKOUT_MINS * 60
+        rec['count'] = 0
+    _otp_attempts[phone] = rec
+    return rec
+
+def _clear_attempts(phone):
+    _otp_attempts.pop(phone, None)
+
+def _twilio_send(phone):
+    import urllib.request, urllib.parse, base64 as _b64
+    url = 'https://verify.twilio.com/v2/Services/' + TWILIO_VERIFY_SID + '/Verifications'
+    data = urllib.parse.urlencode({'To': phone, 'Channel': 'sms'}).encode()
+    creds = _b64.b64encode((TWILIO_ACCOUNT_SID + ':' + TWILIO_AUTH_TOKEN).encode()).decode()
+    req = urllib.request.Request(url, data=data, headers={'Authorization': 'Basic ' + creds})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            result = json.loads(resp.read())
+            return result.get('status') == 'pending'
+    except Exception as e:
+        log.error(f'Twilio send error: {e}')
+        return False
+
+def _twilio_verify(phone, code):
+    import urllib.request, urllib.parse, base64 as _b64
+    url = 'https://verify.twilio.com/v2/Services/' + TWILIO_VERIFY_SID + '/VerificationCheck'
+    data = urllib.parse.urlencode({'To': phone, 'Code': code}).encode()
+    creds = _b64.b64encode((TWILIO_ACCOUNT_SID + ':' + TWILIO_AUTH_TOKEN).encode()).decode()
+    req = urllib.request.Request(url, data=data, headers={'Authorization': 'Basic ' + creds})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            result = json.loads(resp.read())
+            return result.get('status') == 'approved'
+    except Exception as e:
+        log.error(f'Twilio verify error: {e}')
+        return False
+
+@app.route('/api/otp/send', methods=['POST'])
+def otp_send():
+    d = request.json or {}
+    phone = (d.get('phone') or '').strip()
+    client_ip = request.headers.get('X-Real-IP', request.remote_addr or 'unknown')
+    if not phone or len(phone) < 8 or len(phone) > 16:
+        return jsonify({'status': 'error', 'code': 'INVALID_PHONE', 'message': 'Invalid phone number'}), 400
+    is_allowed = any(phone.startswith(c) for c in ALLOWED_CODES)
+    if not is_allowed:
+        return jsonify({'status': 'success', 'message': 'OTP sent'})
+    locked, until = _is_locked(phone)
+    if locked:
+        mins = int((until - _time.time()) / 60) + 1
+        return jsonify({'status': 'error', 'code': 'LOCKED', 'message': f'Too many attempts. Try again in {mins} minutes.'}), 429
+    if not _check_rate('ip_' + str(client_ip), MAX_OTP_PER_IP):
+        return jsonify({'status': 'error', 'code': 'RATE_LIMITED', 'message': 'Too many requests. Please try again later.'}), 429
+    if not _check_rate('phone_' + phone, MAX_OTP_PER_PHONE):
+        return jsonify({'status': 'error', 'code': 'RATE_LIMITED', 'message': 'Too many requests for this number. Try again in an hour.'}), 429
+    if not _twilio_send(phone):
+        return jsonify({'status': 'error', 'code': 'SEND_FAILED', 'message': 'Failed to send code. Please check your number and try again.'}), 500
+    return jsonify({'status': 'success', 'message': 'Verification code sent'})
+
+@app.route('/api/otp/verify', methods=['POST'])
+def otp_verify():
+    d = request.json or {}
+    phone = (d.get('phone') or '').strip()
+    code  = (d.get('otp') or d.get('code') or '').strip()
+    if not phone or not code:
+        return jsonify({'status': 'error', 'code': 'INVALID', 'message': 'Phone and code required'}), 400
+    if not _re.match(r'^[0-9]{4,6}$', code):
+        return jsonify({'status': 'error', 'code': 'INVALID_CODE', 'message': 'Invalid code format'}), 400
+    locked, until = _is_locked(phone)
+    if locked:
+        mins = int((until - _time.time()) / 60) + 1
+        return jsonify({'status': 'error', 'code': 'LOCKED', 'message': f'Too many wrong attempts. Try again in {mins} minutes.'}), 429
+    if _twilio_verify(phone, code):
+        _clear_attempts(phone)
+        return jsonify({'status': 'success', 'verified': True})
+    rec = _inc_attempts(phone)
+    if rec.get('locked_until', 0) > _time.time():
+        return jsonify({'status': 'error', 'code': 'LOCKED', 'message': f'Too many wrong attempts. Locked for {LOCKOUT_MINS} minutes.'}), 429
+    remaining = MAX_VERIFY_TRIES - rec.get('count', 0)
+    return jsonify({'status': 'error', 'code': 'WRONG_CODE', 'message': f'Incorrect code. {remaining} attempt{"s" if remaining != 1 else ""} remaining.'}), 400
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5680, debug=False)
