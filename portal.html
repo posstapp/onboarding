@@ -436,7 +436,7 @@ function renderDashboard() {
     <!-- Danger Zone -->
     <div class="danger-zone">
       <div class="danger-title">⚠️ Account Actions</div>
-      <div class="danger-desc">Need to pause or cancel? Your account will be updated immediately and you'll receive a confirmation email.</div>
+      <div class="danger-desc">Need to pause or cancel? Your account will be updated immediately and you will receive a confirmation email.</div>
       <div class="danger-actions">
         <button class="btn btn-secondary btn-sm" onclick="showPauseConfirm()">Pause posting</button>
         <button class="btn btn-danger btn-sm" onclick="showCancelConfirm()">Cancel account</button>
@@ -784,7 +784,7 @@ function renderProSetup() {
     </div>
 
     <button class="btn btn-primary btn-full" onclick="saveProSetup()" id="pro-save-btn" style="margin-bottom:10px">Save & finish setup →</button>
-    <button onclick="skipProSetup()" class="btn btn-secondary btn-full">Skip for now — I'll set this up later</button>
+    <button onclick="skipProSetup()" class="btn btn-secondary btn-full">Skip for now — I will set this up later</button>
   `;
 }
 
@@ -855,7 +855,7 @@ function showProSetupComplete(driveIntent) {
   document.getElementById('dashboard').innerHTML = `
     <div style="text-align:center;padding:40px 20px">
       <div style="font-size:48px;margin-bottom:16px">🎉</div>
-      <h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">You're all set on Pro!</h2>
+      <h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">You are all set on Pro!</h2>
       <p style="font-size:14px;color:var(--ink-mid);margin-bottom:24px;line-height:1.6">${driveIntent==='now'?'Your photo library is connected. Real photos will be used in your next posts.':'Your Pro features are active. You can connect your photo library anytime from your account.'}</p>
       <button class="btn btn-primary" onclick="renderDashboard()">Go to my account →</button>
     </div>`;
