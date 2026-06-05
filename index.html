@@ -512,7 +512,7 @@ async function sendOTP() {
     errors.phone = '';
     const btn = document.querySelector('button[onclick="sendOTP()"]');
     if(btn){ btn.disabled=true; btn.textContent='Sending...'; }
-    const resp = await fetch(APPS_SCRIPT_URL, { method:'POST', body:JSON.stringify({ action:'send_otp', phone:F.phone_code+F.phone_number }) });
+    const resp = await fetch(PROXY_URL + '/otp/send', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ phone:F.phone_code+F.phone_number }) });
     const result = await resp.json();
     if(result.status === 'success') { otpSent=true; otpVerified=false; startOTPTimer(); render(); }
     else { errors.phone = result.message || 'Failed to send code. Please try again.'; render(); }
@@ -536,7 +536,7 @@ async function verifyOTP() {
   const btn = document.querySelector('button[onclick="verifyOTP()"]');
   if(btn){ btn.disabled=true; btn.textContent='Verifying...'; }
   try {
-    const resp = await fetch(APPS_SCRIPT_URL, { method:'POST', body:JSON.stringify({ action:'verify_otp', phone:F.phone_code+F.phone_number, code:digits }) });
+    const resp = await fetch(PROXY_URL + '/otp/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ phone:F.phone_code+F.phone_number, otp:digits }) });
     const result = await resp.json();
     if(result.status==='success'&&result.verified) {
       otpVerified=true; errors.otp='';
