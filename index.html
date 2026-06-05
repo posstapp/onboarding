@@ -536,19 +536,22 @@ async function verifyOTP() {
         status:        'otp_verified',
         last_step_reached: 'otp'
       });
-      // Try to load saved progress
-      callAppsScript('loadProgress', {phone: fullPhone}).then(function(res) {
-        if(res && res.success && res.step > 1 && res.form) {
-          // Restore saved form state
-          Object.assign(F, res.form);
-          step = res.step;
-          sessionStorage.setItem('posst_resumed', '1');
-          sessionStorage.setItem('posst_resume_name', res.business_name || '');
-          render(); window.scrollTo(0,0);
-        } else if(res && !res.success && res.error === 'already converted') {
-          // Client already completed onboarding — send to portal with phone
+      // Check if client is already active — if so, send to portal
+      callAppsScript('portal_lookup', {phone: fullPhone}).then(function(portalRes) {
+        const clientStatus = portalRes && portalRes.status === 'success' && portalRes.data ? (portalRes.data.status || '') : '';
+        if(['Active','Provisioning','Paused','Cancelled'].includes(clientStatus)) {
           window.location.href = 'https://onboarding.posst.app/portal.html?phone=' + encodeURIComponent(fullPhone);
-        } else {
+          return;
+        }
+        // Not active — try to resume onboarding progress
+        callAppsScript('loadProgress', {phone: fullPhone}).then(function(res) {
+          if(res && res.success && res.step > 1 && res.form) {
+            Object.assign(F, res.form);
+            step = res.step;
+            sessionStorage.setItem('posst_resumed', '1');
+            sessionStorage.setItem('posst_resume_name', res.business_name || '');
+            render(); window.scrollTo(0,0);
+          } else {
           next();
         }
       }).catch(function() { next(); });
