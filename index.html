@@ -694,7 +694,7 @@ async function submitForm() {
     google_drive_url: F.google_drive_url, drive_categories: F.drive_categories, google_drive_intent: F.google_drive_intent,
   };
   try {
-    const resp = await fetch(APPS_SCRIPT_URL, { method:'POST', body:JSON.stringify(payload) });
+    const resp = await fetch(PROXY_URL + '/client', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
     const result = await resp.json();
     const clientId = result.client_id || '';
     const pendingToken = result.pending_token || '';
