@@ -222,12 +222,36 @@ const OAUTH_BASE_URL  = 'https://connect.posst.app/connect';
 
 // ── APPS SCRIPT CALLER ─────────────────────────────────────
 function callAppsScript(action, data) {
-  // All browser calls go through Apps Script (handles CORS)
-  // Apps Script reads/writes Supabase on the backend
+  // Data actions go through proxy → posst-api → Supabase
+  // Email/SEO actions stay on Apps Script
+  var proxyActions = {
+    'portal_lookup':   function(d) { return proxyPost('portal_lookup', d); },
+    'loadProgress':    function(d) { return proxyGet('prospect/progress', {phone: d.phone}); },
+    'saveProgress':    function(d) { return proxyPost('prospect/progress', d); },
+    'createProspect':  function(d) { return proxyPost('prospect', d); },
+    'updateProspect':  function(d) { return proxyPost('prospect', d); },
+    'convertProspect': function(d) { return proxyPost('prospect/convert', d); },
+  };
+  if (proxyActions[action]) return proxyActions[action](data || {});
+  // Fall through to Apps Script for email/SEO
   var payload = JSON.stringify(Object.assign({ action: action }, data));
   return fetch(APPS_SCRIPT_URL, { method: 'POST', body: payload })
     .then(function(r) { return r.json(); })
     .catch(function(err) { console.warn('Apps Script call failed (' + action + '):', err); return null; });
+}
+
+function proxyPost(path, data) {
+  return fetch(PROXY_URL + '/' + path, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data || {})
+  }).then(function(r) { return r.json(); }).catch(function(e) { console.warn('Proxy error:', e); return {}; });
+}
+
+function proxyGet(path, params) {
+  var qs = params ? '?' + Object.keys(params).map(function(k) { return k + '=' + encodeURIComponent(params[k]); }).join('&') : '';
+  return fetch(PROXY_URL + '/' + path + qs)
+    .then(function(r) { return r.json(); }).catch(function(e) { console.warn('Proxy error:', e); return {}; });
 }
 
 // ── BRIDGE HELPERS ─────────────────────────────────────────
