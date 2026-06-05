@@ -11,6 +11,18 @@ import logging
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 from supabase import create_client, Client
+import sys
+sys.path.insert(0, '/opt/posst')
+try:
+    from posst_email import (
+        send_go_live_email, send_cancellation_email, send_pause_email,
+        send_day1_email, send_day7_standard_email, send_day7_pro_email,
+        send_trial_ending_email, send_monthly_email, send_missing_platform_email,
+        send_reengagement_email, send_internal_alert
+    )
+    EMAIL_AVAILABLE = True
+except Exception as e:
+    EMAIL_AVAILABLE = False
 from functools import wraps
 
 app = Flask(__name__)
@@ -67,7 +79,7 @@ def err(message, code=400):
 # ── HEALTH ────────────────────────────────────────────────────
 @app.route('/health')
 def health():
-    return ok(version='1.0', service='posst-api')
+    return ok(version='1.1', service='posst-api')
 
 # ── CLIENT CRUD ───────────────────────────────────────────────
 @app.route('/api/client', methods=['POST'])
@@ -451,6 +463,90 @@ def log_review():
             return ok(action='already_logged')
         raise
     return ok()
+
+
+@app.route('/api/email/go_live', methods=['POST'])
+def email_go_live():
+    d = request.json or {}
+    cid = d.get('client_id')
+    if not cid: return err('client_id required')
+    r = sb.table('clients').select('*').eq('client_id', cid).single().execute()
+    if not r.data: return err('Client not found', 404)
+    if EMAIL_AVAILABLE:
+        send_go_live_email(r.data)
+        sb.table('clients').update({'go_live_email_sent': True}).eq('client_id', cid).execute()
+    return ok()
+
+@app.route('/api/email/cancel', methods=['POST'])
+def email_cancel():
+    d = request.json or {}
+    cid = d.get('client_id')
+    r = sb.table('clients').select('*').eq('client_id', cid).single().execute()
+    if r.data and EMAIL_AVAILABLE: send_cancellation_email(r.data)
+    return ok()
+
+@app.route('/api/email/pause', methods=['POST'])
+def email_pause():
+    d = request.json or {}
+    cid = d.get('client_id')
+    r = sb.table('clients').select('*').eq('client_id', cid).single().execute()
+    if r.data and EMAIL_AVAILABLE: send_pause_email(r.data)
+    return ok()
+
+@app.route('/api/email/reengagement', methods=['POST'])
+def email_reengagement():
+    d = request.json or {}
+    if EMAIL_AVAILABLE:
+        send_reengagement_email(d.get('email',''), d.get('business_name','there'), 'https://onboarding.posst.app')
+    return ok()
+
+@app.route('/api/email/alert', methods=['POST'])
+def email_alert():
+    d = request.json or {}
+    if EMAIL_AVAILABLE:
+        send_internal_alert(d.get('title','Alert'), d.get('message',''), d.get('level','alert'))
+    return ok()
+
+@app.route('/api/email/campaigns', methods=['POST'])
+def run_campaigns():
+    from datetime import datetime
+    today = datetime.utcnow().replace(hour=0,minute=0,second=0,microsecond=0)
+    results = {'day1':0,'day2':0,'day7_std':0,'day7_pro':0,'day27':0,'day28':0,'day29':0,'monthly':0,'errors':[]}
+    clients = sb.table('clients').select('*').eq('status','Active').execute()
+    for c in (clients.data or []):
+        cid = c.get('client_id','')
+        try:
+            prov = c.get('provisioned_at')
+            if not prov: continue
+            prov_date = datetime.fromisoformat(prov.replace('Z','+00:00')).replace(tzinfo=None).replace(hour=0,minute=0,second=0,microsecond=0)
+            days = (today - prov_date).days
+            is_pro = (c.get('plan') or '').lower() == 'pro'
+            def sent(camp): return bool(sb.table('email_campaign_log').select('id').eq('client_id',cid).eq('campaign',camp).execute().data)
+            def log_sent(camp): sb.table('email_campaign_log').insert({'client_id':cid,'campaign':camp,'email':c.get('contact_email','')}).execute()
+            if days==1 and not sent('day1'):
+                if EMAIL_AVAILABLE: send_day1_email(c)
+                log_sent('day1'); results['day1']+=1
+            if days==7 and not is_pro and not sent('day7_standard'):
+                if EMAIL_AVAILABLE: send_day7_standard_email(c)
+                log_sent('day7_standard'); results['day7_std']+=1
+            if days==7 and is_pro and not sent('day7_pro'):
+                if EMAIL_AVAILABLE: send_day7_pro_email(c)
+                log_sent('day7_pro'); results['day7_pro']+=1
+            for td in [27,28,29]:
+                camp = f'trial_day{td}'
+                if days==td and not sent(camp):
+                    if EMAIL_AVAILABLE: send_trial_ending_email(c, 30-td)
+                    log_sent(camp); results[f'day{td}']+=1
+            mday = int(c.get('monthly_report_day') or 1)
+            mcamp = f"monthly_{datetime.utcnow().strftime('%Y_%m')}"
+            if datetime.utcnow().day==mday and days>=30 and not sent(mcamp):
+                if EMAIL_AVAILABLE: send_monthly_email(c)
+                log_sent(mcamp); results['monthly']+=1
+        except Exception as e:
+            results['errors'].append(f'{cid}:{str(e)}')
+    if EMAIL_AVAILABLE:
+        send_internal_alert('Daily Campaigns Complete', str(results), 'info')
+    return ok(results=results)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5680, debug=False)
