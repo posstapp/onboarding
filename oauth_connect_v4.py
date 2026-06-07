@@ -569,6 +569,70 @@ def health():
 
 
 
+
+# ── VALIDATE DRIVE ────────────────────────────────────────────
+# Checks if a Google Drive folder URL is accessible and returns subfolder structure
+@app.route('/validate_drive', methods=['POST', 'OPTIONS'])
+def validate_drive():
+    if request.method == 'OPTIONS':
+        resp = app.make_response('')
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return resp
+    try:
+        d = request.get_json(silent=True) or {}
+        drive_url = d.get('drive_url', '').strip()
+        if not drive_url:
+            resp = app.make_response(json.dumps({'valid': False, 'error': 'No URL provided'}))
+            resp.content_type = 'application/json'
+            resp.headers['Access-Control-Allow-Origin'] = '*'
+            return resp
+
+        # Extract folder ID from URL
+        import re as _re
+        match = _re.search(r'/folders/([a-zA-Z0-9_-]+)', drive_url)
+        if not match:
+            resp = app.make_response(json.dumps({'valid': False, 'error': 'Invalid Google Drive folder URL'}))
+            resp.content_type = 'application/json'
+            resp.headers['Access-Control-Allow-Origin'] = '*'
+            return resp
+
+        folder_id = match.group(1)
+
+        # Try to list folder contents using Drive API
+        from googleapiclient.discovery import build
+        from google.oauth2 import service_account
+        import os as _os
+
+        sa_file = _os.environ.get('GOOGLE_SERVICE_ACCOUNT_FILE', '/opt/posst/oauth/service_account.json')
+        if not _os.path.exists(sa_file):
+            # No service account — return valid=True with empty structure (best effort)
+            resp = app.make_response(json.dumps({'valid': True, 'structure': [], 'note': 'no_service_account'}))
+            resp.content_type = 'application/json'
+            resp.headers['Access-Control-Allow-Origin'] = '*'
+            return resp
+
+        creds = service_account.Credentials.from_service_account_file(
+            sa_file, scopes=['https://www.googleapis.com/auth/drive.readonly'])
+        service = build('drive', 'v3', credentials=creds)
+        results = service.files().list(
+            q=f"'{folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false",
+            fields='files(id,name)', pageSize=20).execute()
+        folders = [f['name'] for f in results.get('files', [])]
+
+        resp = app.make_response(json.dumps({'valid': True, 'structure': folders}))
+        resp.content_type = 'application/json'
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
+
+    except Exception as e:
+        log.error(f'validate_drive error: {e}')
+        resp = app.make_response(json.dumps({'valid': True, 'structure': [], 'error': str(e)}))
+        resp.content_type = 'application/json'
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
+
 # ── CORS PROXY ────────────────────────────────────────────────
 # Forwards browser calls to posst-api with proper CORS headers
 # Allows complete retirement of Apps Script for data operations
