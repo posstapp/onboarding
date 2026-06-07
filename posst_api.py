@@ -18,7 +18,7 @@ try:
         send_go_live_email, send_cancellation_email, send_pause_email,
         send_day1_email, send_day7_standard_email, send_day7_pro_email,
         send_trial_ending_email, send_monthly_email, send_missing_platform_email,
-        send_reengagement_email, send_internal_alert
+        send_reengagement_email, send_internal_alert, send_upgrade_email
     )
     EMAIL_AVAILABLE = True
 except Exception as e:
@@ -469,6 +469,26 @@ def log_review():
         raise
     return ok()
 
+
+
+@app.route('/api/email/upgrade', methods=['POST'])
+def email_upgrade():
+    d = request.json or {}
+    client_id = d.get('client_id', '')
+    if not client_id:
+        return err('client_id required')
+    client = sb.table('clients').select('*').eq('client_id', client_id).single().execute()
+    if not client.data:
+        return err('Client not found')
+    c = client.data
+    has_drive = bool(c.get('google_drive_url'))
+    notes = c.get('notes') or {}
+    if isinstance(notes, str):
+        try: notes = json.loads(notes)
+        except: notes = {}
+    has_themes = bool(notes.get('day_themes'))
+    send_upgrade_email(c.get('contact_email', ''), c.get('business_name', 'there'), has_drive, has_themes)
+    return ok()
 
 @app.route('/api/email/go_live', methods=['POST'])
 def email_go_live():
