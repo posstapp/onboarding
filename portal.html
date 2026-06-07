@@ -637,6 +637,7 @@ async function confirmUpgrade(btn) {
     const result = await resp.json();
     if (result.status === 'success') {
       clientData.plan = 'Pro';
+      fetch(PROXY_URL + '/email/upgrade', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ client_id: clientData.client_id }) }).catch(() => {});
       renderProSetup();
     } else {
       btn.disabled = false;
