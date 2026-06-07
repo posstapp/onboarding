@@ -292,29 +292,22 @@ def send_reengagement_email(to_email, business_name, resume_url):
 
 
 def send_upgrade_email(to, business_name, has_drive=False, has_themes=False):
-    drive_section = ''
-    if has_drive:
-        drive_section = sec('Your Photo Library') + hl('Your Google Drive folder is connected. Your real photos will be used in every post.', '&#x1F4F7;')
-    themes_section = ''
-    if has_themes:
-        themes_section = sec('Your Content Themes') + hl('Your custom day themes are set. Every day of the week will have its own unique flavour.', '&#x1F3A8;')
+    drive_section = hl('Your Google Drive folder is connected. Real photos will be used in every post.', '&#x1F4F7;') if has_drive else ''
+    themes_section = hl('Your custom day themes are active. Every day has its own unique flavour.', '&#x1F3A8;') if has_themes else ''
     body = wrap(
-        hero('&#x2728;', 'Welcome to Pro!', 'You just made the best decision for your business.')
+        hero('&#x2728;', 'Welcome to Pro, ' + business_name + '!', 'You just made the best decision for your business.')
         + hi(business_name)
-        + para('Your posst.app account has been upgraded to <strong>Pro</strong>. Here is what you have unlocked:')
         + sec('What You Unlocked')
-        + hl('Real photos from your Google Drive — every post will use your actual business images.', '&#x1F5BC;')
-        + hl('Custom content themes — set a different topic for each day of the week.', '&#x1F4C5;')
-        + hl('Priority support — Pro clients get faster responses and dedicated attention.', '&#x2B50;')
+        + hl('Real photos from your Google Drive in every post.', '&#x1F5BC;')
+        + hl('Custom content themes — a different topic every day of the week.', '&#x1F4C5;')
+        + hl('Priority support — faster responses and dedicated attention.', '&#x2B50;')
         + drive_section
         + themes_section
-        + sec('What Happens Next')
-        + para('Your next scheduled post will already reflect your Pro settings. Sit back — we handle everything from here.')
-        + para('You are now ahead of 90% of local businesses in your area. Keep showing up, and the results will follow.')
+        + para('Your next post will already reflect your Pro settings. Sit back — we handle everything.')
         + btn('View my account &rarr;', 'https://onboarding.posst.app/portal.html')
         + sign_off()
     )
-    return send_email(to, '&#x2728; Welcome to Pro — ' + business_name, body)
+    return send_email(to, 'Welcome to Pro — ' + business_name, body)
 
 
 def send_internal_alert(title, message, level='alert'):
