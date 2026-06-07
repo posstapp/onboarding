@@ -108,8 +108,6 @@ def create_client_record():
         except: drive_categories = []
 
     notes = {}
-    if d.get('caption_cta_phone'):
-        notes['caption_phone'] = d['caption_cta_phone']
 
     row = {
         'client_id':           client_id,
