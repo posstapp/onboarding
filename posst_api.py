@@ -170,6 +170,18 @@ def update_schedule(client_id):
     if d.get('posting_days'): update['posting_days'] = d['posting_days']
     if d.get('posting_time'): update['posting_time'] = d['posting_time']
     if d.get('timezone'):     update['timezone'] = d['timezone']
+    # Calculate posting_time_utc from local time + timezone
+    if d.get('posting_time') and d.get('timezone'):
+        try:
+            from zoneinfo import ZoneInfo
+            from datetime import datetime as dt
+            local_h, local_m = map(int, d['posting_time'].split(':'))
+            tz = ZoneInfo(d['timezone'])
+            local_dt = dt.now(tz).replace(hour=local_h, minute=local_m, second=0, microsecond=0)
+            utc_dt = local_dt.astimezone(ZoneInfo('UTC'))
+            update['posting_time_utc'] = utc_dt.strftime('%H:%M')
+        except Exception as e:
+            log.warning(f'Could not calculate posting_time_utc: {e}')
     sb.table('clients').update(update).eq('client_id', client_id).execute()
     log.info(f'Schedule updated: {client_id}')
     return ok()
