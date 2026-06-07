@@ -338,7 +338,14 @@ def save_progress():
     state = json.dumps({'step': d.get('step', 0), 'form': d.get('form', {}), 'saved_at': datetime.now().isoformat()})
     existing = sb.table('prospects').select('id').eq('phone', phone).execute()
     if existing.data:
-        sb.table('prospects').update({'form_state': state, 'last_step_reached': str(d.get('step', 0))}).eq('phone', phone).execute()
+        update = {'form_state': state, 'last_step_reached': str(d.get('step', 0))}
+        form = d.get('form', {})
+        if form.get('tier'):
+            update['plan_selected'] = form.get('tier')
+        if form.get('platforms'):
+            plat = form.get('platforms')
+            update['platforms_selected'] = ','.join(plat) if isinstance(plat, list) else str(plat)
+        sb.table('prospects').update(update).eq('phone', phone).execute()
     return ok(action='saved')
 
 @app.route('/api/prospect/progress', methods=['GET'])
