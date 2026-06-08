@@ -646,7 +646,7 @@ function validate() {
 
 function next() {
   if(!validate()) { render(); window.scrollTo(0,0); return; }
-  if(step<7) {
+  if(step<8) {
     step++;
     if(step===5 && !isPro()) step++;
     // Save progress after each step advance
@@ -664,6 +664,38 @@ function back() {
     if(step<0) { window.location.href='https://posst.app'; return; }
     render(); window.scrollTo(0,0);
   } else window.location.href='https://posst.app';
+}
+
+// ── STRIPE CHECKOUT ────────────────────────────────────────
+let savedClientId = '';
+let savedPendingToken = '';
+
+async function goToStripe() {
+  const btn = document.getElementById('stripe-btn');
+  if(btn) { btn.disabled=true; btn.textContent='Redirecting to payment...'; }
+  try {
+    const resp = await fetch(PROXY_URL + '/stripe/checkout', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        client_id: savedClientId,
+        plan: F.tier,
+        currency: detectedCountry,
+        email: F.contact_email,
+        business_name: F.business_name
+      })
+    });
+    const result = await resp.json();
+    if(result.checkout_url) {
+      window.location.href = result.checkout_url;
+    } else {
+      alert('Payment setup failed. Please try again.');
+      if(btn) { btn.disabled=false; btn.textContent='Start free trial →'; }
+    }
+  } catch(e) {
+    alert('Connection error. Please try again.');
+    if(btn) { btn.disabled=false; btn.textContent='Start free trial →'; }
+  }
 }
 
 // ── SUBMIT ──────────────────────────────────────────────────
@@ -705,7 +737,12 @@ async function submitForm() {
     if(hasFB()||hasIG()) oauthPlatforms.push('facebook','instagram');
     if(hasGBP()) oauthPlatforms.push('gbp');
     const params = new URLSearchParams({ client_id:clientId, token:pendingToken, platforms:oauthPlatforms.join(','), business:F.business_name, email:F.contact_email });
-    window.location.href = `${OAUTH_BASE_URL}?${params.toString()}`;
+    // Save client_id + token, then advance to payment step
+    savedClientId = clientId;
+    savedPendingToken = pendingToken;
+    isSubmitting = false;
+    step = 8;
+    render(); window.scrollTo(0,0);
   } catch(e) {
     isSubmitting = false;
     $('main-content').innerHTML = `<div class="submitting"><div style="font-size:40px;margin-bottom:16px">&#9888;&#65039;</div><div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px">Something went wrong</div><div style="font-size:13px;color:var(--ink-mid);margin-bottom:24px">Please check your connection and try again.</div><button class="btn-next" style="margin:0 auto" onclick="render()">Try again</button></div>`;
@@ -1298,13 +1335,56 @@ function renderStep5() {
     </div>
     <div class="info-box blue" style="margin-top:10px">
       <span class="info-box-icon">&#128273;</span>
-      <div class="info-box-text"><strong>Next step:</strong> After submitting, you&#39;ll connect your social accounts securely via OAuth. Takes about 2 minutes.</div>
+      <div class="info-box-text"><strong>Next:</strong> You&#39;ll connect ${hasFB()||hasIG() ? 'your ' + [hasFB()?'Facebook':'', hasIG()?'Instagram':''].filter(Boolean).join(' &amp; ') + (hasGBP()?' and Google Business Profile':'') : 'your Google Business Profile'} securely via OAuth, then start your free trial.</div>
     </div>
     <div class="info-box green">
       <span class="info-box-icon">&#9989;</span>
       <div class="info-box-text">By submitting you confirm these details are correct. A confirmation email will be sent to <strong>${esc(F.contact_email)}</strong>.</div>
-    </div>`;
+    </div>\`;
 }
+
+// ── STEP 8: Payment ────────────────────────────────────────
+function renderStepPayment() {
+  const p = getPrice();
+  const planPrice = F.tier === 'Pro' ? p.pro : p.std;
+  const platformList = [hasFB()?'Facebook':'', hasIG()?'Instagram':'', hasGBP()?'Google Business Profile':''].filter(Boolean);
+  const platformStr = platformList.length > 1
+    ? platformList.slice(0,-1).join(', ') + ' &amp; ' + platformList[platformList.length-1]
+    : platformList[0] || '';
+  const totalSteps = isPro() ? '8 of 8' : '7 of 7';
+  return \`
+    <div class="step-header">
+      <div class="step-tag">Step \${totalSteps} — Start your free trial</div>
+      <h2 class="step-title">You're almost live 🎉</h2>
+      <p class="step-desc">Add your card to activate your 30-day free trial. Nothing is charged today.</p>
+    </div>
+    <div class="info-box green" style="margin-bottom:20px">
+      <span class="info-box-icon">&#127873;</span>
+      <div class="info-box-text">
+        <strong>30 days completely free</strong> &mdash; your card won't be charged until day 30.
+        Cancel anytime before then by emailing <a href="mailto:chief@posst.app" style="color:var(--blue);font-weight:600">chief@posst.app</a>.
+      </div>
+    </div>
+    <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink)">\${F.tier} plan</div>
+          <div style="font-size:12px;color:var(--ink-light)">After trial: \${p.sym}\${planPrice}/month</div>
+        </div>
+        <div style="font-size:11px;color:var(--blue);font-weight:600;cursor:pointer" onclick="step=4;render()">Change plan</div>
+      </div>
+      \${platformStr ? \`<div style="font-size:12px;color:var(--ink-mid);border-top:1px solid var(--border);padding-top:10px">
+        &#128247; Posting to: <strong>\${platformStr}</strong>
+      </div>\` : ''}
+    </div>
+    <div style="background:#F8FAFC;border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink-mid);margin-bottom:4px">Payment</div>
+      <div style="font-size:13px;color:var(--ink-mid)">You'll be taken to Stripe's secure checkout to enter your card details. We never store your card information.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-light);margin-bottom:4px">
+      &#128274; Secured by Stripe &nbsp;&middot;&nbsp; 256-bit SSL &nbsp;&middot;&nbsp; PCI DSS compliant
+    </div>\`;
+}\`
 
 function rr(k,v) {
   if(!v) return '';
@@ -1369,16 +1449,20 @@ function render() {
   const focusId  = activeEl && activeEl.id ? activeEl.id : null;
   const focusSel = activeEl && activeEl.selectionStart != null ? { start: activeEl.selectionStart, end: activeEl.selectionEnd } : null;
   renderSidebar();
-  // steps array: 0=phone, 1=bridge, 2=business, 3=platforms, 4=plan, 5=drive, 6=schedule, 7=review
-  const steps = [renderStep0, renderStepBridge, renderStep1, renderStep2, renderStep3, renderStep4GDrive, renderStep4, renderStep5];
-  const isLastStep = step === 7;
+  // steps array: 0=phone, 1=bridge, 2=business, 3=platforms, 4=plan, 5=drive, 6=schedule, 7=review, 8=payment
+  const steps = [renderStep0, renderStepBridge, renderStep1, renderStep2, renderStep3, renderStep4GDrive, renderStep4, renderStep5, renderStepPayment];
+  const isReviewStep = step === 7;
+  const isPaymentStep = step === 8;
+  const isLastStep = isPaymentStep;
   const nav = `<div class="form-nav">
     <button class="btn-back" onclick="back()">&#8592; ${step===0?'Back to home':'Back'}</button>
     <div style="display:flex;align-items:center;gap:12px">
       ${step > 1 && step < 7 ? `<button id="save-exit-btn" onclick="handleSaveAndExit(this)" style="background:none;border:none;font-size:12px;color:var(--ink-light);cursor:pointer;font-family:var(--sans);text-decoration:underline">Save &amp; continue later</button>` : ''}
-      ${!isLastStep
-        ? `<button class="btn-next" onclick="next()">Continue &#8594;</button>`
-        : `<button class="btn-next" onclick="submitForm()">Submit &amp; connect accounts &#8594;</button>`}
+      ${isPaymentStep
+        ? `<button class="btn-next" onclick="goToStripe()" id="stripe-btn">Start free trial &#8594;</button>`
+        : isReviewStep
+          ? `<button class="btn-next" onclick="submitForm()">Connect accounts &#8594;</button>`
+          : `<button class="btn-next" onclick="next()">Continue &#8594;</button>`}
     </div>
   </div>`;
   const logoHtml = '<img class="form-logo" src="https://raw.githubusercontent.com/posstapp/posstapp.github.io/main/posst_logo_final.png" alt="posst.app">';
