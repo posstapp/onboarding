@@ -157,9 +157,15 @@ def get_client(client_id):
 @app.route('/api/client/<client_id>/status', methods=['PATCH'])
 def update_client_status(client_id):
     d = request.json or {}
-    update = {'status': d.get('status')}
+    new_status = d.get('status')
+    update = {'status': new_status}
     if d.get('provisioned_at'):
         update['provisioned_at'] = d['provisioned_at']
+    # Set trial_start when client first goes Active
+    if new_status == 'Active':
+        existing = sb.table('clients').select('trial_start').eq('client_id', client_id).single().execute()
+        if not (existing.data or {}).get('trial_start'):
+            update['trial_start'] = datetime.now().strftime('%Y-%m-%d')
     sb.table('clients').update(update).eq('client_id', client_id).execute()
     return ok()
 
@@ -553,9 +559,14 @@ def run_campaigns():
     for c in (clients.data or []):
         cid = c.get('client_id','')
         try:
-            prov = c.get('provisioned_at')
-            if not prov: continue
-            prov_date = datetime.fromisoformat(prov.replace('Z','+00:00')).replace(tzinfo=None).replace(hour=0,minute=0,second=0,microsecond=0)
+            # Use trial_start if available, otherwise fall back to provisioned_at
+            trial_start = c.get('trial_start') or c.get('provisioned_at')
+            if not trial_start: continue
+            # trial_start is DATE (YYYY-MM-DD), provisioned_at is ISO datetime
+            if 'T' in str(trial_start) or 'Z' in str(trial_start):
+                prov_date = datetime.fromisoformat(trial_start.replace('Z','+00:00')).replace(tzinfo=None).replace(hour=0,minute=0,second=0,microsecond=0)
+            else:
+                prov_date = datetime.strptime(str(trial_start)[:10], '%Y-%m-%d')
             days = (today - prov_date).days
             is_pro = (c.get('plan') or '').lower() == 'pro'
             def sent(camp): return bool(sb.table('email_campaign_log').select('id').eq('client_id',cid).eq('campaign',camp).execute().data)
@@ -788,6 +799,219 @@ def search_volume():
     # Fallback to proxy volumes
     volume = get_proxy_volume(keyword, is_metro)
     return ok(volume=volume, source='proxy')
+
+# ── STRIPE ───────────────────────────────────────────────────
+STRIPE_SECRET_KEY      = os.environ.get('STRIPE_SECRET_KEY', '')
+STRIPE_WEBHOOK_SECRET  = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
+
+# Price IDs per plan per currency — set in .env
+# Format: STRIPE_PRICE_{PLAN}_{CURRENCY} e.g. STRIPE_PRICE_STD_AUD
+STRIPE_PRICES = {
+    'Standard': {
+        'AU': os.environ.get('STRIPE_PRICE_STD_AUD', ''),
+        'US': os.environ.get('STRIPE_PRICE_STD_USD', ''),
+        'GB': os.environ.get('STRIPE_PRICE_STD_GBP', ''),
+        'EU': os.environ.get('STRIPE_PRICE_STD_EUR', ''),
+        'SG': os.environ.get('STRIPE_PRICE_STD_SGD', ''),
+        'IN': os.environ.get('STRIPE_PRICE_STD_INR', ''),
+        'NZ': os.environ.get('STRIPE_PRICE_STD_NZD', ''),
+        'CA': os.environ.get('STRIPE_PRICE_STD_CAD', ''),
+        'AE': os.environ.get('STRIPE_PRICE_STD_AED', ''),
+    },
+    'Pro': {
+        'AU': os.environ.get('STRIPE_PRICE_PRO_AUD', ''),
+        'US': os.environ.get('STRIPE_PRICE_PRO_USD', ''),
+        'GB': os.environ.get('STRIPE_PRICE_PRO_GBP', ''),
+        'EU': os.environ.get('STRIPE_PRICE_PRO_EUR', ''),
+        'SG': os.environ.get('STRIPE_PRICE_PRO_SGD', ''),
+        'IN': os.environ.get('STRIPE_PRICE_PRO_INR', ''),
+        'NZ': os.environ.get('STRIPE_PRICE_PRO_NZD', ''),
+        'CA': os.environ.get('STRIPE_PRICE_PRO_CAD', ''),
+        'AE': os.environ.get('STRIPE_PRICE_PRO_AED', ''),
+    },
+}
+
+def stripe_request(method, path, payload=None, raw_body=None, extra_headers=None):
+    import urllib.request, urllib.parse, base64 as _b64
+    url = f'https://api.stripe.com/v1{path}'
+    auth = _b64.b64encode(f'{STRIPE_SECRET_KEY}:'.encode()).decode()
+    headers = {'Authorization': f'Basic {auth}', 'Content-Type': 'application/x-www-form-urlencoded'}
+    if extra_headers:
+        headers.update(extra_headers)
+    body = urllib.parse.urlencode(payload).encode() if payload else raw_body
+    req = urllib.request.Request(url, data=body, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read()), None
+    except urllib.error.HTTPError as e:
+        err_body = json.loads(e.read())
+        return None, err_body.get('error', {}).get('message', 'Stripe error')
+
+@app.route('/api/stripe/checkout', methods=['POST'])
+@require_auth
+def stripe_checkout():
+    d = request.json or {}
+    client_id  = d.get('client_id', '')
+    plan       = d.get('plan', 'Standard')
+    currency   = d.get('currency', 'AU')
+    email      = d.get('email', '')
+    business   = d.get('business_name', '')
+
+    if not client_id:
+        return err('client_id required')
+    if not STRIPE_SECRET_KEY:
+        return err('Stripe not configured')
+
+    price_id = STRIPE_PRICES.get(plan, {}).get(currency) or STRIPE_PRICES.get(plan, {}).get('US')
+    if not price_id:
+        return err(f'No price configured for {plan}/{currency}')
+
+    # Create or retrieve Stripe customer
+    client_res = sb.table('clients').select('stripe_customer_id,contact_email,business_name').eq('client_id', client_id).single().execute()
+    client_data = client_res.data or {}
+    stripe_customer_id = client_data.get('stripe_customer_id', '')
+
+    if not stripe_customer_id:
+        cust_payload = {'email': email or client_data.get('contact_email', ''), 'name': business or client_data.get('business_name', ''), 'metadata[client_id]': client_id}
+        cust, cust_err = stripe_request('POST', '/customers', cust_payload)
+        if cust_err:
+            return err(f'Stripe customer error: {cust_err}')
+        stripe_customer_id = cust['id']
+        sb.table('clients').update({'stripe_customer_id': stripe_customer_id}).eq('client_id', client_id).execute()
+
+    # Create checkout session with 30-day trial
+    base_url = 'https://onboarding.posst.app'
+    session_payload = {
+        'customer':                          stripe_customer_id,
+        'mode':                              'subscription',
+        'line_items[0][price]':              price_id,
+        'line_items[0][quantity]':           '1',
+        'subscription_data[trial_period_days]': '30',
+        'subscription_data[metadata][client_id]': client_id,
+        'success_url':                       f'{base_url}/success.html?client_id={client_id}&session_id={{CHECKOUT_SESSION_ID}}',
+        'cancel_url':                        f'{base_url}/index.html?step=payment&client_id={client_id}',
+        'customer_update[address]':          'auto',
+        'allow_promotion_codes':             'true',
+        'metadata[client_id]':               client_id,
+    }
+    if email:
+        session_payload['customer_email'] = email
+
+    session, sess_err = stripe_request('POST', '/checkout/sessions', session_payload)
+    if sess_err:
+        return err(f'Stripe session error: {sess_err}')
+
+    # Store stripe_subscription info placeholder
+    sb.table('clients').update({'stripe_currency': currency}).eq('client_id', client_id).execute()
+
+    log.info(f'Stripe checkout created: {client_id} → {plan}/{currency}')
+    return ok(checkout_url=session['url'], session_id=session['id'])
+
+@app.route('/api/stripe/portal', methods=['POST'])
+@require_auth
+def stripe_portal():
+    d = request.json or {}
+    client_id = d.get('client_id', '')
+    client_res = sb.table('clients').select('stripe_customer_id').eq('client_id', client_id).single().execute()
+    stripe_customer_id = (client_res.data or {}).get('stripe_customer_id', '')
+    if not stripe_customer_id:
+        return err('No Stripe customer found')
+    portal_payload = {
+        'customer':   stripe_customer_id,
+        'return_url': 'https://onboarding.posst.app/portal.html',
+    }
+    portal, portal_err = stripe_request('POST', '/billing_portal/sessions', portal_payload)
+    if portal_err:
+        return err(f'Stripe portal error: {portal_err}')
+    return ok(portal_url=portal['url'])
+
+@app.route('/api/stripe/webhook', methods=['POST'])
+def stripe_webhook():
+    import hmac, hashlib, time as _t
+    payload    = request.get_data()
+    sig_header = request.headers.get('Stripe-Signature', '')
+    if not STRIPE_WEBHOOK_SECRET:
+        return jsonify({'status': 'ok'})
+
+    # Verify signature
+    try:
+        parts = {k: v for k, v in (p.split('=', 1) for p in sig_header.split(','))}
+        ts    = parts.get('t', '')
+        v1    = parts.get('v1', '')
+        signed = f'{ts}.'.encode() + payload
+        expected = hmac.new(STRIPE_WEBHOOK_SECRET.encode(), signed, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, v1):
+            return jsonify({'error': 'Invalid signature'}), 400
+        if abs(_t.time() - int(ts)) > 300:
+            return jsonify({'error': 'Timestamp too old'}), 400
+    except Exception as e:
+        log.error(f'Webhook signature error: {e}')
+        return jsonify({'error': 'Signature error'}), 400
+
+    event = json.loads(payload)
+    etype = event.get('type', '')
+    obj   = event.get('data', {}).get('object', {})
+    log.info(f'Stripe webhook: {etype}')
+
+    def get_client_id():
+        # Try subscription metadata first, then customer metadata
+        meta = obj.get('metadata', {})
+        cid = meta.get('client_id', '')
+        if not cid:
+            cid = (obj.get('subscription_data') or {}).get('metadata', {}).get('client_id', '')
+        if not cid:
+            # Look up by stripe_customer_id
+            cust_id = obj.get('customer', '')
+            if cust_id:
+                res = sb.table('clients').select('client_id').eq('stripe_customer_id', cust_id).execute()
+                if res.data:
+                    cid = res.data[0]['client_id']
+        return cid
+
+    if etype == 'checkout.session.completed':
+        cid = obj.get('metadata', {}).get('client_id', '')
+        sub_id = obj.get('subscription', '')
+        if cid and sub_id:
+            sb.table('clients').update({'stripe_subscription_id': sub_id}).eq('client_id', cid).execute()
+            log.info(f'Checkout complete: {cid} subscription {sub_id}')
+
+    elif etype == 'customer.subscription.updated':
+        cid = get_client_id()
+        status = obj.get('status', '')
+        if cid and status == 'active':
+            # Trial ended, payment succeeded — ensure still Active
+            sb.table('clients').update({'status': 'Active'}).eq('client_id', cid).execute()
+            log.info(f'Subscription active (trial ended): {cid}')
+
+    elif etype == 'invoice.payment_failed':
+        cid = get_client_id()
+        attempt = obj.get('attempt_count', 1)
+        if cid:
+            if attempt >= 3:
+                sb.table('clients').update({'status': 'Paused'}).eq('client_id', cid).execute()
+                if EMAIL_AVAILABLE:
+                    client = sb.table('clients').select('*').eq('client_id', cid).single().execute().data
+                    if client:
+                        send_pause_email(client)
+                log.info(f'Payment failed x3 — paused: {cid}')
+            else:
+                log.info(f'Payment failed attempt {attempt}: {cid}')
+                if EMAIL_AVAILABLE:
+                    send_internal_alert('Payment Failed', f'Client {cid} payment failed (attempt {attempt})', 'alert')
+
+    elif etype == 'customer.subscription.deleted':
+        cid = get_client_id()
+        if cid:
+            sb.table('clients').update({'status': 'Cancelled'}).eq('client_id', cid).execute()
+            if EMAIL_AVAILABLE:
+                client = sb.table('clients').select('*').eq('client_id', cid).single().execute().data
+                if client:
+                    send_cancellation_email(client)
+            log.info(f'Subscription cancelled: {cid}')
+
+    return jsonify({'status': 'ok'})
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5680, debug=False)
