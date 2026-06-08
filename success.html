@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You're live — posst.app</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--ink:#111827;--ink-mid:#6b7280;--blue:#2563EB;--green:#16A34A;--green-dim:#F0FDF4;--border:#e5e7eb;--bg:#f9f9f7;--sans:'Inter',sans-serif;--serif:'Lora',serif}
+body{font-family:var(--sans);background:var(--bg);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:white;border:1.5px solid var(--border);border-radius:20px;padding:48px 40px;max-width:480px;width:100%;text-align:center}
+.icon{font-size:56px;margin-bottom:24px;display:block}
+.title{font-family:var(--serif);font-size:30px;color:var(--ink);margin-bottom:12px;line-height:1.2}
+.sub{font-size:15px;color:var(--ink-mid);line-height:1.7;margin-bottom:32px}
+.steps{background:var(--green-dim);border:1px solid #BBF7D0;border-radius:12px;padding:20px;margin-bottom:28px;text-align:left}
+.step-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+.step-row:last-child{margin-bottom:0}
+.step-icon{font-size:18px;flex-shrink:0;width:24px;text-align:center;margin-top:1px}
+.step-text{font-size:13px;color:#166534;line-height:1.5}
+.step-text strong{font-weight:600}
+.btn{display:inline-block;background:var(--blue);color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:600;font-family:var(--sans)}
+.btn:hover{background:#1d4ed8}
+.logo{height:28px;margin-bottom:32px}
+.oauth-section{margin-top:28px;padding-top:24px;border-top:1px solid var(--border)}
+.oauth-title{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px}
+.oauth-sub{font-size:12px;color:var(--ink-mid);margin-bottom:16px;line-height:1.5}
+.btn-oauth{display:inline-block;background:var(--ink);color:white;text-decoration:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:600;font-family:var(--sans)}
+</style>
+</head>
+<body>
+<div class="card">
+  <img class="logo" src="https://raw.githubusercontent.com/posstapp/posstapp.github.io/main/posst_logo_final.png" alt="posst.app">
+  <span class="icon">🎉</span>
+  <h1 class="title">You're all set!</h1>
+  <p class="sub">Your 30-day free trial has started. Now let's connect your social accounts so we can start posting.</p>
+
+  <div class="steps">
+    <div class="step-row">
+      <div class="step-icon">✅</div>
+      <div class="step-text"><strong>Business details saved</strong><br>Your profile and posting schedule are ready.</div>
+    </div>
+    <div class="step-row">
+      <div class="step-icon">✅</div>
+      <div class="step-text"><strong>30-day free trial started</strong><br>Nothing charged until day 30.</div>
+    </div>
+    <div class="step-row">
+      <div class="step-icon">⏳</div>
+      <div class="step-text"><strong>Connect your accounts</strong><br>One click to authorise Facebook, Instagram or Google.</div>
+    </div>
+  </div>
+
+  <div class="oauth-section" id="oauth-section" style="display:none">
+    <div class="oauth-title">Last step — connect your accounts</div>
+    <div class="oauth-sub" id="oauth-sub">Connect your social accounts so posst can start posting for you.</div>
+    <a href="#" class="btn-oauth" id="oauth-btn">Connect accounts →</a>
+  </div>
+
+  <div id="no-oauth" style="margin-top:24px">
+    <p style="font-size:13px;color:var(--ink-mid)">Loading your account details...</p>
+  </div>
+</div>
+
+<script>
+const OAUTH_BASE_URL = 'https://connect.posst.app/connect';
+const PROXY_URL = 'https://connect.posst.app/proxy';
+const API_SECRET = 'posst-api-secret-2026';
+
+(async function() {
+  const params = new URLSearchParams(window.location.search);
+  const clientId = params.get('client_id') || '';
+  const sessionId = params.get('session_id') || '';
+
+  if(!clientId) {
+    document.getElementById('no-oauth').innerHTML = '<p style="font-size:13px;color:#dc2626">Missing account details. Please contact chief@posst.app</p>';
+    return;
+  }
+
+  try {
+    // Fetch client to get platforms + pending token
+    const resp = await fetch(`${PROXY_URL}/client/${clientId}`);
+    const result = await resp.json();
+    const client = result.data || result;
+
+    const platforms = (client.platforms || '').split(',').map(p => p.trim()).filter(Boolean);
+    const pendingToken = client.pending_token || '';
+    const business = client.business_name || '';
+    const email = client.contact_email || '';
+
+    if(platforms.length && pendingToken) {
+      const oauthSection = document.getElementById('oauth-section');
+      const oauthSub = document.getElementById('oauth-sub');
+      const oauthBtn = document.getElementById('oauth-btn');
+      const noOauth = document.getElementById('no-oauth');
+
+      const platNames = [];
+      if(platforms.includes('facebook') || platforms.includes('instagram')) platNames.push('Facebook & Instagram');
+      if(platforms.includes('gbp')) platNames.push('Google Business Profile');
+      oauthSub.textContent = `Connect your ${platNames.join(' and ')} account${platNames.length > 1 ? 's' : ''} — takes about 2 minutes.`;
+
+      const oauthParams = new URLSearchParams({ client_id: clientId, token: pendingToken, platforms: platforms.join(','), business, email });
+      oauthBtn.href = `${OAUTH_BASE_URL}?${oauthParams.toString()}`;
+      oauthSection.style.display = 'block';
+      noOauth.style.display = 'none';
+    } else {
+      document.getElementById('no-oauth').innerHTML = '<a href="https://onboarding.posst.app/portal.html" style="font-size:13px;color:var(--blue);font-weight:600">Go to My Account →</a>';
+    }
+  } catch(e) {
+    document.getElementById('no-oauth').innerHTML = '<p style="font-size:13px;color:var(--ink-mid)">Please check your email for next steps, or contact chief@posst.app</p>';
+  }
+})();
+</script>
+</body>
+</html>
