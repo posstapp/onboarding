@@ -29,7 +29,8 @@ GOOGLE_SCOPES        = ['https://www.googleapis.com/auth/business.manage']
 ENCRYPT_KEY          = os.environ.get('TOKEN_ENCRYPT_KEY', '')
 cipher               = Fernet(ENCRYPT_KEY.encode()) if ENCRYPT_KEY else None
 
-API_BASE = 'http://127.0.0.1:5680'
+API_BASE        = 'http://127.0.0.1:5680'
+POSST_API_SECRET = os.environ.get('POSST_API_SECRET', 'posst-api-secret-2026')
 
 def api_get(path):
     try:
@@ -643,6 +644,8 @@ def cors_headers(response):
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
     return response
 
+AUTH_HEADERS = {'X-API-Key': POSST_API_SECRET}
+
 @app.route('/proxy/<path:path>', methods=['GET', 'POST', 'PATCH', 'OPTIONS'])
 def proxy(path):
     if request.method == 'OPTIONS':
@@ -655,11 +658,11 @@ def proxy(path):
         params = request.args
 
         if method == 'GET':
-            resp = requests.get(url, params=params, timeout=15)
+            resp = requests.get(url, params=params, headers=AUTH_HEADERS, timeout=15)
         elif method == 'POST':
-            resp = requests.post(url, json=data, timeout=15)
+            resp = requests.post(url, json=data, headers=AUTH_HEADERS, timeout=15)
         elif method == 'PATCH':
-            resp = requests.patch(url, json=data, timeout=15)
+            resp = requests.patch(url, json=data, headers=AUTH_HEADERS, timeout=15)
         else:
             return cors_headers(app.make_response(('Method not allowed', 405)))
 
@@ -674,6 +677,25 @@ def proxy(path):
         response.status_code = 500
         response.content_type = 'application/json'
         return cors_headers(response)
+
+# ── STRIPE WEBHOOK PASSTHROUGH ────────────────────────────────
+# Stripe POSTs directly here — must forward raw bytes to posst-api
+# so the HMAC signature check against the raw payload works correctly.
+@app.route('/stripe/webhook', methods=['POST'])
+def stripe_webhook_proxy():
+    raw_body = request.get_data()
+    sig      = request.headers.get('Stripe-Signature', '')
+    try:
+        resp = requests.post(
+            'http://127.0.0.1:5680/api/stripe/webhook',
+            data=raw_body,
+            headers={'Content-Type': 'application/json', 'Stripe-Signature': sig},
+            timeout=15
+        )
+        return resp.text, resp.status_code, {'Content-Type': 'application/json'}
+    except Exception as e:
+        log.error(f'Stripe webhook proxy error: {e}')
+        return json.dumps({'status': 'error', 'message': str(e)}), 500, {'Content-Type': 'application/json'}
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
