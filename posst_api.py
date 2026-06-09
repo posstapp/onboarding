@@ -805,31 +805,11 @@ STRIPE_SECRET_KEY      = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET  = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
 
-# Price IDs per plan per currency — set in .env
-# Format: STRIPE_PRICE_{PLAN}_{CURRENCY} e.g. STRIPE_PRICE_STD_AUD
+# Two price IDs — Stripe handles currency automatically based on customer location
+# Fallback to USD for countries outside the 9 configured currencies
 STRIPE_PRICES = {
-    'Standard': {
-        'AU': os.environ.get('STRIPE_PRICE_STD_AUD', ''),
-        'US': os.environ.get('STRIPE_PRICE_STD_USD', ''),
-        'GB': os.environ.get('STRIPE_PRICE_STD_GBP', ''),
-        'EU': os.environ.get('STRIPE_PRICE_STD_EUR', ''),
-        'SG': os.environ.get('STRIPE_PRICE_STD_SGD', ''),
-        'IN': os.environ.get('STRIPE_PRICE_STD_INR', ''),
-        'NZ': os.environ.get('STRIPE_PRICE_STD_NZD', ''),
-        'CA': os.environ.get('STRIPE_PRICE_STD_CAD', ''),
-        'AE': os.environ.get('STRIPE_PRICE_STD_AED', ''),
-    },
-    'Pro': {
-        'AU': os.environ.get('STRIPE_PRICE_PRO_AUD', ''),
-        'US': os.environ.get('STRIPE_PRICE_PRO_USD', ''),
-        'GB': os.environ.get('STRIPE_PRICE_PRO_GBP', ''),
-        'EU': os.environ.get('STRIPE_PRICE_PRO_EUR', ''),
-        'SG': os.environ.get('STRIPE_PRICE_PRO_SGD', ''),
-        'IN': os.environ.get('STRIPE_PRICE_PRO_INR', ''),
-        'NZ': os.environ.get('STRIPE_PRICE_PRO_NZD', ''),
-        'CA': os.environ.get('STRIPE_PRICE_PRO_CAD', ''),
-        'AE': os.environ.get('STRIPE_PRICE_PRO_AED', ''),
-    },
+    'Standard': os.environ.get('STRIPE_PRICE_STD', ''),
+    'Pro':      os.environ.get('STRIPE_PRICE_PRO', ''),
 }
 
 def stripe_request(method, path, payload=None, raw_body=None, extra_headers=None):
@@ -863,9 +843,9 @@ def stripe_checkout():
     if not STRIPE_SECRET_KEY:
         return err('Stripe not configured')
 
-    price_id = STRIPE_PRICES.get(plan, {}).get(currency) or STRIPE_PRICES.get(plan, {}).get('US')
+    price_id = STRIPE_PRICES.get(plan, '')
     if not price_id:
-        return err(f'No price configured for {plan}/{currency}')
+        return err(f'No price configured for {plan} — check STRIPE_PRICE_STD/PRO env vars')
 
     # Create or retrieve Stripe customer
     client_res = sb.table('clients').select('stripe_customer_id,contact_email,business_name').eq('client_id', client_id).single().execute()
