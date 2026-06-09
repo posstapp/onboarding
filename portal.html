@@ -281,10 +281,7 @@ function renderDashboard() {
           <button class="btn btn-primary btn-full" onclick="startUpgrade()">Upgrade to Pro ✦</button>
           ` : ''}
           <div style="margin-top:${isPro?'0':'12px'}">
-            <div class="info-box info-box-amber" style="margin-bottom:0">
-              <span class="info-icon">💳</span>
-              <div>Billing managed by Stripe. Card details and invoices available once billing is active. <a href="mailto:chief@posst.app" style="color:var(--amber)">Contact us</a> for billing queries.</div>
-            </div>
+            <button class="btn btn-secondary btn-full" id="billing-btn" onclick="openBillingPortal()">💳 Manage billing &amp; invoices</button>
           </div>
         </div>
       </div>
@@ -610,6 +607,27 @@ async function testDrivePortal() {
 function changeDrive() { showDriveInput(); }
 
 // ── UPGRADE ───────────────────────────────────────────────
+async function openBillingPortal() {
+  const btn = document.getElementById('billing-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Opening billing portal...'; }
+  try {
+    const resp = await fetch(PROXY_URL + '/stripe/portal', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ client_id: clientData.client_id })
+    });
+    const result = await resp.json();
+    if (result.portal_url) {
+      window.location.href = result.portal_url;
+    } else {
+      alert('Billing portal unavailable. Please email chief@posst.app for billing queries.');
+      if (btn) { btn.disabled = false; btn.textContent = '💳 Manage billing & invoices'; }
+    }
+  } catch (e) {
+    alert('Connection error. Please try again.');
+    if (btn) { btn.disabled = false; btn.textContent = '💳 Manage billing & invoices'; }
+  }
+}
+
 function startUpgrade() {
   // Show upgrade confirmation
   const dashboard = document.getElementById('dashboard');
