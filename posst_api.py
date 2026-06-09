@@ -873,6 +873,7 @@ def stripe_checkout():
         'cancel_url':                        f'{base_url}/index.html?step=payment&client_id={client_id}',
         'customer_update[address]':          'auto',
         'allow_promotion_codes':             'true',
+        'automatic_tax[enabled]':            'true',
         'metadata[client_id]':               client_id,
     }
     if email:
