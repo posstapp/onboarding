@@ -34,6 +34,13 @@ DARK     = '#1A1A2E'
 GREEN    = '#16A34A'
 
 # ── SEND ──────────────────────────────────────────────────────
+def portal_url(client):
+    import urllib.parse
+    phone = (client.get('business_phone') or '').strip()
+    if phone:
+        return 'https://onboarding.posst.app/portal.html?phone=' + urllib.parse.quote(phone)
+    return 'https://onboarding.posst.app/portal.html'
+
 def send_email(to, subject, html_body, reply_to=None):
     try:
         msg = MIMEMultipart('alternative')
@@ -126,13 +133,13 @@ def send_go_live_email(client):
         if drive_url:
             drive_section = f'{sec("Your Photo Library")}{hl("Your Google Drive folder is connected. Photos will be used from your next post.", "&#x1F4C1;")}'
         else:
-            drive_section = f'{sec("Your Photo Library")}{hl("Set up your Google Drive photo library to use your own photos in posts.", "&#x1F4C1;")}{btn("Set up photo library &rarr;", "https://onboarding.posst.app/portal.html")}'
+            drive_section = f'{sec("Your Photo Library")}{hl("Set up your Google Drive photo library to use your own photos in posts.", "&#x1F4C1;")}{btn("Set up photo library &rarr;", portal_url(client))}'
 
     upgrade_section = ''
     if not is_pro:
-        upgrade_section = f'{sec("Upgrade to Pro")}{para("Want to use your own photos and set custom content themes per day? Upgrade to Pro anytime from your account portal.")}{btn("Manage my account &rarr;", "https://onboarding.posst.app/portal.html")}'
+        upgrade_section = f'{sec("Upgrade to Pro")}{para("Want to use your own photos and set custom content themes per day? Upgrade to Pro anytime from your account portal.")}{btn("Manage my account &rarr;", portal_url(client))}'
     else:
-        upgrade_section = btn("Manage my account &rarr;", "https://onboarding.posst.app/portal.html")
+        upgrade_section = btn("Manage my account &rarr;", portal_url(client))
 
     body = wrap(f'''
         {hero("&#x1F680;", "You are live!", "Your social media is now posting automatically.")}
@@ -202,8 +209,8 @@ def send_day1_email(client):
         {step(1, "AI wrote your caption", "A fresh on-brand caption written specifically for your business")}
         {step(2, "Photo selected and posted", "Published on " + (client.get("platforms") or "your platforms").replace(",", ", "))}
         {hl("Check your social media pages to see your post live!", "&#x1F4F1;")}
-        {'' if is_pro else f'{sec("Want Even Better Results?")}{para("Upgrade to Pro to use your own real photos.")}{btn("Upgrade to Pro &rarr;", "https://onboarding.posst.app/portal.html")}'}
-        {btn("View my account &rarr;", "https://onboarding.posst.app/portal.html")}
+        {'' if is_pro else f'{sec("Want Even Better Results?")}{para("Upgrade to Pro to use your own real photos.")}{btn("Upgrade to Pro &rarr;", portal_url(client))}'}
+        {btn("View my account &rarr;", portal_url(client))}
         {sign_off()}
     ''')
     return send_email(client.get('contact_email'), "Your first post just went live!", body)
@@ -216,7 +223,7 @@ def send_day7_standard_email(client):
         {sec("Upgrade to Pro")}
         {para("Use your own real photos from Google Drive and set custom content themes per day.")}
         {tbl([["Real photos", "3-5x more engagement than AI images"], ["Custom themes", "Service Spotlight, Tip Tuesday and more"], ["Cost", "Only A$10 more per month (A$34.99 total)"]])}
-        {btn("Upgrade to Pro &rarr;", "https://onboarding.posst.app/portal.html")}
+        {btn("Upgrade to Pro &rarr;", portal_url(client))}
         {hl("Your 30-day free trial continues regardless. Upgrade anytime.", "&#x2705;")}
         {sign_off()}
     ''')
@@ -224,14 +231,14 @@ def send_day7_standard_email(client):
 
 def send_day7_pro_email(client):
     drive_ok = bool((client.get('google_drive_url') or '').strip())
-    drive_section = hl("Google Drive is connected. Your real photos are being used in every post.", "&#x2705;") if drive_ok else f'{hl("You are on Pro but Google Drive is not connected yet.", "&#x1F4F7;")}{btn("Connect Google Drive &rarr;", "https://onboarding.posst.app/portal.html")}'
+    drive_section = hl("Google Drive is connected. Your real photos are being used in every post.", "&#x2705;") if drive_ok else f'{hl("You are on Pro but Google Drive is not connected yet.", "&#x1F4F7;")}{btn("Connect Google Drive &rarr;", portal_url(client))}'
     body = wrap(f'''
         {hero("&#x1F4CA;", "One week live on Pro!", "A quick check-in on your account.")}
         {hi(client.get("business_name") or "there")}
         {para("You have been on Pro for 7 days. Your automated posting is running every day.")}
         {tbl([["Plan", "Pro"], ["Posting", (client.get("posting_days") or "").replace(",", ", ") + " at " + (client.get("posting_time") or "11:00")], ["Photo library", "Connected" if drive_ok else "Not connected yet"]])}
         {drive_section}
-        {btn("Manage my account &rarr;", "https://onboarding.posst.app/portal.html")}
+        {btn("Manage my account &rarr;", portal_url(client))}
         {sign_off()}
     ''')
     return send_email(client.get('contact_email'), "One week live on Pro -- quick check-in", body)
@@ -248,7 +255,7 @@ def send_trial_ending_email(client, days_left):
         {para(f"Your 30-day free trial ends in {days_left} day{'s' if days_left > 1 else ''}. Your subscription will continue at A${price}/month.")}
         {tbl([["Plan", "Pro" if is_pro else "Standard"], ["Monthly cost", f"A${price}"], ["Trial ends", f"{days_left} day{'s' if days_left > 1 else ''}"]])}
         {hl("To cancel before being charged, reply to this email with Cancel or log in to your account.", "&#x1F4AC;")}
-        {btn("Manage my account &rarr;", "https://onboarding.posst.app/portal.html")}
+        {btn("Manage my account &rarr;", portal_url(client))}
         {sign_off()}
     ''')
     return send_email(client.get('contact_email'), subject, body)
@@ -256,7 +263,7 @@ def send_trial_ending_email(client, days_left):
 def send_monthly_email(client):
     is_pro = (client.get('plan') or '').lower() == 'pro'
     drive_ok = bool((client.get('google_drive_url') or '').strip())
-    cta = btn("Upgrade to Pro -- A$34.99/month &rarr;", "https://onboarding.posst.app/portal.html") if not is_pro else (btn("Connect Google Drive &rarr;", "https://onboarding.posst.app/portal.html") if is_pro and not drive_ok else btn("Manage my account &rarr;", "https://onboarding.posst.app/portal.html"))
+    cta = btn("Upgrade to Pro -- A$34.99/month &rarr;", portal_url(client)) if not is_pro else (btn("Connect Google Drive &rarr;", portal_url(client)) if is_pro and not drive_ok else btn("Manage my account &rarr;", portal_url(client)))
     body = wrap(f'''
         {hero("&#x1F4CA;", "Your monthly posst.app update", "Another month of automated social media done.")}
         {hi(client.get("business_name") or "there")}
@@ -273,7 +280,7 @@ def send_missing_platform_email(client, missing):
         {hero("&#x26A0;&#xFE0F;", "One platform still needs connecting", "Takes less than a minute to complete.")}
         {hi(client.get("business_name") or "there")}
         {para(f"{list_str} still needs to be connected to start posting automatically.")}
-        {btn("Connect now &rarr;", "https://onboarding.posst.app/portal.html")}
+        {btn("Connect now &rarr;", portal_url(client))}
         {hl("Takes less than 60 seconds. Click the button above and connect your account.", "&#x23F1;&#xFE0F;")}
         {sign_off()}
     ''')
