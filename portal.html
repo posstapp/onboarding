@@ -792,7 +792,10 @@ function renderProSetup() {
 
     <div class="form-section" style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
       <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px">📷 Your photo library</div>
-      <div style="font-size:12px;color:var(--ink-mid);margin-bottom:12px">Connect your Google Drive folder. Share it with posst-sheets-bot@posst-app.iam.gserviceaccount.com as Viewer first.</div>
+      <div style="font-size:12px;color:var(--ink-mid);margin-bottom:12px;line-height:1.6">
+        Connect your Google Drive photo folder so we use your real photos in posts.<br>
+        <strong>Before pasting the link:</strong> In Google Drive, right-click your folder → Share → add <span style="background:#f1f5f9;border-radius:4px;padding:1px 6px;font-family:monospace;font-size:11px">posst-sheets-bot@posst-app.iam.gserviceaccount.com</span> as Viewer → Send.
+      </div>
       <div style="display:flex;gap:8px;margin-bottom:4px">
         <input id="portal-drive-url" class="form-input" style="flex:1;font-size:13px" placeholder="https://drive.google.com/drive/folders/..." oninput="window.proSetup.driveUrl=this.value;window.proSetup.driveValidated=false;document.getElementById('portal-drive-status').innerHTML=''">
         <button onclick="testDriveInPortal()" id="portal-drive-btn" class="btn btn-secondary btn-sm">🔗 Test</button>
@@ -825,7 +828,17 @@ async function testDriveInPortal() {
     if (result.valid) {
       window.proSetup.driveValidated = true;
       window.proSetup.driveStructure = result.structure || [];
-      if(status) status.innerHTML = '<span style="color:var(--green);font-weight:600">✅ Connected — ' + (result.folder_name||'folder found') + '</span>';
+      const folders = result.structure || [];
+      let folderHtml = '<span style="color:var(--green);font-weight:600">✅ Folder connected</span>';
+      if (folders.length > 0) {
+        folderHtml += '<div style="margin-top:8px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px">';
+        folderHtml += '<div style="font-size:11px;font-weight:600;color:var(--ink-mid);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Subfolders found (' + folders.length + ')</div>';
+        folderHtml += folders.map(f => '<div style="font-size:12px;color:var(--ink);padding:3px 0;border-bottom:1px solid var(--border)">📁 ' + f + '</div>').join('');
+        folderHtml += '</div>';
+      } else {
+        folderHtml += '<div style="margin-top:6px;font-size:12px;color:var(--ink-mid)">No subfolders found — we'll pick photos from the main folder automatically.</div>';
+      }
+      if(status) status.innerHTML = folderHtml;
     } else {
       if(status) status.innerHTML = '<span style="color:var(--red)">❌ ' + (result.error||'Could not access folder') + '</span>';
     }
