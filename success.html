@@ -47,7 +47,7 @@ body{font-family:var(--sans);background:var(--bg);min-height:100vh;display:flex;
     </div>
     <div class="step-row">
       <div class="step-icon">⏳</div>
-      <div class="step-text"><strong>Connect your accounts</strong><br>One click to authorise Facebook, Instagram or Google.</div>
+      <div class="step-text"><strong>Connect your accounts</strong><br><span id="connect-desc">One click to authorise your social accounts.</span></div>
     </div>
   </div>
 
@@ -97,7 +97,10 @@ const API_SECRET = 'posst-api-secret-2026';
       const platNames = [];
       if(platforms.includes('facebook') || platforms.includes('instagram')) platNames.push('Facebook & Instagram');
       if(platforms.includes('gbp')) platNames.push('Google Business Profile');
-      oauthSub.textContent = `Connect your ${platNames.join(' and ')} account${platNames.length > 1 ? 's' : ''} — takes about 2 minutes.`;
+      const platLabel = platNames.join(' and ');
+      oauthSub.textContent = `Connect your ${platLabel} account${platNames.length > 1 ? 's' : ''} — takes about 2 minutes.`;
+      const connectDesc = document.getElementById('connect-desc');
+      if(connectDesc) connectDesc.textContent = `Connect your ${platLabel} account${platNames.length > 1 ? 's' : ''}.`;
 
       const oauthParams = new URLSearchParams({ client_id: clientId, token: pendingToken, platforms: platforms.join(','), business, email });
       oauthBtn.href = `${OAUTH_BASE_URL}?${oauthParams.toString()}`;
