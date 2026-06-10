@@ -7,7 +7,6 @@ Changes from v3.3:
 """
 
 import os
-import json
 import logging
 import requests
 from datetime import datetime, timedelta
