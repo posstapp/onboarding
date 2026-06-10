@@ -1340,7 +1340,7 @@ function renderStep5() {
     <div class="info-box green">
       <span class="info-box-icon">&#9989;</span>
       <div class="info-box-text">By submitting you confirm these details are correct. A confirmation email will be sent to <strong>${esc(F.contact_email)}</strong>.</div>
-    </div>\`;
+    </div>`;
 }
 
 // ── STEP 8: Payment ────────────────────────────────────────
@@ -1352,9 +1352,9 @@ function renderStepPayment() {
     ? platformList.slice(0,-1).join(', ') + ' &amp; ' + platformList[platformList.length-1]
     : platformList[0] || '';
   const totalSteps = isPro() ? '8 of 8' : '7 of 7';
-  return \`
+  return `
     <div class="step-header">
-      <div class="step-tag">Step \${totalSteps} — Start your free trial</div>
+      <div class="step-tag">Step ${totalSteps} — Start your free trial</div>
       <h2 class="step-title">You're almost live 🎉</h2>
       <p class="step-desc">Add your card to activate your 30-day free trial. Nothing is charged today.</p>
     </div>
@@ -1368,14 +1368,14 @@ function renderStepPayment() {
     <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div>
-          <div style="font-size:14px;font-weight:700;color:var(--ink)">\${F.tier} plan</div>
-          <div style="font-size:12px;color:var(--ink-light)">After trial: \${p.sym}\${planPrice}/month</div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink)">${F.tier} plan</div>
+          <div style="font-size:12px;color:var(--ink-light)">After trial: ${p.sym}${planPrice}/month</div>
         </div>
         <div style="font-size:11px;color:var(--blue);font-weight:600;cursor:pointer" onclick="step=4;render()">Change plan</div>
       </div>
-      \${platformStr ? \`<div style="font-size:12px;color:var(--ink-mid);border-top:1px solid var(--border);padding-top:10px">
-        &#128247; Posting to: <strong>\${platformStr}</strong>
-      </div>\` : ''}
+      ${platformStr ? \`<div style="font-size:12px;color:var(--ink-mid);border-top:1px solid var(--border);padding-top:10px">
+        &#128247; Posting to: <strong>${platformStr}</strong>
+      </div>` : ''}
     </div>
     <div style="background:#F8FAFC;border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px">
       <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink-mid);margin-bottom:4px">Payment</div>
@@ -1383,7 +1383,7 @@ function renderStepPayment() {
     </div>
     <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-light);margin-bottom:4px">
       &#128274; Secured by Stripe &nbsp;&middot;&nbsp; 256-bit SSL &nbsp;&middot;&nbsp; PCI DSS compliant
-    </div>\`;
+    </div>`;
 }
 
 function rr(k,v) {
