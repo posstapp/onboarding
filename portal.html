@@ -836,7 +836,7 @@ async function testDriveInPortal() {
         folderHtml += folders.map(f => '<div style="font-size:12px;color:var(--ink);padding:3px 0;border-bottom:1px solid var(--border)">📁 ' + f + '</div>').join('');
         folderHtml += '</div>';
       } else {
-        folderHtml += '<div style="margin-top:6px;font-size:12px;color:var(--ink-mid)">No subfolders found — we'll pick photos from the main folder automatically.</div>';
+        folderHtml += '<div style="margin-top:6px;font-size:12px;color:var(--ink-mid)">No subfolders found &#8212; we will pick photos from the main folder automatically.</div>';
       }
       if(status) status.innerHTML = folderHtml;
     } else {
