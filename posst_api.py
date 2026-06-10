@@ -814,19 +814,23 @@ STRIPE_PRICES = {
 
 def stripe_request(method, path, payload=None, raw_body=None, extra_headers=None):
     import urllib.request, urllib.parse, base64 as _b64
+    key = STRIPE_SECRET_KEY.strip()
     url = f'https://api.stripe.com/v1{path}'
-    auth = _b64.b64encode(f'{STRIPE_SECRET_KEY}:'.encode()).decode()
+    auth = _b64.b64encode(f'{key}:'.encode()).decode()
     headers = {'Authorization': f'Basic {auth}', 'Content-Type': 'application/x-www-form-urlencoded'}
     if extra_headers:
         headers.update(extra_headers)
     body = urllib.parse.urlencode(payload).encode() if payload else raw_body
     req = urllib.request.Request(url, data=body, headers=headers, method=method)
+    log.info(f'Stripe {method} {path} | key_len={len(key)} key_prefix={key[:12]}')
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             return json.loads(resp.read()), None
     except urllib.error.HTTPError as e:
         err_body = json.loads(e.read())
-        return None, err_body.get('error', {}).get('message', 'Stripe error')
+        msg = err_body.get('error', {}).get('message', 'Stripe error')
+        log.error(f'Stripe error {e.code} on {method} {path}: {msg}')
+        return None, msg
 
 @app.route('/api/stripe/checkout', methods=['POST'])
 @require_auth
@@ -876,8 +880,7 @@ def stripe_checkout():
         'automatic_tax[enabled]':            'true',
         'metadata[client_id]':               client_id,
     }
-    if email:
-        session_payload['customer_email'] = email
+    # Do NOT set customer_email when customer ID is already set — Stripe rejects both together
 
     session, sess_err = stripe_request('POST', '/checkout/sessions', session_payload)
     if sess_err:
