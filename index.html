@@ -589,11 +589,20 @@ async function verifyOTP() {
         last_step_reached: 'otp'
       });
       // Check if client is already active — if so, send to portal
-      // UNLESS mode=new_business — in that case, skip and start fresh onboarding
+      // UNLESS mode=new_business — in that case, clear old data and go to search screen
       var urlParams = new URLSearchParams(window.location.search);
-      var isNewBusiness = urlParams.get('mode') === 'new_business';
+      var isNewBusiness = urlParams.get('mode') === 'new_business' || sessionStorage.getItem('posst_new_business_mode') === '1';
       if (isNewBusiness) {
-        next();
+        // Clear old business sessionStorage so search screen starts fresh
+        ['posst_business_name','posst_business_city','posst_business_type',
+         'posst_google_score','posst_review_count','posst_competitor_avg',
+         'posst_search_volume','posst_resumed','posst_resume_name'].forEach(function(k) {
+          sessionStorage.removeItem(k);
+        });
+        sessionStorage.setItem('posst_new_business_mode', '1');
+        step = 1; // Go to search screen
+        render();
+        window.scrollTo(0,0);
         return;
       }
       callAppsScript('portal_lookup', {phone: fullPhone}).then(function(portalRes) {
@@ -846,6 +855,69 @@ function renderStep0() {
       </div>
       <button class="btn-next" onclick="verifyOTP()">Verify &amp; continue &#8594;</button>
     `}`;
+}
+
+
+// ── NEW BUSINESS SEARCH SCREEN ─────────────────────────────
+function renderStepSearch() {
+  return `
+    <div class="step-header">
+      <div class="step-tag">New business</div>
+      <h2 class="step-title">Find your new business</h2>
+      <p class="step-desc">Search for your business to see how it scores against local competitors.</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Search your business name</label>
+      <div class="location-wrap">
+        <input class="form-input" id="new-biz-search" placeholder="e.g. Joe's Bakery Glen Waverley" autocomplete="off"
+          oninput="initNewBizSearch()">
+        <div class="location-dropdown" id="new-biz-dropdown" style="display:none"></div>
+      </div>
+      <div class="form-hint">Start typing — select your business from the list to continue.</div>
+    </div>
+    <div id="new-biz-status" style="font-size:13px;color:var(--ink-light);margin-top:8px"></div>
+  `;
+}
+
+let newBizAutocomplete = null;
+let newBizSearchInit = false;
+
+function initNewBizSearch() {
+  if (newBizSearchInit) return;
+  if (typeof google === 'undefined' || !google.maps || !google.maps.places) return;
+  newBizSearchInit = true;
+  const input = document.getElementById('new-biz-search');
+  if (!input) return;
+  const ac = new google.maps.places.Autocomplete(input, {
+    types: ['establishment'],
+    fields: ['name','address_components','types','rating','user_ratings_total','geometry']
+  });
+  ac.addListener('place_changed', function() {
+    const place = ac.getPlace();
+    if (!place || !place.name) return;
+    const status = document.getElementById('new-biz-status');
+    if (status) status.textContent = 'Calculating your score...';
+    // Clear old session data for previous business
+    ['posst_business_name','posst_business_city','posst_business_type',
+     'posst_google_score','posst_review_count','posst_competitor_avg','posst_search_volume']
+      .forEach(function(k) { sessionStorage.removeItem(k); });
+    // Reset form fields that were auto-populated from old business
+    F.business_name = '';
+    F.business_city = '';
+    F.business_suburb = '';
+    F.business_type = '';
+    F.business_type_group = '';
+    // Load new business data
+    initBridgeData(place);
+    // Advance to Bridge after a short delay for score fetch to start
+    setTimeout(function() {
+      step = 2; // Bridge is always index 2 in new_business mode steps array
+      newBizSearchInit = false; // reset for next time
+      render();
+      window.scrollTo(0,0);
+    }, 600);
+  });
+  newBizAutocomplete = ac;
 }
 
 // ── BRIDGE SCREEN ──────────────────────────────────────────
@@ -1488,7 +1560,11 @@ function render() {
   const focusSel = activeEl && activeEl.selectionStart != null ? { start: activeEl.selectionStart, end: activeEl.selectionEnd } : null;
   renderSidebar();
   // steps array: 0=phone, 1=bridge, 2=business, 3=platforms, 4=plan, 5=drive, 6=schedule, 7=review, 8=payment
-  const steps = [renderStep0, renderStepBridge, renderStep1, renderStep2, renderStep3, renderStep4GDrive, renderStep4, renderStep5, renderStepPayment];
+  // new_business mode: 0=phone, 1=search, 2=bridge, 3=business, 4=platforms, 5=plan, 6=drive, 7=schedule, 8=review, 9=payment
+  const isNewBiz = sessionStorage.getItem('posst_new_business_mode') === '1';
+  const steps = isNewBiz
+    ? [renderStep0, renderStepSearch, renderStepBridge, renderStep1, renderStep2, renderStep3, renderStep4GDrive, renderStep4, renderStep5, renderStepPayment]
+    : [renderStep0, renderStepBridge, renderStep1, renderStep2, renderStep3, renderStep4GDrive, renderStep4, renderStep5, renderStepPayment];
   const isReviewStep = step === 7;
   const isPaymentStep = step === 8;
   const isLastStep = isPaymentStep;
@@ -1763,7 +1839,9 @@ render = function() {
   _origRender();
   // Only show chat bubble from step 2 onwards (after OTP)
   const bubble = document.getElementById('chat-bubble');
-  if (bubble) bubble.style.display = currentStep >= 2 ? 'flex' : 'none';
+  const _isNewBiz = sessionStorage.getItem('posst_new_business_mode') === '1';
+  const _chatThreshold = _isNewBiz ? 3 : 2;
+  if (bubble) bubble.style.display = currentStep >= _chatThreshold ? 'flex' : 'none';
   // Inject tooltip
   setTimeout(injectTooltip, 0);
 };
