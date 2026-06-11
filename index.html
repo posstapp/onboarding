@@ -876,7 +876,24 @@ function renderStepSearch() {
       <div class="form-hint">Start typing — select your business from the list to continue.</div>
     </div>
     <div id="new-biz-status" style="font-size:13px;color:var(--ink-light);margin-top:8px"></div>
+    <div style="margin-top:20px;text-align:center">
+      <a href="#" style="font-size:13px;color:var(--ink-light);text-decoration:underline" onclick="skipNewBizSearch(event)">My business isn\'t on Google yet — skip this step</a>
+    </div>
   `;
+}
+
+function skipNewBizSearch(e) {
+  e.preventDefault();
+  // Set score to 0 — no Google listing
+  ['posst_business_name','posst_business_city','posst_business_type',
+   'posst_google_score','posst_review_count','posst_competitor_avg','posst_search_volume']
+    .forEach(function(k) { sessionStorage.removeItem(k); });
+  sessionStorage.setItem('posst_google_score', '0');
+  sessionStorage.setItem('posst_search_volume', '0');
+  newBizSearchInit = false;
+  step = 2; // Go straight to Bridge (score=0 path)
+  render();
+  window.scrollTo(0,0);
 }
 
 let newBizAutocomplete = null;
@@ -943,9 +960,9 @@ function renderStepBridge() {
   return `
     <div class="bridge-wrap">
       <div>
-        <p class="bridge-eyebrow">Here&#39;s what we found</p>
-        <h1 class="bridge-business">${esc(businessName)}</h1>
-        <p class="bridge-sub">${esc(businessCity)} &middot; ${esc(businessType)}</p>
+        <p class="bridge-eyebrow">${googleScore === 0 && sessionStorage.getItem('posst_new_business_mode') === '1' ? "Let\'s get you found" : "Here\'s what we found"}</p>
+        <h1 class="bridge-business">${esc(businessName) || 'Your new business'}</h1>
+        <p class="bridge-sub">${googleScore === 0 && sessionStorage.getItem('posst_new_business_mode') === '1' ? "Not on Google yet — let\'s change that" : esc(businessCity) + ' &middot; ' + esc(businessType)}</p>
       </div>
       <div class="bridge-card bridge-score-card">
         <div class="bridge-score-top">
