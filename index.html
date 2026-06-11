@@ -589,6 +589,13 @@ async function verifyOTP() {
         last_step_reached: 'otp'
       });
       // Check if client is already active — if so, send to portal
+      // UNLESS mode=new_business — in that case, skip and start fresh onboarding
+      var urlParams = new URLSearchParams(window.location.search);
+      var isNewBusiness = urlParams.get('mode') === 'new_business';
+      if (isNewBusiness) {
+        next();
+        return;
+      }
       callAppsScript('portal_lookup', {phone: fullPhone}).then(function(portalRes) {
         const clientStatus = portalRes && portalRes.status === 'success' && portalRes.data ? (portalRes.data.status || '') : '';
         if(['Active','Provisioning','Paused','Cancelled'].includes(clientStatus)) {
@@ -1528,6 +1535,18 @@ detectCountry();
   // If mode=login, show sign-in screen directly
   if (params.get('mode') === 'login') {
     sessionStorage.setItem('posst_login_mode', '1');
+  }
+  // Pre-fill phone when coming from portal Add new business
+  if (params.get('mode') === 'new_business' && params.get('phone')) {
+    var prePhone = params.get('phone');
+    // Extract country code and number
+    var knownCodes = ['+61','+1','+44','+91','+971','+65','+64','+27','+49','+33','+39','+34','+31','+353','+46','+47','+45','+41','+48','+966','+974','+973','+968','+965','+20','+234','+254','+55','+52','+60','+63','+66','+84','+81','+82','+852','+92','+880','+94'];
+    var matched = knownCodes.find(function(c) { return prePhone.startsWith(c); });
+    if (matched) {
+      F.phone_code = matched;
+      F.phone_number = prePhone.slice(matched.length).replace(/\s/g,'');
+    }
+    sessionStorage.setItem('posst_new_business_mode', '1');
   }
   if (params.get('bn')) {
     sessionStorage.setItem('posst_business_name',  params.get('bn') || '');
