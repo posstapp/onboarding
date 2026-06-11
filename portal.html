@@ -283,6 +283,16 @@ function renderDashboard() {
           <div style="margin-top:${isPro?'0':'12px'}">
             <button class="btn btn-secondary btn-full" id="billing-btn" onclick="openBillingPortal()">💳 Manage billing &amp; invoices</button>
           </div>
+          <div style="margin-top:12px;text-align:center">
+            <a href="#" style="font-size:13px;color:var(--ink-light);text-decoration:underline" onclick="toggleCouponField(event)">Have a discount code?</a>
+          </div>
+          <div id="coupon-section" style="display:none;margin-top:12px">
+            <div style="display:flex;gap:8px">
+              <input id="coupon-input" class="form-input" placeholder="Enter discount code" style="flex:1;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+              <button class="btn btn-primary" id="coupon-btn" onclick="applyCoupon()">Apply</button>
+            </div>
+            <div id="coupon-status" style="font-size:13px;margin-top:8px"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -637,6 +647,45 @@ async function testDrivePortal() {
 function changeDrive() { showDriveInput(); }
 
 // ── UPGRADE ───────────────────────────────────────────────
+function toggleCouponField(e) {
+  e.preventDefault();
+  const section = document.getElementById('coupon-section');
+  if (section) {
+    section.style.display = section.style.display === 'none' ? 'block' : 'none';
+    if (section.style.display === 'block') {
+      document.getElementById('coupon-input').focus();
+    }
+  }
+}
+
+async function applyCoupon() {
+  const input = document.getElementById('coupon-input');
+  const status = document.getElementById('coupon-status');
+  const btn = document.getElementById('coupon-btn');
+  const code = (input?.value || '').trim();
+  if (!code) { status.innerHTML = '<span style="color:#e53e3e">Please enter a discount code.</span>'; return; }
+  btn.disabled = true; btn.textContent = 'Applying...';
+  status.innerHTML = '';
+  try {
+    const resp = await fetch(PROXY_URL + '/stripe/coupon', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ client_id: clientData.client_id, coupon_code: code })
+    });
+    const result = await resp.json();
+    if (result.discount) {
+      status.innerHTML = '<span style="color:#38a169">✅ Discount applied — ' + result.discount + '</span>';
+      input.value = '';
+      btn.textContent = 'Applied ✅';
+    } else {
+      status.innerHTML = '<span style="color:#e53e3e">❌ ' + (result.error || 'Invalid or expired code.') + '</span>';
+      btn.disabled = false; btn.textContent = 'Apply';
+    }
+  } catch (e) {
+    status.innerHTML = '<span style="color:#e53e3e">❌ Connection error. Please try again.</span>';
+    btn.disabled = false; btn.textContent = 'Apply';
+  }
+}
+
 async function openBillingPortal() {
   const btn = document.getElementById('billing-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Opening billing portal...'; }
