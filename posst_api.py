@@ -554,7 +554,7 @@ def email_alert():
 def run_campaigns():
     from datetime import datetime
     today = datetime.utcnow().replace(hour=0,minute=0,second=0,microsecond=0)
-    results = {'day1':0,'day2':0,'day7_std':0,'day7_pro':0,'day27':0,'day28':0,'day29':0,'monthly':0,'errors':[]}
+    results = {'day1':0,'day2':0,'day7_std':0,'day7_pro':0,'day27':0,'day28':0,'day29':0,'monthly':0,'billing_alerts':0,'errors':[]}
     clients = sb.table('clients').select('*').eq('status','Active').execute()
     for c in (clients.data or []):
         cid = c.get('client_id','')
@@ -590,6 +590,11 @@ def run_campaigns():
             if datetime.utcnow().day==mday and days>=30 and not sent(mcamp):
                 if EMAIL_AVAILABLE: send_monthly_email(c)
                 log_sent(mcamp); results['monthly']+=1
+            # Safety check — trial ended but no subscription ID recorded
+            if days >= 31 and not c.get('stripe_subscription_id') and not sent('billing_alert'):
+                msg = f"Client {cid} ({c.get('business_name','?')}) — trial ended {days-30} day(s) ago but no stripe_subscription_id on record. Manual check required."
+                if EMAIL_AVAILABLE: send_internal_alert('Billing Alert — Missing Subscription', msg, 'alert')
+                log_sent('billing_alert'); results.setdefault('billing_alerts', 0); results['billing_alerts'] += 1
         except Exception as e:
             results['errors'].append(f'{cid}:{str(e)}')
     if EMAIL_AVAILABLE:
