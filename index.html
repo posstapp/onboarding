@@ -803,7 +803,7 @@ async function submitForm() {
     savedClientId = clientId;
     savedPendingToken = pendingToken;
     isSubmitting = false;
-    step = 8;
+    step = sessionStorage.getItem('posst_new_business_mode') === '1' ? 9 : 8;
     render(); window.scrollTo(0,0);
   } catch(e) {
     isSubmitting = false;
