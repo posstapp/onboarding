@@ -661,9 +661,14 @@ function handleOTPHiddenInput(el) {
 // ── VALIDATION ─────────────────────────────────────────────
 function validate() {
   errors = {};
+  const _isNewBiz = sessionStorage.getItem('posst_new_business_mode') === '1';
+  // Normalise step to logical step (0=phone,bridge,1=search(newbiz only),biz,2=platforms,3=plan,4=drive,5=schedule)
+  // Normal:   0=phone 1=bridge 2=biz 3=platforms 4=plan 5=drive 6=schedule 7=review 8=payment
+  // New biz:  0=phone 1=search 2=bridge 3=biz 4=platforms 5=plan 6=drive 7=schedule 8=review 9=payment
+  const s = _isNewBiz ? step - 1 : step; // shift new_business steps down by 1 to match normal indices
   if(step===0) { if(!otpVerified) errors.otp='Please verify your phone number'; }
-  // step 1 = bridge — no validation needed
-  if(step===2) {
+  // s=1 = bridge or search — no validation needed
+  if(s===2) {
     if(!F.business_name.trim()) errors.business_name='Required';
     if(!F.business_country.trim()) errors.business_country='Required';
     if(!F.business_suburb.trim()) errors.business_suburb='Required';
@@ -672,7 +677,7 @@ function validate() {
     if(!F.business_description.trim()) errors.business_description='Please describe your business — this is used to write your posts';
     if(!F.contact_email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) errors.contact_email='Valid email required';
   }
-  if(step===3) {
+  if(s===3) {
     if(F.platforms.length===0) errors.platforms='Select at least one platform';
     if(hasFB()&&!F.facebook_page_name.trim()) errors.facebook_page_name='Required';
     if(hasFB()&&!F.facebook_page_url.trim()) errors.facebook_page_url='Required';
@@ -680,14 +685,14 @@ function validate() {
     if(hasIG()&&!F.ig_url.trim()) errors.ig_url='Required';
     if(hasGBP()&&!F.gbp_name.trim()) errors.gbp_name='Required';
   }
-  if(step===4) { if(!F.tier) errors.tier='Please choose a plan'; }
-  if(step===5) {
+  if(s===4) { if(!F.tier) errors.tier='Please choose a plan'; }
+  if(s===5) {
     if(isPro() && F.google_drive_intent==='now') {
       if(!F.google_drive_url.trim()) errors.google_drive_url='Please paste your Google Drive folder link';
       else if(!driveValidated) errors.google_drive_url='Please test your connection before continuing';
     }
   }
-  if(step===6) { if(!F.posting_time) errors.posting_time='Choose a posting time'; }
+  if(s===6) { if(!F.posting_time) errors.posting_time='Choose a posting time'; }
   return Object.keys(errors).length===0;
 }
 
@@ -889,14 +894,14 @@ function renderStepSearch() {
 
 function skipNewBizSearch(e) {
   e.preventDefault();
-  // Set score to 0 — no Google listing
+  // No Google listing — clear score data, skip Bridge entirely, go to Business details
   ['posst_business_name','posst_business_city','posst_business_type',
    'posst_google_score','posst_review_count','posst_competitor_avg','posst_search_volume']
     .forEach(function(k) { sessionStorage.removeItem(k); });
   sessionStorage.setItem('posst_google_score', '0');
   sessionStorage.setItem('posst_search_volume', '0');
   newBizSearchInit = false;
-  step = 2; // Go straight to Bridge (score=0 path)
+  step = 3; // Skip Bridge (step=2), go straight to Business details (step=3)
   render();
   window.scrollTo(0,0);
 }
@@ -1616,7 +1621,8 @@ function render() {
   } else {
     $('main-content').innerHTML = logoHtml + welcomeBackBanner + steps[step]()+nav;
   }
-  if(step===2) setTimeout(initPlacesAutocomplete, 100);
+  const _placesStep = sessionStorage.getItem('posst_new_business_mode')==='1' ? 3 : 2;
+  if(step===_placesStep) setTimeout(initPlacesAutocomplete, 100);
   if(focusId) {
     const el = document.getElementById(focusId);
     if(el) { el.focus(); if(focusSel && el.setSelectionRange) el.setSelectionRange(focusSel.end, focusSel.end); }
