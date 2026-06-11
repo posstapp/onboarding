@@ -386,6 +386,10 @@ function renderDashboard() {
             <div>Connect your Google Drive photo folder so we use your real photos in every post. Share the folder with <strong>posst-sheets-bot@posst-app.iam.gserviceaccount.com</strong> as Viewer first.</div>
           </div>`}
           <div class="form-group" id="drive-input-group" style="${cd.google_drive_url?'display:none':''}">
+            <div class="info-box info-box-blue" style="margin-bottom:12px">
+              <span class="info-icon">📋</span>
+              <div style="font-size:12px">Before pasting your link: in Google Drive, right-click your folder → <strong>Share</strong> → add <strong>posst-sheets-bot@posst-app.iam.gserviceaccount.com</strong> as Viewer → Send.</div>
+            </div>
             <label class="form-label">Google Drive folder URL</label>
             <div style="display:flex;gap:8px">
               <input id="drive-url-input" class="form-input" style="flex:1" placeholder="https://drive.google.com/drive/folders/...">
