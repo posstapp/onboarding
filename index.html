@@ -693,9 +693,12 @@ function validate() {
 
 function next() {
   if(!validate()) { render(); window.scrollTo(0,0); return; }
-  if(step<8) {
+  const isNewBiz = sessionStorage.getItem('posst_new_business_mode') === '1';
+  const maxStep = isNewBiz ? 9 : 8;
+  const driveStep = isNewBiz ? 6 : 5;
+  if(step < maxStep) {
     step++;
-    if(step===5 && !isPro()) step++;
+    if(step === driveStep && !isPro()) step++;
     // Save progress after each step advance
     const phone = sessionStorage.getItem('posst_phone') || '';
     if(phone && step > 1) {
@@ -705,10 +708,12 @@ function next() {
   }
 }
 function back() {
-  if(step>0) {
+  const isNewBiz = sessionStorage.getItem('posst_new_business_mode') === '1';
+  const driveStep = isNewBiz ? 6 : 5;
+  if(step > 0) {
     step--;
-    if(step===5 && !isPro()) step--;
-    if(step<0) { window.location.href='https://posst.app'; return; }
+    if(step === driveStep && !isPro()) step--;
+    if(step < 0) { window.location.href='https://posst.app'; return; }
     render(); window.scrollTo(0,0);
   } else window.location.href='https://posst.app';
 }
@@ -1582,8 +1587,9 @@ function render() {
   const steps = isNewBiz
     ? [renderStep0, renderStepSearch, renderStepBridge, renderStep1, renderStep2, renderStep3, renderStep4GDrive, renderStep4, renderStep5, renderStepPayment]
     : [renderStep0, renderStepBridge, renderStep1, renderStep2, renderStep3, renderStep4GDrive, renderStep4, renderStep5, renderStepPayment];
-  const isReviewStep = step === 7;
-  const isPaymentStep = step === 8;
+  const _isNewBizMode = sessionStorage.getItem('posst_new_business_mode') === '1';
+  const isReviewStep = step === (_isNewBizMode ? 8 : 7);
+  const isPaymentStep = step === (_isNewBizMode ? 9 : 8);
   const isLastStep = isPaymentStep;
   const nav = `<div class="form-nav">
     <button class="btn-back" onclick="back()">&#8592; ${step===0?'Back to home':'Back'}</button>
