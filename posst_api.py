@@ -261,36 +261,41 @@ def portal_lookup():
         return err('Phone required')
     # Normalize — remove all spaces for comparison
     phone = phone_raw.replace(' ', '')
-    # Fetch all clients and compare normalized phones
-    result = sb.table('clients').select('*').execute()
-    client = None
+    # Fetch all clients and compare normalized phones — collect ALL matches
+    result = sb.table('clients').select('*').order('created_at', desc=False).execute()
+    clients = []
     for row in result.data:
         stored = (row.get('phone') or '').replace(' ', '').lstrip("'")
         if stored == phone:
-            client = row
-            break
-    if not client:
+            clients.append(row)
+    if not clients:
         return jsonify({'status': 'not_found'})
-    result = type('R', (), {'data': [client]})()
-    client = result.data[0]
+    def fmt(client):
+        return {
+            'client_id':        client['client_id'],
+            'business_name':    client['business_name'],
+            'email':            client['contact_email'],
+            'plan':             client['plan'],
+            'platforms':        client['platforms'],
+            'drive_intent':     client['google_drive_intent'],
+            'google_drive_url': client['google_drive_url'],
+            'status':           client['status'],
+            'fb_connected':     bool(client.get('fb_page_id')),
+            'ig_connected':     bool(client.get('ig_business_id')),
+            'gbp_connected':    bool(client.get('gbp_location_id')),
+            'posting_days':     client['posting_days'],
+            'posting_time':     client['posting_time'],
+            'timezone':         client['timezone'],
+            'notes':            client.get('notes', {}),
+            'fb_page_name':     client.get('fb_page_name', ''),
+            'ig_handle':        client.get('ig_handle', ''),
+            'trial_start':      client.get('trial_start', ''),
+            'drive_categories': client.get('drive_categories', []),
+        }
+    # Return first client as primary + full list for switcher
     return ok({
-        'client_id':        client['client_id'],
-        'business_name':    client['business_name'],
-        'email':            client['contact_email'],
-        'plan':             client['plan'],
-        'platforms':        client['platforms'],
-        'drive_intent':     client['google_drive_intent'],
-        'google_drive_url': client['google_drive_url'],
-        'status':           client['status'],
-        'fb_connected':     bool(client.get('fb_page_id')),
-        'ig_connected':     bool(client.get('ig_business_id')),
-        'gbp_connected':    bool(client.get('gbp_location_id')),
-        'posting_days':     client['posting_days'],
-        'posting_time':     client['posting_time'],
-        'timezone':         client['timezone'],
-        'notes':            client.get('notes', {}),
-        'fb_page_name':     client.get('fb_page_name', ''),
-        'ig_handle':        client.get('ig_handle', ''),
+        **fmt(clients[0]),
+        'all_clients': [{'client_id': c['client_id'], 'business_name': c['business_name'], 'status': c['status']} for c in clients]
     })
 
 # ── PENDING TOKEN ─────────────────────────────────────────────
