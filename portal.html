@@ -127,6 +127,23 @@ body{font-family:var(--sans);background:var(--cream);color:var(--ink);min-height
 .drive-connected{background:var(--green-dim);border:1px solid #BBF7D0;border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .drive-url{font-size:11px;color:var(--ink-light);margin-top:3px;word-break:break-all}
 
+/* ── BUSINESS SWITCHER ── */
+.nav-switcher{position:relative;display:inline-block}
+.nav-switcher-btn{font-size:13px;font-weight:600;color:var(--ink);background:none;border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;font-family:var(--sans);display:flex;align-items:center;gap:6px;transition:border-color 0.15s}
+.nav-switcher-btn:hover{border-color:var(--blue)}
+.nav-switcher-btn .sw-caret{font-size:9px;color:var(--ink-light);transition:transform 0.2s}
+.nav-switcher-btn.open .sw-caret{transform:rotate(180deg)}
+.nav-switcher-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:220px;background:white;border:1.5px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:300;overflow:hidden;display:none}
+.nav-switcher-menu.open{display:block}
+.sw-item{padding:11px 16px;font-size:13px;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;transition:background 0.1s}
+.sw-item:hover{background:var(--blue-dim)}
+.sw-item.active{background:var(--blue-dim);font-weight:600}
+.sw-item-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw-item-status{font-size:10px;color:var(--ink-light);flex-shrink:0}
+.sw-item-status.active{color:var(--green)}
+.sw-divider{height:1px;background:var(--border);margin:4px 0}
+.sw-add{padding:11px 16px;font-size:13px;color:var(--blue);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.1s}
+.sw-add:hover{background:var(--blue-dim)}
 /* ── FOOTER ── */
 .footer{text-align:center;padding:32px 16px;font-size:11px;color:var(--ink-light)}
 .footer a{color:var(--blue);text-decoration:none}
@@ -139,7 +156,14 @@ body{font-family:var(--sans);background:var(--cream);color:var(--ink);min-height
     <img src="https://posst.app/posst_logo_dark.png" alt="posst.app">
   </a>
   <div class="nav-right">
-    <span class="nav-name" id="nav-biz-name"></span>
+    <div class="nav-switcher" id="nav-switcher">
+      <button class="nav-switcher-btn" id="nav-switcher-btn" onclick="toggleSwitcher()" style="display:none">
+        <span id="nav-biz-name"></span>
+        <span class="sw-caret">▼</span>
+      </button>
+      <span class="nav-name" id="nav-biz-name-single"></span>
+      <div class="nav-switcher-menu" id="nav-switcher-menu"></div>
+    </div>
     <button class="nav-signout" onclick="signOut()">Sign out</button>
   </div>
 </nav>
@@ -200,7 +224,22 @@ async function loadAccount() {
     }
 
     clientData = result.data;
-    document.getElementById('nav-biz-name').textContent = clientData.business_name || '';
+    const allClients = result.data.all_clients || [];
+    const bizName = clientData.business_name || '';
+
+    if (allClients.length > 1) {
+      // Multiple businesses — show switcher dropdown
+      document.getElementById('nav-biz-name').textContent = bizName;
+      document.getElementById('nav-switcher-btn').style.display = 'flex';
+      document.getElementById('nav-biz-name-single').style.display = 'none';
+      buildSwitcherMenu(allClients, clientData.client_id);
+    } else {
+      // Single business — plain name
+      document.getElementById('nav-biz-name-single').textContent = bizName;
+      document.getElementById('nav-switcher-btn').style.display = 'none';
+      document.getElementById('nav-biz-name-single').style.display = 'inline';
+    }
+
     document.getElementById('loading').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
     renderDashboard();
@@ -216,6 +255,79 @@ function showError(msg) {
 function signOut() {
   sessionStorage.removeItem('posst_portal_phone');
   window.location.href = 'https://posst.app';
+}
+
+// ── BUSINESS SWITCHER ──────────────────────────────────────
+function buildSwitcherMenu(allClients, activeClientId) {
+  const menu = document.getElementById('nav-switcher-menu');
+  if (!menu) return;
+  const items = allClients.map(c => {
+    const isActive = c.client_id === activeClientId;
+    const statusLabel = c.status === 'Active' ? 'Active' : c.status;
+    return `<div class="sw-item ${isActive?'active':''}" onclick="switchBusiness('${c.client_id}')">
+      <span class="sw-item-name">${esc(c.business_name)}</span>
+      <span class="sw-item-status ${c.status==='Active'?'active':''}">${statusLabel}</span>
+    </div>`;
+  }).join('');
+  menu.innerHTML = items +
+    '<div class="sw-divider"></div>' +
+    '<div class="sw-add" onclick="addNewBusiness()">➕ Add another business</div>';
+}
+
+function toggleSwitcher() {
+  const btn = document.getElementById('nav-switcher-btn');
+  const menu = document.getElementById('nav-switcher-menu');
+  if (!btn || !menu) return;
+  const isOpen = menu.classList.contains('open');
+  menu.classList.toggle('open', !isOpen);
+  btn.classList.toggle('open', !isOpen);
+  if (!isOpen) {
+    // Close on outside click
+    setTimeout(() => {
+      document.addEventListener('click', function handler(e) {
+        if (!document.getElementById('nav-switcher').contains(e.target)) {
+          menu.classList.remove('open');
+          btn.classList.remove('open');
+        }
+        document.removeEventListener('click', handler);
+      });
+    }, 0);
+  }
+}
+
+async function switchBusiness(clientId) {
+  // Close menu
+  document.getElementById('nav-switcher-menu')?.classList.remove('open');
+  document.getElementById('nav-switcher-btn')?.classList.remove('open');
+  if (clientId === clientData.client_id) return;
+  // Load the selected client directly
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('dashboard').style.display = 'none';
+  try {
+    const resp = await fetch(PROXY_URL + '/client/' + clientId, {
+      method: 'GET', headers: {'Content-Type': 'application/json'}
+    });
+    const result = await resp.json();
+    if (result.status === 'success') {
+      // Merge all_clients from current clientData so switcher stays populated
+      result.data.all_clients = clientData.all_clients || [];
+      clientData = result.data;
+      document.getElementById('nav-biz-name').textContent = clientData.business_name || '';
+      buildSwitcherMenu(clientData.all_clients, clientId);
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      renderDashboard();
+    } else {
+      showError('Could not load that business. Please try again.');
+    }
+  } catch(e) {
+    showError('Connection error. Please try again.');
+  }
+}
+
+function addNewBusiness() {
+  const encodedPhone = encodeURIComponent(phone);
+  window.location.href = `https://onboarding.posst.app?mode=new_business&phone=${encodedPhone}`;
 }
 
 // ── RENDER DASHBOARD ──────────────────────────────────────
@@ -450,6 +562,14 @@ function renderDashboard() {
       </div>
     </div>
     ` : ''}
+
+    <!-- Add Another Business -->
+    <div style="margin-bottom:16px;background:white;border:1.5px dashed var(--border);border-radius:16px;padding:20px;text-align:center">
+      <div style="font-size:22px;margin-bottom:8px">➕</div>
+      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px">Add another business</div>
+      <div style="font-size:13px;color:var(--ink-light);margin-bottom:14px">Set up a second location or brand under the same account.</div>
+      <button class="btn btn-secondary btn-sm" onclick="addNewBusiness()">Start new business setup</button>
+    </div>
 
     <!-- Danger Zone -->
     <div class="danger-zone">
