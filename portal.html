@@ -348,7 +348,7 @@ function renderDashboard() {
 
   // Parse day themes from notes
   let dayThemes = {};
-  try { const n = JSON.parse(cd.notes || '{}'); dayThemes = n.day_themes || {}; } catch(e) {}
+  try { const n = typeof cd.notes === 'string' ? JSON.parse(cd.notes || '{}') : (cd.notes || {}); dayThemes = n.day_themes || {}; } catch(e) {}
   const defaultThemes = {Mon:'Service Spotlight',Tue:'Tip / Advice',Wed:'Transformation Story',Thu:'Seasonal / Local',Fri:'Booking Nudge',Sat:'Fun Fact',Sun:'Community Love'};
   DAYS.forEach(d => { if (!dayThemes[d]) dayThemes[d] = defaultThemes[d]; });
 
