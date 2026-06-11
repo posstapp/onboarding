@@ -959,31 +959,31 @@ function renderStep1() {
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Business name *</label>
+        <label class="form-label">Business name *${tip('business_name')}</label>
         <input class="form-input ${errors.business_name?'err':''}" value="${esc(F.business_name)}" placeholder="Joe&#39;s Bakery" oninput="F.business_name=this.value">
         ${errors.business_name?`<div class="form-error">${errors.business_name}</div>`:''}
       </div>
       <div class="form-group">
-        <label class="form-label">Contact email *</label>
+        <label class="form-label">Contact email *${tip('contact_email')}</label>
         <input class="form-input ${errors.contact_email?'err':''}" value="${esc(F.contact_email)}" placeholder="joe@joesbakery.com.au" type="email" oninput="F.contact_email=this.value">
         ${errors.contact_email?`<div class="form-error">${errors.contact_email}</div>`:''}
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Country *</label>
+      <label class="form-label">Country *${tip('country')}</label>
       <select class="form-input form-select" id="country-select" onchange="F.business_country=this.options[this.selectedIndex].text;F.business_city='';F.business_suburb='';setTimeout(initPlacesAutocomplete,50)">
         ${COUNTRIES.map(c=>`<option value="${c.code}" ${F.business_country===c.name?'selected':''}>${c.name}</option>`).join('')}
       </select>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">City *</label>
+        <label class="form-label">City *${tip('city')}</label>
         <input class="form-input ${errors.business_city?'err':''}" id="city-input" value="${esc(F.business_city)}" placeholder="Start typing your city..." oninput="F.business_city=this.value">
         ${errors.business_city?`<div class="form-error">${errors.business_city}</div>`:''}
         <div class="form-hint">Used for local SEO and content</div>
       </div>
       <div class="form-group">
-        <label class="form-label">Suburb *</label>
+        <label class="form-label">Suburb *${tip('suburb')}</label>
         <input class="form-input ${errors.business_suburb?'err':''}" id="suburb-input" value="${esc(F.business_suburb)}" placeholder="Start typing your suburb..." oninput="F.business_suburb=this.value">
         ${errors.business_suburb?`<div class="form-error">${errors.business_suburb}</div>`:''}
         <div class="form-hint">Used in post captions</div>
@@ -991,14 +991,14 @@ function renderStep1() {
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Business category *</label>
+        <label class="form-label">Business category *${tip('biz_category')}</label>
         <select class="form-input form-select" onchange="updateBizGroup(this.value)">
           <option value="">Select a category...</option>
           ${BIZ_CATEGORIES.map(g=>`<option value="${esc(g.group)}" ${F.business_type_group===g.group?'selected':''}>${g.group}</option>`).join('')}
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Business type *</label>
+        <label class="form-label">Business type *${tip('biz_type')}</label>
         <select class="form-input form-select ${errors.business_type?'err':''}" onchange="F.business_type=this.value" ${!F.business_type_group?'disabled':''}>
           <option value="">${F.business_type_group?'Select type...':'Select a category first'}</option>
           ${typeOptions.map(t=>`<option value="${esc(t)}" ${F.business_type===t?'selected':''}>${t}</option>`).join('')}
@@ -1007,24 +1007,24 @@ function renderStep1() {
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Describe your business *</label>
+      <label class="form-label">Describe your business *${tip('biz_description')}</label>
       <textarea class="form-input ${errors.business_description?'err':''}" placeholder="What do you offer? Who are your customers? What makes you different?" oninput="F.business_description=this.value" style="min-height:120px">${esc(F.business_description)}</textarea>
       ${errors.business_description?`<div class="form-error">${errors.business_description}</div>`:''}
       <div class="form-hint">This is used to write your captions and generate relevant images. Be specific.</div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Brand keywords <span class="form-label-opt">optional</span></label>
+        <label class="form-label">Brand keywords${tip('brand_keywords')} <span class="form-label-opt">optional</span></label>
         <input class="form-input" value="${esc(F.brand_keywords)}" placeholder="warm, local, premium, trusted..." oninput="F.brand_keywords=this.value">
         <div class="form-hint">Words that describe your brand voice</div>
       </div>
       <div class="form-group">
-        <label class="form-label">Email for post captions <span class="form-label-opt">optional</span></label>
+        <label class="form-label">Email for post captions${tip('caption_email')} <span class="form-label-opt">optional</span></label>
         <input class="form-input" value="${esc(F.caption_cta_email)}" placeholder="${esc(F.contact_email)||'bookings@yourbusiness.com'}" type="email" oninput="F.caption_cta_email=this.value">
         <div class="form-hint">Booking or enquiry email shown in captions. Leave blank to use contact email above.</div>
       </div>
       <div class="form-group">
-        <label class="form-label">Phone for post captions <span class="form-label-opt">optional</span></label>
+        <label class="form-label">Phone for post captions${tip('caption_phone')} <span class="form-label-opt">optional</span></label>
         <input class="form-input" value="${esc(F.caption_cta_phone)}" placeholder="e.g. 0412 345 678" type="tel" oninput="F.caption_cta_phone=this.value">
         <div class="form-hint">Phone number shown in post captions. Leave blank to omit.</div>
       </div>
@@ -1041,7 +1041,7 @@ function renderStep2() {
       <p class="step-desc">Select the platforms you want us to post to.</p>
     </div>
     <div class="form-group">
-      <label class="form-label">Which platforms? *</label>
+      <label class="form-label">Which platforms? *${tip('platforms')}</label>
       <div class="platform-grid">
         ${PLATFORMS.map(p=>`<div class="platform-card ${F.platforms.includes(p.id)?'selected':''}" onclick="togglePlatform('${p.id}')"><div class="platform-icon">${p.icon}</div><div class="platform-name">${p.name}</div><div class="platform-sub">${p.sub}</div></div>`).join('')}
       </div>
@@ -1057,7 +1057,7 @@ function renderStep2() {
           <input class="form-input" value="${esc(F.facebook_page_name)}" placeholder="Joe&#39;s Bakery" oninput="F.facebook_page_name=this.value">
         </div>
         <div class="form-group">
-          <label class="form-label">Page URL *</label>
+          <label class="form-label">Page URL *${tip('fb_page_url')}</label>
           <input class="form-input ${errors.facebook_page_url?'err':''}" value="${esc(F.facebook_page_url)}" placeholder="facebook.com/joesbakery" oninput="F.facebook_page_url=this.value">
           ${errors.facebook_page_url?`<div class="form-error">${errors.facebook_page_url}</div>`:''}
         </div>
@@ -1067,7 +1067,7 @@ function renderStep2() {
       <div class="step-tag" style="margin-bottom:12px">Instagram details</div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Instagram handle *</label>
+          <label class="form-label">Instagram handle *${tip('ig_handle')}</label>
           <div style="display:flex;align-items:center">
             <span style="padding:0 10px;height:44px;display:flex;align-items:center;background:#f7f4ef;border:1.5px solid ${errors.ig_handle?'#e53e3e':'var(--border)'};border-right:none;border-radius:8px 0 0 8px;font-size:15px;color:var(--ink-mid);font-weight:600">@</span>
             <input class="form-input ${errors.ig_handle?'err':''}" style="border-radius:0 8px 8px 0;flex:1" value="${esc(F.ig_handle.replace(/^@/,''))}" placeholder="joesbakery" oninput="F.ig_handle=this.value.replace(/^@+/,'')">
@@ -1084,13 +1084,13 @@ function renderStep2() {
       <div class="step-tag" style="margin-bottom:12px">Google Business Profile</div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">GBP listing name *</label>
+          <label class="form-label">GBP listing name *${tip('gbp_name')}</label>
           <input class="form-input ${errors.gbp_name?'err':''}" value="${esc(F.gbp_name)}" placeholder="Joe&#39;s Bakery Glen Waverley" oninput="F.gbp_name=this.value">
           ${errors.gbp_name?`<div class="form-error">${errors.gbp_name}</div>`:''}
           <div class="form-hint">Exactly as it appears on Google Maps</div>
         </div>
         <div class="form-group">
-          <label class="form-label">Verification status</label>
+          <label class="form-label">Verification status${tip('gbp_status')}</label>
           <select class="form-input form-select" onchange="F.gbp_status=this.value">
             <option value="">Select status...</option>
             <option ${F.gbp_status==='Already verified'?'selected':''}>Already verified</option>
@@ -1247,7 +1247,7 @@ function renderStep4GDrive() {
   else if(intent==='now') {
     const folderInput =
       '<div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">'+
-      '<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px">Paste your main folder link</div>'+
+      '<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px">Paste your main folder link' + tip('drive_url') + '</div>'+
       '<input class="form-input '+(errors.google_drive_url?'err':'')+'" id="drive-url-input" value="'+esc(F.google_drive_url)+'" placeholder="https://drive.google.com/drive/folders/..." oninput="F.google_drive_url=this.value;driveValidated=false">'+
       (errors.google_drive_url?'<div class="form-error">'+errors.google_drive_url+'</div>':'')+
       '<div class="form-hint" style="margin-bottom:12px">Share the folder with <strong>posst-sheets-bot@posst-app.iam.gserviceaccount.com</strong> as Viewer first.</div>'+
@@ -1307,14 +1307,14 @@ function renderStep4() {
         <p class="step-desc">Each day has a purpose. Smart defaults are set — customise any day or leave as-is.</p>
       </div>
       <div class="form-group">
-        <label class="form-label">Content theme per day</label>
+        <label class="form-label">Content theme per day${tip('day_themes')}</label>
         <div class="days-theme-grid">
           ${DAYS.map(d=>`<div class="day-theme-card active"><div class="day-theme-name">${d}</div><select class="day-theme-select" onchange="updateDayTheme('${d}',this.value)">${DAY_THEMES.map(t=>`<option value="${esc(t)}" ${(F.day_themes[d]||DEFAULT_DAY_THEMES[d])===t?'selected':''}>${t}</option>`).join('')}</select></div>`).join('')}
         </div>
       </div>
       <div style="height:1px;background:var(--border);margin:24px 0"></div>
       <div class="form-group">
-        <label class="form-label">What time should we post? *</label>
+        <label class="form-label">What time should we post? *${tip('posting_time')}</label>
         <div class="time-select-row">
           <input class="form-input ${errors.posting_time?'err':''}" type="time" value="${esc(F.posting_time)}" min="06:00" max="22:00" onchange="F.posting_time=this.value" style="max-width:160px">
           <span style="font-size:13px;color:var(--ink-mid)">in your local timezone</span>
@@ -1329,7 +1329,7 @@ function renderStep4() {
       <p class="step-desc">We post every day for you &mdash; just pick the time that works best for your audience.</p>
     </div>
     <div class="form-group">
-      <label class="form-label">What time should we post? *</label>
+      <label class="form-label">What time should we post? *${tip('posting_time')}</label>
       <div class="time-select-row">
         <input class="form-input ${errors.posting_time?'err':''}" type="time" value="${esc(F.posting_time)}" min="06:00" max="22:00" onchange="F.posting_time=this.value" style="max-width:160px">
         <span style="font-size:13px;color:var(--ink-mid)">in your local timezone</span>
@@ -1544,6 +1544,50 @@ detectCountry();
 })();
 
 render();
+
+
+// ── FIELD TOOLTIPS ────────────────────────────────────────────
+const FIELD_TIPS = {
+  business_name:       "Your trading name — exactly as customers know you. This appears in every post caption.",
+  contact_email:       "We send your go-live confirmation and monthly reports here. Not shown publicly.",
+  country:             "Used to set your currency, timezone defaults and local content tone.",
+  city:                "Your main city — used in post captions and for local SEO targeting.",
+  suburb:              "Your suburb is included in post captions to attract nearby customers.",
+  biz_category:        "Pick the category that best fits your business. This shapes the style and topics of your posts.",
+  biz_type:            "A more specific type within your category — helps us write posts that match your exact service.",
+  biz_description:     "Describe what you do, who your customers are and what makes you different. The more detail you give, the better your posts will sound.",
+  brand_keywords:      "Words that describe your brand personality — e.g. friendly, premium, family-owned, fast. These shape the tone of every caption.",
+  caption_email:       "The email shown in post captions for bookings or enquiries. Leave blank to use your contact email above.",
+  caption_phone:       "A phone number shown in post captions. Leave blank to omit it from posts.",
+  platforms:           "Select every platform you want us to post to. You can add or remove platforms later from My Account.",
+  fb_page_url:         "The URL of your Facebook Business Page — e.g. facebook.com/yourbusiness. Required to post to Facebook.",
+  ig_handle:           "Your Instagram username without the @. Required to post to Instagram.",
+  gbp_name:            "Your Google Business Profile name exactly as it appears on Google Maps — including suburb if listed.",
+  gbp_status:          "Your current Google verification status. Verified listings can receive automated review replies.",
+  drive_url:           "Paste the link to your Google Drive folder containing your business photos. Share the folder with posst-sheets-bot@posst-app.iam.gserviceaccount.com as Viewer first.",
+  day_themes:          "Assign a content theme to each posting day — e.g. Monday = Tips, Friday = Promotions. posst.app rotates content to match.",
+  posting_time:        "The time your posts go live each day — in your local timezone. Best times: 7–9am, 11am–1pm, or 6–8pm."
+};
+
+function tip(id) {
+  const text = FIELD_TIPS[id];
+  if (!text) return '';
+  const uid = 'ftip_' + id;
+  return `<span class="tooltip-wrap" style="display:inline-flex;vertical-align:middle;margin-left:6px">
+    <button class="tooltip-btn" onclick="toggleFieldTip(event,'${uid}')" type="button">?</button>
+    <div class="tooltip-pop" id="${uid}">${text}</div>
+  </span>`;
+}
+
+function toggleFieldTip(e, uid) {
+  e.stopPropagation();
+  // close all other open tips first
+  document.querySelectorAll('.tooltip-pop.open').forEach(el => {
+    if (el.id !== uid) el.classList.remove('open');
+  });
+  const pop = document.getElementById(uid);
+  if (pop) pop.classList.toggle('open');
+}
 
 // ── TOOLTIP & CHAT ────────────────────────────────────────────
 
