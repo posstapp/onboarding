@@ -381,7 +381,7 @@ function renderDashboard() {
               ${(cd.drive_structure || cd.drive_categories || []).length > 0 ? `
               <div style="margin-top:8px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px">
                 <div style="font-size:11px;font-weight:600;color:var(--ink-mid);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Subfolders (${(cd.drive_structure || cd.drive_categories || []).length})</div>
-                ${(cd.drive_structure || cd.drive_categories || []).map(f => `<div style="font-size:12px;color:var(--ink);padding:3px 0;border-bottom:1px solid var(--border)">&#128193; ${f}</div>`).join('')}
+                ${(cd.drive_structure || cd.drive_categories || []).map(f => `<div style="font-size:12px;color:var(--ink);padding:3px 0;border-bottom:1px solid var(--border)">&#128193; ${typeof f === 'string' ? f : f.name || JSON.stringify(f)}</div>`).join('')}
               </div>` : ''}
             </div>
             <button class="btn btn-secondary btn-sm" onclick="changeDrive()">Change</button>
