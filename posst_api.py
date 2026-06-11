@@ -910,6 +910,46 @@ def stripe_portal():
         return err(f'Stripe portal error: {portal_err}')
     return ok(portal_url=portal['url'])
 
+@app.route('/api/stripe/coupon', methods=['POST'])
+@require_auth
+def stripe_coupon():
+    d = request.json or {}
+    client_id  = d.get('client_id', '')
+    coupon_code = d.get('coupon_code', '').strip()
+    if not coupon_code:
+        return err('Coupon code is required')
+    client_res = sb.table('clients').select('stripe_customer_id,stripe_subscription_id').eq('client_id', client_id).single().execute()
+    client_data = client_res.data or {}
+    stripe_subscription_id = client_data.get('stripe_subscription_id', '')
+    if not stripe_subscription_id:
+        return err('No active subscription found')
+    # Apply coupon to subscription via Stripe API
+    payload = {'coupon': coupon_code}
+    result, result_err = stripe_request('POST', f'/subscriptions/{stripe_subscription_id}', payload)
+    if result_err:
+        return err(result_err)
+    # Extract discount details to return to client
+    discount = result.get('discount') or {}
+    coupon  = discount.get('coupon') or {}
+    pct_off = coupon.get('percent_off')
+    amt_off = coupon.get('amount_off')
+    duration = coupon.get('duration', '')
+    duration_months = coupon.get('duration_in_months')
+    if pct_off:
+        discount_desc = f'{int(pct_off)}% off'
+    elif amt_off:
+        discount_desc = f'{amt_off/100:.2f} off'
+    else:
+        discount_desc = 'Discount'
+    if duration == 'forever':
+        duration_desc = 'forever'
+    elif duration == 'repeating' and duration_months:
+        duration_desc = f'for {duration_months} month{"s" if duration_months > 1 else ""}'
+    else:
+        duration_desc = 'once'
+    log.info(f'Coupon applied: {client_id} → {coupon_code} ({discount_desc} {duration_desc})')
+    return ok(discount=f'{discount_desc} {duration_desc}')
+
 @app.route('/api/stripe/webhook', methods=['POST'])
 def stripe_webhook():
     import hmac, hashlib, time as _t
