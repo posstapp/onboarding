@@ -201,6 +201,37 @@ textarea.form-input{resize:vertical;min-height:100px}
   .tier-grid{grid-template-columns:1fr}
   .nav{padding:0 20px}
 }
+
+/* ── TOOLTIP ── */
+.tooltip-wrap{position:relative;display:inline-flex;align-items:center;margin-left:10px;vertical-align:middle}
+.tooltip-btn{width:20px;height:20px;border-radius:50%;background:var(--blue-dim);border:1.5px solid rgba(22,72,255,0.25);color:var(--blue);font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-family:var(--sans);line-height:1;transition:all 0.15s;flex-shrink:0}
+.tooltip-btn:hover{background:var(--blue);color:white}
+.tooltip-pop{position:absolute;top:28px;left:0;width:260px;background:white;border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:500;font-size:13px;color:var(--ink-mid);line-height:1.6;display:none}
+.tooltip-pop.open{display:block}
+.tooltip-pop::before{content:'';position:absolute;top:-7px;left:10px;width:12px;height:12px;background:white;border-left:1.5px solid var(--border);border-top:1.5px solid var(--border);transform:rotate(45deg)}
+/* ── CHAT BUBBLE ── */
+#chat-bubble{position:fixed;bottom:24px;right:24px;z-index:1000;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+#chat-toggle{width:52px;height:52px;border-radius:50%;background:var(--blue);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(22,72,255,0.35);transition:all 0.2s;font-size:22px}
+#chat-toggle:hover{background:var(--blue-dark);transform:translateY(-2px)}
+#chat-panel{width:320px;background:white;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.15);border:1px solid var(--border);display:none;flex-direction:column;overflow:hidden;max-height:480px}
+#chat-panel.open{display:flex}
+#chat-header{background:var(--blue);padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
+#chat-header-left{display:flex;align-items:center;gap:10px}
+#chat-header-left span{font-size:20px}
+#chat-header-title{color:white;font-size:14px;font-weight:600}
+#chat-header-sub{color:rgba(255,255,255,0.7);font-size:11px}
+#chat-close{background:none;border:none;color:rgba(255,255,255,0.7);font-size:18px;cursor:pointer;line-height:1;padding:0}
+#chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;min-height:200px}
+.chat-msg{max-width:85%;padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.5}
+.chat-msg.user{background:var(--blue);color:white;align-self:flex-end;border-radius:12px 12px 2px 12px}
+.chat-msg.bot{background:var(--blue-dim);color:var(--ink);align-self:flex-start;border-radius:12px 12px 12px 2px}
+.chat-msg.typing{color:var(--ink-light);font-style:italic}
+#chat-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border)}
+#chat-input{flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--sans);color:var(--ink);outline:none;resize:none}
+#chat-input:focus{border-color:var(--blue)}
+#chat-send{background:var(--blue);color:white;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:background 0.15s}
+#chat-send:hover{background:var(--blue-dark)}
+#chat-send:disabled{opacity:0.5;cursor:default}
 </style>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDG28meRuFcbyK-XFuuHuoP0U6gVng8h0s&libraries=places"></script>
 </head>
@@ -1513,6 +1544,167 @@ detectCountry();
 })();
 
 render();
+
+// ── TOOLTIP & CHAT ────────────────────────────────────────────
+
+const STEP_TOOLTIPS = {
+  renderStep1:    "We use your business name, location and type to write posts that sound exactly like you — specific, local and on-brand.",
+  renderStep2:    "Connect the platforms where your customers follow you. posst.app will post automatically to each one every day.",
+  renderStep3:    "Standard gives you fully automated AI posts every day. Pro adds your own real photos via Google Drive plus custom content themes per day of the week.",
+  renderStep4GDrive: "Connect a Google Drive folder containing your business photos. posst.app will pick from them automatically for every post — real photos get 3-5x more engagement.",
+  renderStep4:    "Choose which days you want to post and at what time. posst.app will post automatically on each selected day at your chosen time.",
+  renderStep5:    "Check everything looks right before you go live. You can always change your settings later from your account.",
+  renderStepPayment: "Your 30-day free trial starts today. Your card is saved but nothing is charged for 30 days. Cancel anytime from your account before the trial ends."
+};
+
+function getTooltipForCurrentStep() {
+  const steps = [renderStep0, renderStepBridge, renderStep1, renderStep2, renderStep3, renderStep4GDrive, renderStep4, renderStep5, renderStepPayment];
+  const fn = steps[currentStep];
+  return fn ? STEP_TOOLTIPS[fn.name] : null;
+}
+
+function injectTooltip() {
+  const tip = getTooltipForCurrentStep();
+  if (!tip) return;
+  const title = document.querySelector('.step-title');
+  if (!title || document.getElementById('step-tooltip-wrap')) return;
+  const wrap = document.createElement('span');
+  wrap.id = 'step-tooltip-wrap';
+  wrap.className = 'tooltip-wrap';
+  wrap.innerHTML = `<button class="tooltip-btn" onclick="toggleTooltip(event)" aria-label="Help">?</button>
+    <div class="tooltip-pop" id="step-tooltip-pop">\${tip}</div>`;
+  title.appendChild(wrap);
+  // close on outside click
+  document.addEventListener('click', function handler(e) {
+    if (!wrap.contains(e.target)) {
+      const pop = document.getElementById('step-tooltip-pop');
+      if (pop) pop.classList.remove('open');
+    }
+  }, { once: false });
+}
+
+function toggleTooltip(e) {
+  e.stopPropagation();
+  const pop = document.getElementById('step-tooltip-pop');
+  if (pop) pop.classList.toggle('open');
+}
+
+// Chat
+const CHAT_SYSTEM = `You are a friendly support assistant for posst.app — an automated social media posting service for local businesses.
+Only answer questions about posst.app onboarding, features, pricing and setup. If asked anything unrelated, politely say you can only help with posst.app questions.
+
+Key facts:
+- posst.app automatically posts to Facebook, Instagram, Google Business Profile, and LinkedIn every day
+- Standard plan: A$24.99/month — fully automated AI-written posts
+- Pro plan: A$34.99/month — includes real photos from Google Drive + custom content themes per day of the week
+- Both plans include a 30-day free trial — card is saved but nothing charged for 30 days
+- Cancel anytime before trial ends — no charge
+- Google Drive (Pro only): connect a folder of your business photos, posst.app uses them automatically
+- Posting schedule: you choose which days and what time
+- OTP login: phone number only, no password needed
+- After signup: connect your social media accounts via OAuth, takes under 2 minutes
+- Support: reply to any email or contact chief@posst.app`;
+
+let chatHistory = [];
+let chatOpen = false;
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const panel = document.getElementById('chat-panel');
+  const toggle = document.getElementById('chat-toggle');
+  if (panel) {
+    panel.classList.toggle('open', chatOpen);
+    toggle.textContent = chatOpen ? '✕' : '💬';
+    if (chatOpen && chatHistory.length === 0) {
+      appendChatMsg('bot', 'Hi! I\'m here to help with any questions about posst.app. What would you like to know?');
+    }
+    if (chatOpen) {
+      setTimeout(() => { const inp = document.getElementById('chat-input'); if(inp) inp.focus(); }, 100);
+    }
+  }
+}
+
+function appendChatMsg(role, text) {
+  const msgs = document.getElementById('chat-messages');
+  if (!msgs) return;
+  const div = document.createElement('div');
+  div.className = `chat-msg \${role}`;
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('chat-send');
+  const text = (input?.value || '').trim();
+  if (!text) return;
+  input.value = '';
+  sendBtn.disabled = true;
+  appendChatMsg('user', text);
+  chatHistory.push({ role: 'user', content: text });
+  const typing = appendChatMsg('bot typing', '...');
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: CHAT_SYSTEM,
+        messages: chatHistory
+      })
+    });
+    const data = await resp.json();
+    const reply = (data.content || []).find(b => b.type === 'text')?.text || 'Sorry, I could not get a response. Please try again.';
+    if (typing) typing.remove();
+    appendChatMsg('bot', reply);
+    chatHistory.push({ role: 'assistant', content: reply });
+  } catch(e) {
+    if (typing) typing.remove();
+    appendChatMsg('bot', 'Connection error. Please try again.');
+  }
+  sendBtn.disabled = false;
+  input.focus();
+}
+
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+}
+
+// Inject chat bubble into body and hook into render
+(function() {
+  const bubble = document.createElement('div');
+  bubble.id = 'chat-bubble';
+  bubble.innerHTML = `
+    <div id="chat-panel">
+      <div id="chat-header">
+        <div id="chat-header-left"><span>💬</span><div><div id="chat-header-title">posst.app Support</div><div id="chat-header-sub">Ask us anything</div></div></div>
+        <button id="chat-close" onclick="toggleChat()">✕</button>
+      </div>
+      <div id="chat-messages"></div>
+      <div id="chat-input-row">
+        <textarea id="chat-input" placeholder="Ask a question..." rows="1" onkeydown="handleChatKey(event)"></textarea>
+        <button id="chat-send" onclick="sendChatMessage()">Send</button>
+      </div>
+    </div>
+    <button id="chat-toggle" onclick="toggleChat()" aria-label="Chat support">💬</button>
+  `;
+  document.body.appendChild(bubble);
+})();
+
+// Patch render() to inject tooltip after each render
+const _origRender = render;
+render = function() {
+  _origRender();
+  // Only show chat bubble from step 2 onwards (after OTP)
+  const bubble = document.getElementById('chat-bubble');
+  if (bubble) bubble.style.display = currentStep >= 2 ? 'flex' : 'none';
+  // Inject tooltip
+  setTimeout(injectTooltip, 0);
+};
+
 </script>
 </body>
 </html>
