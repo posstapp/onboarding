@@ -378,10 +378,10 @@ function renderDashboard() {
             <div>
               <div style="font-size:13px;font-weight:600;color:var(--green)">✅ Drive connected</div>
               <div class="drive-url">${esc(cd.google_drive_url)}</div>
-              ${cd.drive_structure && cd.drive_structure.length > 0 ? `
+              ${(cd.drive_structure || cd.drive_categories || []).length > 0 ? `
               <div style="margin-top:8px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px">
-                <div style="font-size:11px;font-weight:600;color:var(--ink-mid);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Subfolders (${cd.drive_structure.length})</div>
-                ${cd.drive_structure.map(f => `<div style="font-size:12px;color:var(--ink);padding:3px 0;border-bottom:1px solid var(--border)">&#128193; ${f}</div>`).join('')}
+                <div style="font-size:11px;font-weight:600;color:var(--ink-mid);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Subfolders (${(cd.drive_structure || cd.drive_categories || []).length})</div>
+                ${(cd.drive_structure || cd.drive_categories || []).map(f => `<div style="font-size:12px;color:var(--ink);padding:3px 0;border-bottom:1px solid var(--border)">&#128193; ${f}</div>`).join('')}
               </div>` : ''}
             </div>
             <button class="btn btn-secondary btn-sm" onclick="changeDrive()">Change</button>
@@ -600,10 +600,10 @@ async function testDrivePortal() {
         html += '</div>';
       }
       status.innerHTML = html;
-      // Save to posst-api
+      // Save to posst-api including subfolder structure
       await fetch(PROXY_URL + '/client/' + clientData.client_id + '/drive', {
         method: 'PATCH', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({google_drive_url: url, google_drive_intent: 'now'})
+        body: JSON.stringify({google_drive_url: url, google_drive_intent: 'now', drive_categories: folders})
       });
       clientData.google_drive_url = url;
       clientData.drive_structure = folders;
