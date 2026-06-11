@@ -607,7 +607,7 @@ def validate_drive():
         from google.oauth2 import service_account
         import os as _os
 
-        sa_file = _os.environ.get('GOOGLE_SERVICE_ACCOUNT_FILE', '/opt/posst/service_account.json')
+        sa_file = _os.environ.get('GOOGLE_SERVICE_ACCOUNT_FILE', '/opt/posst/oauth/service_account.json')
         if not _os.path.exists(sa_file):
             # No service account — return valid=True with empty structure (best effort)
             resp = app.make_response(json.dumps({'valid': True, 'structure': [], 'note': 'no_service_account'}))
