@@ -1742,7 +1742,7 @@ const STEP_TOOLTIPS = {
 
 function getTooltipForCurrentStep() {
   const steps = [renderStep0, renderStepBridge, renderStep1, renderStep2, renderStep3, renderStep4GDrive, renderStep4, renderStep5, renderStepPayment];
-  const fn = steps[currentStep];
+  const fn = steps[step];
   return fn ? STEP_TOOLTIPS[fn.name] : null;
 }
 
@@ -1885,7 +1885,7 @@ render = function() {
   const bubble = document.getElementById('chat-bubble');
   const _isNewBiz = sessionStorage.getItem('posst_new_business_mode') === '1';
   const _chatThreshold = _isNewBiz ? 3 : 2;
-  if (bubble) bubble.style.display = currentStep >= _chatThreshold ? 'flex' : 'none';
+  if (bubble) bubble.style.display = step >= _chatThreshold ? 'flex' : 'none';
   // Inject tooltip
   setTimeout(injectTooltip, 0);
 };
