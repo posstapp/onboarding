@@ -212,7 +212,12 @@ PAGE_SELECT_PAGE = """
 <div class="card">
   <img class="logo" src="https://posst.app/posst_logo_dark.png" alt="posst.app">
   <h1>Select your business page</h1>
-  <p>We found {{ pages|length }} Facebook page(s). Select the one you want posst.app to post to.</p>
+  <p>We found {{ pages|length }} Facebook page{{ 's' if pages|length > 1 else '' }}. Select the page for <strong>{{ business }}</strong>.</p>
+  {% if pages|length > 1 %}
+  <div style="background:#FFF7ED;border:1.5px solid #FED7AA;border-radius:10px;padding:12px 14px;margin-bottom:16px;text-align:left;font-size:13px;color:#92400E">
+    ⚠️ You manage multiple pages — make sure you select the correct one for <strong>{{ business }}</strong>.
+  </div>
+  {% endif %}
   {% for page in pages %}
   <form method="POST" action="/connect/meta/select">
     <input type="hidden" name="page_id" value="{{ page.id }}">
@@ -428,7 +433,7 @@ def connect_page():
 
     return render_template_string(CONNECT_PAGE,
         meta_url=meta_url, google_url=google_url,
-        platforms=platforms, business_name=business,
+        platforms=platforms, business=business,
         meta_done=meta_done, gbp_done=gbp_done,
         fb_page_name=fb_page_name, ig_username=ig_username)
 
@@ -476,11 +481,11 @@ def meta_callback():
 
     log.info(f'Meta OAuth success for {client_id} — {len(page_list)} pages found')
 
-    if len(page_list) == 1:
-        p = page_list[0]
-        return save_meta_page(client_id, p['id'], p['name'], p['ig_biz_id'], p['ig_username'], ll_token, ll_expiry.strftime('%d/%m/%Y'))
-
-    return render_template_string(PAGE_SELECT_PAGE, pages=page_list)
+    # Always show page picker — never auto-select
+    # Customers with multiple businesses must choose the correct page
+    business_name = get_client(client_id)
+    business_name = (business_name.get('business_name') or '') if business_name else ''
+    return render_template_string(PAGE_SELECT_PAGE, pages=page_list, business=business_name)
 
 
 @app.route('/connect/meta/select', methods=['POST'])
