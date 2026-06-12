@@ -788,26 +788,36 @@ async function submitForm() {
   };
   try {
     const resp = await fetch(PROXY_URL + '/client', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
-    const result = await resp.json();
+    let result;
+    try { result = await resp.json(); } catch(jsonErr) {
+      throw new Error('Server returned invalid response (HTTP ' + resp.status + ')');
+    }
+    if (!result || result.status === 'error') {
+      throw new Error(result?.error || result?.message || 'Client creation failed');
+    }
     const clientId = result.client_id || '';
     const pendingToken = result.pending_token || '';
+    if (!clientId) throw new Error('No client ID returned from server');
     // Mark prospect as converted
     callAppsScript('convertProspect', { phone: sessionStorage.getItem('posst_phone') || '' });
     sessionStorage.removeItem('posst_resumed');
     sessionStorage.removeItem('posst_resume_name');
+    // Clear new_business_mode flag — onboarding complete
+    sessionStorage.removeItem('posst_new_business_mode');
     let oauthPlatforms = [];
     if(hasFB()||hasIG()) oauthPlatforms.push('facebook','instagram');
     if(hasGBP()) oauthPlatforms.push('gbp');
     const params = new URLSearchParams({ client_id:clientId, token:pendingToken, platforms:oauthPlatforms.join(','), business:F.business_name, email:F.contact_email });
-    // Save client_id + token, then advance to payment step
     savedClientId = clientId;
     savedPendingToken = pendingToken;
     isSubmitting = false;
-    step = sessionStorage.getItem('posst_new_business_mode') === '1' ? 9 : 8;
+    step = 8; // Payment step — same index in both modes (new_business_mode flag now cleared)
     render(); window.scrollTo(0,0);
   } catch(e) {
     isSubmitting = false;
-    $('main-content').innerHTML = `<div class="submitting"><div style="font-size:40px;margin-bottom:16px">&#9888;&#65039;</div><div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px">Something went wrong</div><div style="font-size:13px;color:var(--ink-mid);margin-bottom:24px">Please check your connection and try again.</div><button class="btn-next" style="margin:0 auto" onclick="render()">Try again</button></div>`;
+    const errMsg = e.message || 'Unknown error';
+    $('main-content').innerHTML = `<div class="submitting"><div style="font-size:40px;margin-bottom:16px">&#9888;&#65039;</div><div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px">Something went wrong</div><div style="font-size:13px;color:var(--ink-mid);margin-bottom:24px">${errMsg}</div><button class="btn-next" style="margin:0 auto" onclick="step=(step>0?step-1:0);render()">Go back</button></div>`;
+    console.error('submitForm error:', errMsg);
   }
 }
 
@@ -1477,7 +1487,7 @@ function renderStep5() {
     </div>
     <div class="info-box blue" style="margin-top:10px">
       <span class="info-box-icon">&#128273;</span>
-      <div class="info-box-text"><strong>Next:</strong> You&#39;ll connect ${hasFB()||hasIG() ? 'your ' + [hasFB()?'Facebook':'', hasIG()?'Instagram':''].filter(Boolean).join(' &amp; ') + (hasGBP()?' and Google Business Profile':'') : 'your Google Business Profile'} securely via OAuth, then start your free trial.</div>
+      <div class="info-box-text"><strong>Next:</strong> You&#39;ll complete payment to start your 30-day free trial, then connect ${hasFB()||hasIG() ? [hasFB()?'Facebook':'', hasIG()?'Instagram':''].filter(Boolean).join(' &amp; ') + (hasGBP()?' and Google Business Profile':'') : 'your Google Business Profile'} securely via OAuth.</div>
     </div>
     <div class="info-box green">
       <span class="info-box-icon">&#9989;</span>
