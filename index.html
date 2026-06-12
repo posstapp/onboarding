@@ -816,7 +816,7 @@ async function submitForm() {
   } catch(e) {
     isSubmitting = false;
     const errMsg = e.message || 'Unknown error';
-    $('main-content').innerHTML = `<div class="submitting"><div style="font-size:40px;margin-bottom:16px">&#9888;&#65039;</div><div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px">Something went wrong</div><div style="font-size:13px;color:var(--ink-mid);margin-bottom:24px">${errMsg}</div><button class="btn-next" style="margin:0 auto" onclick="step=(step>0?step-1:0);render()">Go back</button></div>`;
+    $('main-content').innerHTML = '<div class="submitting"><div style="font-size:40px;margin-bottom:16px">&#9888;&#65039;</div><div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px">Something went wrong</div><div style="font-size:13px;color:var(--ink-mid);margin-bottom:24px">' + errMsg + '</div><button class="btn-next" style="margin:0 auto" onclick="step=Math.max(0,step-1);render()">Go back</button></div>';
     console.error('submitForm error:', errMsg);
   }
 }
