@@ -127,8 +127,14 @@ CONNECT_PAGE = """
   <p class="sub">Authorise posst.app to post on your behalf. You only do this once.</p>
   {% if business %}
   <div style="background:#FFF7ED;border:1.5px solid #FED7AA;border-radius:12px;padding:14px 16px;margin-bottom:20px;text-align:left">
-    <div style="font-size:12px;font-weight:700;color:#C2410C;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">⚠️ Important — select the correct account</div>
-    <div style="font-size:13px;color:#7C2D12;line-height:1.5">You are connecting accounts for <strong>{{ business }}</strong>.<br>When Meta asks which page to connect — make sure you select the Facebook page and Instagram account that belongs to <strong>{{ business }}</strong>, not another business you manage.</div>
+    <div style="font-size:12px;font-weight:700;color:#C2410C;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">⚠️ Important — read before connecting</div>
+    <div style="font-size:13px;color:#7C2D12;line-height:1.6">
+      You are connecting accounts for <strong>{{ business }}</strong>.<br><br>
+      <strong>Step 1 — If Meta shows a "Reconnect" screen:</strong> click <strong>Edit settings</strong> to see your full page list and select the correct one.<br><br>
+      <strong>Step 2 — Select pages:</strong> choose only the Facebook page for <strong>{{ business }}</strong> — uncheck any other pages.<br><br>
+      <strong>Step 3 — Select Instagram:</strong> choose the Instagram account linked to <strong>{{ business }}</strong> — uncheck any others.<br><br>
+      Complete all steps — both Facebook and Instagram must be selected to finish.
+    </div>
   </div>
   {% endif %}
   <div class="step-row {% if meta_done %}done{% else %}active{% endif %}">
@@ -136,13 +142,15 @@ CONNECT_PAGE = """
     <div class="step-body">
       <div class="step-title">{% if "instagram" in platforms %}Facebook + Instagram{% else %}Facebook{% endif %}</div>
       {% if meta_done %}
-        <div class="step-confirmed">✅ {{ fb_page_name }} connected</div>
+        <div class="step-confirmed">✅ Facebook: {{ fb_page_name }}</div>
         {% if "instagram" in platforms %}
-          {% if ig_username %}<div class="step-confirmed">✅ @{{ ig_username }} connected</div>
-          {% else %}<div class="step-confirmed" style="color:#b45309">⚠️ No Instagram linked to this page</div>{% endif %}
+          {% if ig_username %}<div class="step-confirmed">✅ Instagram: @{{ ig_username }}</div>
+          {% else %}<div class="step-confirmed" style="color:#b45309">⚠️ No Instagram found — go back and reconnect, making sure to select your Instagram account</div>{% endif %}
         {% endif %}
       {% else %}
-        <div class="step-desc">{% if "instagram" in platforms %}Connect your Facebook page and Instagram account{% else %}Connect your Facebook page{% endif %}</div>
+        <div class="step-desc">
+          {% if "instagram" in platforms %}Connect your Facebook page and Instagram account — you will go through 3 Meta screens{% else %}Connect your Facebook page{% endif %}
+        </div>
       {% endif %}
     </div>
     <div class="step-action">
