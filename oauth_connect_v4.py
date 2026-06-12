@@ -258,6 +258,17 @@ SUCCESS_PAGE = """
   <div class="icon">✅</div>
   <h1>You are all set!</h1>
   <p>Your accounts are connected. We are setting everything up now.</p>
+  {% if fb_page_name or ig_handle or gbp_name %}
+  <div style="background:#f0fdf4;border:1px solid #BBF7D0;border-radius:12px;padding:16px;margin-bottom:20px;text-align:left">
+    <div style="font-size:12px;font-weight:600;color:#166534;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">Connected accounts</div>
+    {% if fb_page_name %}<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#0F0E17;margin-bottom:6px">
+      <span style="font-size:16px">📘</span><span><strong>Facebook:</strong> {{ fb_page_name }}</span></div>{% endif %}
+    {% if ig_handle %}<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#0F0E17;margin-bottom:6px">
+      <span style="font-size:16px">📸</span><span><strong>Instagram:</strong> @{{ ig_handle }}</span></div>{% endif %}
+    {% if gbp_name %}<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#0F0E17;margin-bottom:6px">
+      <span style="font-size:16px">📍</span><span><strong>Google:</strong> {{ gbp_name }}</span></div>{% endif %}
+  </div>
+  {% endif %}
   <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Check your email</strong> — confirmation sent to {{ email }}</div></div>
   <div class="step"><div class="step-num">2</div><div class="step-text"><strong>We set everything up</strong> — your automation goes live within 24 hours</div></div>
   <div class="step"><div class="step-num">3</div><div class="step-text"><strong>First post goes out</strong> — you will get an email notification when you are live</div></div>
@@ -328,7 +339,19 @@ def render_success(client_id, email):
                     pass
     except:
         pass
-    return render_template_string(SUCCESS_PAGE, email=email, show_drive=show_drive, drive_url=drive_url)
+    # Get connected account names for display
+    fb_page_name = ''
+    ig_handle    = ''
+    gbp_name     = ''
+    try:
+        if client:
+            fb_page_name = client.get('fb_page_name') or ''
+            ig_handle    = client.get('ig_handle') or ''
+            gbp_name     = client.get('gbp_name') or '' if client.get('gbp_location_id') else ''
+    except:
+        pass
+    return render_template_string(SUCCESS_PAGE, email=email, show_drive=show_drive, drive_url=drive_url,
+                                  fb_page_name=fb_page_name, ig_handle=ig_handle, gbp_name=gbp_name)
 
 
 @app.route('/connect')
