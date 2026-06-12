@@ -125,6 +125,12 @@ CONNECT_PAGE = """
   <div class="badge">Almost there</div>
   <h1>Connect your accounts</h1>
   <p class="sub">Authorise posst.app to post on your behalf. You only do this once.</p>
+  {% if business %}
+  <div style="background:#FFF7ED;border:1.5px solid #FED7AA;border-radius:12px;padding:14px 16px;margin-bottom:20px;text-align:left">
+    <div style="font-size:12px;font-weight:700;color:#C2410C;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">⚠️ Important — select the correct account</div>
+    <div style="font-size:13px;color:#7C2D12;line-height:1.5">You are connecting accounts for <strong>{{ business }}</strong>.<br>When Meta asks which page to connect — make sure you select the Facebook page and Instagram account that belongs to <strong>{{ business }}</strong>, not another business you manage.</div>
+  </div>
+  {% endif %}
   <div class="step-row {% if meta_done %}done{% else %}active{% endif %}">
     <div class="step-icon {% if meta_done %}done{% endif %}">{% if meta_done %}✅{% else %}📘{% endif %}</div>
     <div class="step-body">
