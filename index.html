@@ -1829,18 +1829,16 @@ async function sendChatMessage() {
   chatHistory.push({ role: 'user', content: text });
   const typing = appendChatMsg('bot typing', '...');
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch(PROXY_URL + '/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
         system: CHAT_SYSTEM,
         messages: chatHistory
       })
     });
     const data = await resp.json();
-    const reply = (data.content || []).find(b => b.type === 'text')?.text || 'Sorry, I could not get a response. Please try again.';
+    const reply = data.reply || data.message || 'Sorry, I could not get a response. Please try again.';
     if (typing) typing.remove();
     appendChatMsg('bot', reply);
     chatHistory.push({ role: 'assistant', content: reply });
