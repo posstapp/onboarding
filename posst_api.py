@@ -703,7 +703,9 @@ def otp_send():
         return jsonify({'status': 'error', 'code': 'RATE_LIMITED', 'message': 'Too many requests. Please try again later.'}), 429
     if not _check_rate('phone_' + phone, MAX_OTP_PER_PHONE):
         return jsonify({'status': 'error', 'code': 'RATE_LIMITED', 'message': 'Too many requests for this number. Try again in an hour.'}), 429
-    if not _twilio_send(phone):
+    # Twilio Verify requires strict E.164 (no spaces) — Supabase/app format includes a space (e.g. "+61 414208895")
+    phone_e164 = phone.replace(' ', '')
+    if not _twilio_send(phone_e164):
         return jsonify({'status': 'error', 'code': 'SEND_FAILED', 'message': 'Failed to send code. Please check your number and try again.'}), 500
     return jsonify({'status': 'success', 'message': 'Verification code sent'})
 
@@ -720,7 +722,7 @@ def otp_verify():
     if locked:
         mins = int((until - _time.time()) / 60) + 1
         return jsonify({'status': 'error', 'code': 'LOCKED', 'message': f'Too many wrong attempts. Try again in {mins} minutes.'}), 429
-    if _twilio_verify(phone, code):
+    if _twilio_verify(phone.replace(' ', ''), code):
         _clear_attempts(phone)
         return jsonify({'status': 'success', 'verified': True})
     rec = _inc_attempts(phone)
