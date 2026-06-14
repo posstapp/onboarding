@@ -732,6 +732,48 @@ def otp_verify():
     return jsonify({'status': 'error', 'code': 'WRONG_CODE', 'message': f'Incorrect code. {remaining} attempt{"s" if remaining != 1 else ""} remaining.'}), 400
 
 
+# ── SUPPORT CHAT (mobile widget) ─────────────────────────────
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+MAX_CHAT_PER_IP = 30
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    d = request.json or {}
+    system = (d.get('system') or '')[:4000]
+    messages = d.get('messages') or []
+    if not isinstance(messages, list) or not messages:
+        return jsonify({'status': 'error', 'message': 'messages required'}), 400
+    if not ANTHROPIC_API_KEY:
+        return jsonify({'status': 'error', 'message': 'Chat is not configured yet.'}), 503
+    client_ip = request.headers.get('X-Real-IP', request.remote_addr or 'unknown')
+    if not _check_rate('chat_ip_' + str(client_ip), MAX_CHAT_PER_IP):
+        return jsonify({'status': 'error', 'message': 'Too many messages. Please try again later.'}), 429
+    # Cap history to last 20 messages to control cost/payload size
+    messages = messages[-20:]
+    import urllib.request as _ur
+    payload = json.dumps({
+        'model': 'claude-sonnet-4-6',
+        'max_tokens': 500,
+        'system': system,
+        'messages': messages,
+    }).encode()
+    req = _ur.Request('https://api.anthropic.com/v1/messages', data=payload, headers={
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+    })
+    try:
+        with _ur.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read())
+        reply = next((b.get('text','') for b in result.get('content', []) if b.get('type') == 'text'), '')
+        if not reply:
+            reply = 'Sorry, I could not get a response. Please try again.'
+        return jsonify({'status': 'success', 'reply': reply})
+    except Exception as e:
+        log.error(f'Chat error: {e}')
+        return jsonify({'status': 'error', 'message': 'Connection error. Please try again.'}), 500
+
+
 # ── SEARCH VOLUME (DataForSEO) ───────────────────────────────
 DATAFORSEO_LOGIN    = os.environ.get('DATAFORSEO_LOGIN', '')
 DATAFORSEO_PASSWORD = os.environ.get('DATAFORSEO_PASSWORD', '')
