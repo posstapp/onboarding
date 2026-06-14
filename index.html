@@ -1879,11 +1879,9 @@ function handleChatKey(e) {
 const _origRender = render;
 render = function() {
   _origRender();
-  // Only show chat bubble from step 2 onwards (after OTP)
+  // Chat bubble available from the very first step
   const bubble = document.getElementById('chat-bubble');
-  const _isNewBiz = sessionStorage.getItem('posst_new_business_mode') === '1';
-  const _chatThreshold = _isNewBiz ? 3 : 2;
-  if (bubble) bubble.style.display = step >= _chatThreshold ? 'flex' : 'none';
+  if (bubble) bubble.style.display = 'flex';
   // Inject tooltip
   setTimeout(injectTooltip, 0);
 };
