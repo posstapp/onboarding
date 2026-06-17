@@ -895,6 +895,7 @@ def stripe_checkout():
     currency   = d.get('currency', 'AU')
     email      = d.get('email', '')
     business   = d.get('business_name', '')
+    return_url = d.get('return_url', '')  # Mobile deep-link return; absent = web default
 
     if not client_id:
         return err('client_id required')
@@ -920,6 +921,7 @@ def stripe_checkout():
 
     # Create checkout session with 30-day trial
     base_url = 'https://onboarding.posst.app'
+    success_url = return_url if return_url else f'{base_url}/success.html?client_id={client_id}&session_id={{CHECKOUT_SESSION_ID}}'
     session_payload = {
         'customer':                          stripe_customer_id,
         'mode':                              'subscription',
@@ -927,7 +929,7 @@ def stripe_checkout():
         'line_items[0][quantity]':           '1',
         'subscription_data[trial_period_days]': '30',
         'subscription_data[metadata][client_id]': client_id,
-        'success_url':                       f'{base_url}/success.html?client_id={client_id}&session_id={{CHECKOUT_SESSION_ID}}',
+        'success_url':                       success_url,
         'cancel_url':                        f'{base_url}/index.html?step=payment&client_id={client_id}',
         'customer_update[address]':          'auto',
         'allow_promotion_codes':             'true',
