@@ -291,6 +291,8 @@ def portal_lookup():
             'ig_handle':        client.get('ig_handle', ''),
             'trial_start':      client.get('trial_start', ''),
             'drive_categories': client.get('drive_categories', []),
+            'pending_token':    client.get('pending_token', ''),
+            'contact_email':    client.get('contact_email', ''),
         }
     # Return first client as primary + full list for switcher
     return ok({
@@ -957,9 +959,10 @@ def stripe_portal():
     stripe_customer_id = (client_res.data or {}).get('stripe_customer_id', '')
     if not stripe_customer_id:
         return err('No Stripe customer found')
+    return_url = d.get('return_url', 'https://onboarding.posst.app/portal.html')
     portal_payload = {
         'customer':   stripe_customer_id,
-        'return_url': 'https://onboarding.posst.app/portal.html',
+        'return_url': return_url,
     }
     portal, portal_err = stripe_request('POST', '/billing_portal/sessions', portal_payload)
     if portal_err:
