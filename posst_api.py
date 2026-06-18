@@ -275,7 +275,8 @@ def portal_lookup():
     if requested_id:
         primary = next((c for c in clients if c['client_id'] == requested_id), clients[0])
     else:
-        primary = clients[0]
+        # Default to first Active client, else first client
+        primary = next((c for c in clients if c.get('status') == 'Active'), clients[0])
     def fmt(client):
         return {
             'client_id':        client['client_id'],
