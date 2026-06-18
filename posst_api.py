@@ -270,6 +270,12 @@ def portal_lookup():
             clients.append(row)
     if not clients:
         return jsonify({'status': 'not_found'})
+    # If client_id specified (business switcher), use that client as primary
+    requested_id = d.get('client_id', '')
+    if requested_id:
+        primary = next((c for c in clients if c['client_id'] == requested_id), clients[0])
+    else:
+        primary = clients[0]
     def fmt(client):
         return {
             'client_id':        client['client_id'],
@@ -294,9 +300,9 @@ def portal_lookup():
             'pending_token':    client.get('pending_token', ''),
             'contact_email':    client.get('contact_email', ''),
         }
-    # Return first client as primary + full list for switcher
+    # Return primary client + full list for switcher
     return ok({
-        **fmt(clients[0]),
+        **fmt(primary),
         'all_clients': [{'client_id': c['client_id'], 'business_name': c['business_name'], 'status': c['status']} for c in clients]
     })
 
