@@ -1320,11 +1320,14 @@ async function testDriveConnection() {
     if(result.valid) {
       driveValidated = true;
       driveStructure = result.structure || [];
-      F.drive_categories = driveStructure.map(cat => ({
-        name: cat.name,
-        day: driveAssignments[cat.name] || '',
-        subcategories: (cat.subcategories||[]).map(s => typeof s === 'string' ? s : s.name).filter(Boolean)
-      }));
+      F.drive_categories = driveStructure.map(cat => {
+        const name = typeof cat === 'string' ? cat : (cat.name || '');
+        return {
+          name: name,
+          day: driveAssignments[name] || '',
+          subcategories: typeof cat === 'string' ? [] : (cat.subcategories||[]).map(s => typeof s === 'string' ? s : s.name).filter(Boolean)
+        };
+      });
       if(statusEl) statusEl.innerHTML = '<span style="color:#16A34A;font-weight:600">\u2705 Connected \u2014 ' + (result.folder_name||'folder found') + '</span>';
     } else {
       if(statusEl) statusEl.innerHTML = '<span style="color:var(--red)">\u274c ' + (result.error||'Could not access folder. Check it is shared with posst-sheets-bot@posst-app.iam.gserviceaccount.com') + '</span>';
@@ -1382,7 +1385,9 @@ function renderStep4GDrive() {
     let structureHtml = '';
     if(driveValidated && driveStructure.length > 0) {
       const folderRows = driveStructure.map(cat => {
-        const subs = (cat.subcategories||[]).map(s => typeof s === 'string' ? s : s.name).filter(Boolean);
+        const catName = typeof cat === 'string' ? cat : (cat.name || '');
+        const subs = typeof cat === 'string' ? [] : (cat.subcategories||[]).map(s => typeof s === 'string' ? s : s.name).filter(Boolean);
+        cat = { name: catName, subcategories: subs };
         const subList = subs.length > 0
           ? '<div style="padding-left:28px;margin-top:3px">' +
             subs.map(s => '<div style="font-size:11px;color:var(--ink-light);padding:1px 0">&#128247; '+esc(s)+'</div>').join('') +
