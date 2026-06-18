@@ -337,6 +337,11 @@ TOKEN_ERROR_PAGE = """
 # ── ROUTES ────────────────────────────────────────────────────
 
 def render_success(client_id, email):
+    mobile_return = session.get('mobile_return', '')
+    if mobile_return:
+        import urllib.parse
+        sep = '&' if '?' in mobile_return else '?'
+        return redirect(f'{mobile_return}{sep}client_id={urllib.parse.quote(client_id)}&status=connected')
     show_drive = False
     drive_url  = ''
     try:
@@ -389,11 +394,13 @@ def connect_page():
     elif incoming_client_id and incoming_client_id != session.get('client_id', ''):
         session.clear()
 
+    mobile_return = request.args.get('mobile_return', session.get('mobile_return', ''))
     session['client_id']     = client_id
     session['platforms']     = platforms
     session['platforms_str'] = ','.join(platforms)
     session['business']      = business
     session['email']         = email
+    session['mobile_return'] = mobile_return  # persists across OAuth round trips
 
     # Validate pending token
     if not session.get('meta_done', False):
