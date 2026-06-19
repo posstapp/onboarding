@@ -364,7 +364,8 @@ const STEPS = [
 const PLATFORMS = [
   {id:'facebook',  icon:'&#128216;', name:'Facebook Page',          sub:'Business page'},
   {id:'instagram', icon:'&#128248;', name:'Instagram Business',      sub:'Business or Creator'},
-  {id:'gbp',       icon:'&#128506;', name:'Google Business Profile', sub:'Google Maps listing'},
+  // GBP temporarily hidden — Google Business Profile API not yet allowlisted (reapply ~11 Aug 2026)
+  // Re-add this line to restore: {id:'gbp', icon:'&#128506;', name:'Google Business Profile', sub:'Google Maps listing'},
 ];
 
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -1004,7 +1005,7 @@ function renderStepBridge() {
               '</div></div>';
           })()}
           <div class="bridge-score-label">
-            <strong>Your Google score</strong>
+            <strong>Your local score</strong>
             <span>vs top competitors in ${esc(businessCity)}</span>
           </div>
         </div>
@@ -1791,9 +1792,8 @@ ACCURACY RULES (critical):
 - Never discuss internal systems, infrastructure, other customers, or anything not listed here.
 
 WHAT POSST.APP DOES:
-- Posts automatically every day to Facebook Page, Instagram Business account, and Google Business Profile (Google Maps listing) — whichever the business connects
+- Posts automatically every day to Facebook Page and Instagram Business account — whichever the business connects
 - AI writes each caption in the business's own brand voice and generates a matching image for every post
-- Automatically replies to Google Business Profile reviews with SEO-friendly responses
 - Sends a monthly performance report
 - The business owner never needs to log in day-to-day — it just runs automatically
 
@@ -1809,7 +1809,7 @@ FREE TRIAL:
 
 SIGNING UP:
 - Login is via phone number + a one-time SMS code (OTP) — no password needed
-- Signup takes about 5 minutes: business details, choose platforms (Facebook / Instagram / Google Business Profile), choose a plan, choose a posting schedule (which days and what time)
+- Signup takes about 5 minutes: business details, choose platforms (Facebook / Instagram), choose a plan, choose a posting schedule (which days and what time)
 - After signup, connect social accounts via a quick OAuth flow — takes under 2 minutes
 - Posting schedule (days + time) is fully customizable and can be changed anytime from My Account
 
