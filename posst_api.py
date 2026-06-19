@@ -195,8 +195,40 @@ def update_schedule(client_id):
 @app.route('/api/client/<client_id>/plan', methods=['PATCH'])
 def update_plan(client_id):
     d = request.json or {}
-    sb.table('clients').update({'plan': d.get('plan', 'Pro')}).eq('client_id', client_id).execute()
-    log.info(f'Plan updated: {client_id} → {d.get("plan")}')
+    new_plan = d.get('plan', 'Pro')
+
+    # Look up subscription so we can swap the Stripe price to match (prevents
+    # plan/price drift — see Lesson: Upgrade to Pro previously only touched
+    # Supabase, never the actual Stripe subscription price).
+    client_res = sb.table('clients').select('stripe_subscription_id').eq('client_id', client_id).single().execute()
+    stripe_subscription_id = (client_res.data or {}).get('stripe_subscription_id', '')
+
+    if stripe_subscription_id and new_plan in STRIPE_PRICES and STRIPE_PRICES[new_plan]:
+        # Fetch current subscription to get the line item ID to swap
+        sub, sub_err = stripe_request('GET', f'/subscriptions/{stripe_subscription_id}')
+        if sub_err:
+            log.error(f'Plan update — could not fetch subscription for {client_id}: {sub_err}')
+            return err(f'Could not verify Stripe subscription: {sub_err}')
+        items = (sub or {}).get('items', {}).get('data', [])
+        if items:
+            item_id = items[0]['id']
+            swap_payload = {
+                'items[0][id]':    item_id,
+                'items[0][price]': STRIPE_PRICES[new_plan],
+                'proration_behavior': 'none',  # trial/manual upgrades — no surprise mid-cycle charge
+            }
+            result, result_err = stripe_request('POST', f'/subscriptions/{stripe_subscription_id}', swap_payload)
+            if result_err:
+                log.error(f'Plan update — Stripe price swap failed for {client_id}: {result_err}')
+                return err(f'Stripe price update failed: {result_err}')
+            log.info(f'Stripe subscription price swapped: {client_id} → {new_plan}')
+        else:
+            log.warning(f'Plan update — no subscription items found for {client_id}, Supabase-only update')
+    else:
+        log.warning(f'Plan update — no stripe_subscription_id for {client_id}, Supabase-only update (pre-payment client)')
+
+    sb.table('clients').update({'plan': new_plan}).eq('client_id', client_id).execute()
+    log.info(f'Plan updated: {client_id} → {new_plan}')
     return ok()
 
 @app.route('/api/client/<client_id>/drive', methods=['PATCH'])
