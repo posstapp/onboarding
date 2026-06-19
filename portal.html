@@ -574,11 +574,9 @@ function renderDashboard() {
     <!-- Danger Zone -->
     <div class="danger-zone">
       <div class="danger-title">⚠️ Account Actions</div>
-      <div class="danger-desc">${cd.status === 'Paused' ? 'Your account is currently paused. Resume any time, or cancel below.' : 'Need to pause or cancel? Your account will be updated immediately and you will receive a confirmation email.'}</div>
+      <div class="danger-desc">${cd.status === 'Paused' ? 'Your posting is currently paused. Resume anytime — billing picks back up immediately.' : 'Need to pause or cancel? Your account will be updated immediately and you will receive a confirmation email.'}</div>
       <div class="danger-actions">
-        ${cd.status === 'Paused'
-          ? '<button class="btn btn-secondary btn-sm" onclick="showResumeConfirm()">▶ Resume account</button>'
-          : '<button class="btn btn-secondary btn-sm" onclick="showPauseConfirm()">Pause posting</button>'}
+        ${cd.status === 'Paused' ? `<button class="btn btn-primary btn-sm" onclick="showResumeConfirm()">▶️ Resume posting</button>` : `<button class="btn btn-secondary btn-sm" onclick="showPauseConfirm()">Pause posting</button>`}
         <button class="btn btn-danger btn-sm" onclick="showCancelConfirm()">Cancel account</button>
       </div>
     </div>
@@ -916,14 +914,14 @@ function closeModal() {
 
 function showPauseConfirm() {
   showModal('⏸️', 'Pause your posting?',
-    'Posting and billing pause immediately. Resume any time from this page.',
+    'Your automated posts will stop immediately and billing pauses too. Resume anytime from My Account.',
     'Pause posting', 'btn-secondary', 'pause');
 }
 
 function showResumeConfirm() {
-  showModal('▶️', 'Resume your account?',
-    'Posting and billing will restart immediately.',
-    'Resume account', 'btn-secondary', 'resume');
+  showModal('▶️', 'Resume your posting?',
+    'Your automated posts and billing will start again immediately.',
+    'Resume posting', 'btn-primary', 'resume');
 }
 
 function showCancelConfirm() {
@@ -936,7 +934,7 @@ async function modalConfirm() {
   const btn = document.getElementById('modal-confirm-btn');
   btn.disabled = true;
   btn.textContent = 'Processing...';
-  const endpoint = modalAction === 'cancel' ? 'cancel' : modalAction === 'resume' ? 'resume' : 'pause';
+  const endpoint = modalAction; // 'cancel' | 'pause' | 'resume' — all map directly to API routes
   try {
     const resp = await fetch(PROXY_URL + '/client/' + clientData.client_id + '/' + endpoint, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -945,20 +943,19 @@ async function modalConfirm() {
     const result = await resp.json();
     closeModal();
     if (result.status === 'success') {
-      if (modalAction === 'cancel') {
-        document.getElementById('dashboard').innerHTML = `
-          <div style="text-align:center;padding:60px 20px">
-            <div style="font-size:48px;margin-bottom:16px">👋</div>
-            <h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">Account cancelled</h2>
-            <p style="font-size:14px;color:var(--ink-mid);line-height:1.6;margin-bottom:24px">Confirmation email sent. Your data is kept for 30 days.</p>
-            <a href="https://posst.app" class="btn btn-secondary">Back to posst.app</a>
-          </div>`;
-      } else {
-        // Pause / resume — update local state and re-render the live dashboard
-        // so the correct action (Resume vs Pause) is immediately visible.
-        clientData.status = modalAction === 'resume' ? 'Active' : 'Paused';
+      if (modalAction === 'resume') {
+        // Resume drops the user straight back into their live dashboard, not a goodbye screen
+        clientData.status = 'Active';
         renderDashboard();
+        return;
       }
+      document.getElementById('dashboard').innerHTML = `
+        <div style="text-align:center;padding:60px 20px">
+          <div style="font-size:48px;margin-bottom:16px">${modalAction==='cancel'?'👋':'⏸️'}</div>
+          <h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">${modalAction==='cancel'?'Account cancelled':'Posting paused'}</h2>
+          <p style="font-size:14px;color:var(--ink-mid);line-height:1.6;margin-bottom:24px">${modalAction==='cancel'?'Confirmation email sent. Your data is kept for 30 days.':'Confirmation email sent. Resume anytime from My Account.'}</p>
+          <a href="https://posst.app" class="btn btn-secondary">Back to posst.app</a>
+        </div>`;
     } else {
       alert('Something went wrong. Please try again.');
     }
