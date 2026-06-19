@@ -274,14 +274,70 @@ def update_themes(client_id):
 
 @app.route('/api/client/<client_id>/cancel', methods=['POST'])
 def cancel_client(client_id):
+    # Cancel the actual Stripe subscription, not just the Supabase status —
+    # same root-cause pattern as the plan/price drift bug (see /plan endpoint).
+    # A "cancelled" client whose Stripe sub keeps running is the same class of bug.
+    client_res = sb.table('clients').select('stripe_subscription_id').eq('client_id', client_id).single().execute()
+    stripe_subscription_id = (client_res.data or {}).get('stripe_subscription_id', '')
+
+    if stripe_subscription_id:
+        result, result_err = stripe_request('DELETE', f'/subscriptions/{stripe_subscription_id}')
+        if result_err:
+            # If Stripe says it's already cancelled/missing, don't block the Supabase update —
+            # but any other error should surface so it isn't silently swallowed.
+            if 'already' not in result_err.lower() and 'no such subscription' not in result_err.lower():
+                log.error(f'Cancel — Stripe cancellation failed for {client_id}: {result_err}')
+                return err(f'Stripe cancellation failed: {result_err}')
+            log.warning(f'Cancel — Stripe sub already gone for {client_id}, proceeding: {result_err}')
+        else:
+            log.info(f'Stripe subscription cancelled: {client_id} ({stripe_subscription_id})')
+    else:
+        log.warning(f'Cancel — no stripe_subscription_id for {client_id}, Supabase-only update (pre-payment client)')
+
     sb.table('clients').update({'status': 'Cancelled'}).eq('client_id', client_id).execute()
     log.info(f'Client cancelled: {client_id}')
     return ok()
 
 @app.route('/api/client/<client_id>/pause', methods=['POST'])
 def pause_client(client_id):
+    # Pause billing via Stripe's native pause_collection (keeps the subscription
+    # intact and resumable — distinct from cancel, which deletes it outright).
+    client_res = sb.table('clients').select('stripe_subscription_id').eq('client_id', client_id).single().execute()
+    stripe_subscription_id = (client_res.data or {}).get('stripe_subscription_id', '')
+
+    if stripe_subscription_id:
+        pause_payload = {'pause_collection[behavior]': 'void'}
+        result, result_err = stripe_request('POST', f'/subscriptions/{stripe_subscription_id}', pause_payload)
+        if result_err:
+            log.error(f'Pause — Stripe pause_collection failed for {client_id}: {result_err}')
+            return err(f'Stripe pause failed: {result_err}')
+        log.info(f'Stripe subscription billing paused: {client_id} ({stripe_subscription_id})')
+    else:
+        log.warning(f'Pause — no stripe_subscription_id for {client_id}, Supabase-only update (pre-payment client)')
+
     sb.table('clients').update({'status': 'Paused'}).eq('client_id', client_id).execute()
     log.info(f'Client paused: {client_id}')
+    return ok()
+
+@app.route('/api/client/<client_id>/resume', methods=['POST'])
+def resume_client(client_id):
+    # Resumes billing for a paused client — clears pause_collection on Stripe
+    # and restores Active status. No UI button yet (manual/portal use for now).
+    client_res = sb.table('clients').select('stripe_subscription_id').eq('client_id', client_id).single().execute()
+    stripe_subscription_id = (client_res.data or {}).get('stripe_subscription_id', '')
+
+    if stripe_subscription_id:
+        resume_payload = {'pause_collection': ''}
+        result, result_err = stripe_request('POST', f'/subscriptions/{stripe_subscription_id}', resume_payload)
+        if result_err:
+            log.error(f'Resume — Stripe resume failed for {client_id}: {result_err}')
+            return err(f'Stripe resume failed: {result_err}')
+        log.info(f'Stripe subscription billing resumed: {client_id} ({stripe_subscription_id})')
+    else:
+        log.warning(f'Resume — no stripe_subscription_id for {client_id}, Supabase-only update')
+
+    sb.table('clients').update({'status': 'Active'}).eq('client_id', client_id).execute()
+    log.info(f'Client resumed: {client_id}')
     return ok()
 
 # ── PORTAL LOOKUP ─────────────────────────────────────────────
