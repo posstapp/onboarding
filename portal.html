@@ -227,12 +227,12 @@ async function loadAccount() {
     const allClients = result.data.all_clients || [];
     const bizName = clientData.business_name || '';
 
-    if (allClients.length > 1) {
-      // Multiple businesses — show switcher dropdown
+    if (allClients.length > 1 || clientData.draft_prospect) {
+      // Multiple businesses, or a resumable draft signup — show switcher dropdown
       document.getElementById('nav-biz-name').textContent = bizName;
       document.getElementById('nav-switcher-btn').style.display = 'flex';
       document.getElementById('nav-biz-name-single').style.display = 'none';
-      buildSwitcherMenu(allClients, clientData.client_id);
+      buildSwitcherMenu(allClients, clientData.client_id, clientData.draft_prospect);
     } else {
       // Single business — plain name
       document.getElementById('nav-biz-name-single').textContent = bizName;
@@ -258,7 +258,7 @@ function signOut() {
 }
 
 // ── BUSINESS SWITCHER ──────────────────────────────────────
-function buildSwitcherMenu(allClients, activeClientId) {
+function buildSwitcherMenu(allClients, activeClientId, draftProspect) {
   const menu = document.getElementById('nav-switcher-menu');
   if (!menu) return;
   const items = allClients.map(c => {
@@ -269,9 +269,18 @@ function buildSwitcherMenu(allClients, activeClientId) {
       <span class="sw-item-status ${c.status==='Active'?'active':''}">${statusLabel}</span>
     </div>`;
   }).join('');
-  menu.innerHTML = items +
+  const draftItem = draftProspect ? `<div class="sw-item" style="border-style:dashed;opacity:0.85" onclick="resumeDraft()">
+      <span class="sw-item-name">${esc(draftProspect.business_name)} <span style="font-size:11px;color:var(--ink-light)">(unfinished)</span></span>
+      <span class="sw-item-status" style="color:var(--blue)">↻ Resume signup</span>
+    </div>` : '';
+  menu.innerHTML = items + draftItem +
     '<div class="sw-divider"></div>' +
     '<div class="sw-add" onclick="addNewBusiness()">➕ Add another business</div>';
+}
+
+function resumeDraft() {
+  const encodedPhone = encodeURIComponent(phone);
+  window.location.href = `https://onboarding.posst.app?resume=1&phone=${encodedPhone}`;
 }
 
 function toggleSwitcher() {
@@ -313,7 +322,7 @@ async function switchBusiness(clientId) {
       result.data.all_clients = clientData.all_clients || [];
       clientData = result.data;
       document.getElementById('nav-biz-name').textContent = clientData.business_name || '';
-      buildSwitcherMenu(clientData.all_clients, clientId);
+      buildSwitcherMenu(clientData.all_clients, clientId, clientData.draft_prospect);
       document.getElementById('loading').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       renderDashboard();
