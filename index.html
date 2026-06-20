@@ -1664,6 +1664,19 @@ detectCountry();
   if (params.get('mode') === 'login') {
     sessionStorage.setItem('posst_login_mode', '1');
   }
+  // Pre-fill phone when resuming a draft from the portal switcher —
+  // deliberately does NOT set posst_new_business_mode, so after OTP the
+  // existing portal_lookup -> loadProgress resume path runs normally
+  // instead of being forced into the "start fresh" new-business flow.
+  if (params.get('resume') === '1' && params.get('phone')) {
+    var resumePhone = params.get('phone');
+    var knownCodesResume = ['+61','+1','+44','+91','+971','+65','+64','+27','+49','+33','+39','+34','+31','+353','+46','+47','+45','+41','+48','+966','+974','+973','+968','+965','+20','+234','+254','+55','+52','+60','+63','+66','+84','+81','+82','+852','+92','+880','+94'];
+    var matchedResume = knownCodesResume.find(function(c) { return resumePhone.startsWith(c); });
+    if (matchedResume) {
+      F.phone_code = matchedResume;
+      F.phone_number = resumePhone.slice(matchedResume.length).replace(/\s/g,'');
+    }
+  }
   // Pre-fill phone when coming from portal Add new business
   if (params.get('mode') === 'new_business' && params.get('phone')) {
     var prePhone = params.get('phone');
