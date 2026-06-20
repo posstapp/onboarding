@@ -712,6 +712,14 @@ async function saveThemes(btn) {
 // ── DRIVE ─────────────────────────────────────────────────
 function showDriveInput() {
   const g = document.getElementById('drive-input-group');
+  const urlInput = document.getElementById('drive-url-input');
+  const status = document.getElementById('drive-test-status');
+  // Clear any leftover result from a previous successful test — without this,
+  // reopening after connecting a folder shows the old "Connected" panel
+  // stacked alongside the freshly-updated top summary box, looking like two
+  // different folders are connected at once.
+  if (urlInput) urlInput.value = '';
+  if (status) status.innerHTML = '';
   if (g) g.style.display = 'block';
 }
 
