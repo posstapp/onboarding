@@ -350,10 +350,21 @@ function renderDashboard() {
   const postingDays = (cd.posting_days || 'Mon,Tue,Wed,Thu,Fri,Sat,Sun').split(',').map(d => d.trim());
 
   // Parse platforms
+  // NOTE: hasFB/hasIG/hasGBP must reflect whether the platform is actually
+  // OAuth-connected (fb_page_id/ig_business_id/gbp_location_id populated),
+  // not which platforms were originally selected during onboarding signup.
+  // Previously these were derived from cd.platforms (the static signup
+  // selection list), which meant a client who selected Facebook-only at
+  // signup would keep showing "+ Add Instagram" forever even after
+  // successfully connecting Instagram later — cd.platforms never updates
+  // post-signup, only fb_connected/ig_connected/gbp_connected do.
+  // Confirmed live against Clippers on 2026-06-20: Instagram was connected
+  // in Supabase (ig_business_id + ig_handle populated) but the portal kept
+  // prompting to add it.
   const platforms = (cd.platforms || '').toLowerCase().split(',').map(p => p.trim()).filter(Boolean);
-  const hasFB = platforms.some(p => p.includes('facebook'));
-  const hasIG = platforms.some(p => p.includes('instagram'));
-  const hasGBP = platforms.some(p => p.includes('gbp') || p.includes('google'));
+  const hasFB = !!cd.fb_connected;
+  const hasIG = !!cd.ig_connected;
+  const hasGBP = !!cd.gbp_connected;
 
   // Parse day themes from notes
   let dayThemes = {};
