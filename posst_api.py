@@ -482,6 +482,7 @@ def create_prospect():
     phone = d.get('phone', '')
     if not phone:
         return err('Phone required')
+    log.info(f'create_prospect: incoming payload for phone={phone}: {d}')
     existing = sb.table('prospects').select('*').eq('phone', phone).execute()
     # Only ever update a row that is still an active, incomplete draft.
     # A 'converted' row is a permanent historical record of a real past
@@ -491,6 +492,32 @@ def create_prospect():
     # historical row on 2026-06-20. Converted rows are now untouchable.
     active_row = next((r for r in (existing.data or []) if r.get('status') != 'converted'), None)
     if active_row:
+        # Guard against regression: createProspect() is called fresh at the
+        # very start of EVERY OTP verification (status='otp_verified',
+        # last_step_reached='otp'), regardless of whether this is a brand
+        # new attempt or a second/stray OTP verify under the same phone
+        # while a real, further-along draft already exists (e.g. a second
+        # browser tab, or re-verifying for an unrelated reason). Without
+        # this guard, that early-stage write blindly overwrites
+        # business_name/city/type with whatever sessionStorage happened to
+        # hold at that moment — even placeholder/blank data — destroying a
+        # real in-progress draft that was already several steps further
+        # along. Confirmed live: an Angelicurio draft (last_step_reached: 4,
+        # real business data) got overwritten by a later OTP-verify call
+        # (last_step_reached: 'otp') carrying "Melbourne"/"local business"
+        # placeholder data, on 2026-06-21. If the active row already shows
+        # real progress (a numeric/step_ last_step_reached, i.e. anything
+        # past the bare OTP stage) and this write is itself just the bare
+        # OTP-verify stage, don't let it clobber the further-along data.
+        existing_step = str(active_row.get('last_step_reached', ''))
+        incoming_step = str(d.get('last_step_reached', ''))
+        existing_has_progress = existing_step not in ('', 'otp', 'landing')
+        is_otp_stage_write = incoming_step == 'otp'
+        if is_otp_stage_write and existing_has_progress:
+            log.info(f'create_prospect: skipping OTP-stage overwrite for phone={phone} — active row already at last_step_reached={existing_step}')
+            if d.get('session_id'):
+                sb.table('prospects').update({'session_id': d.get('session_id')}).eq('id', active_row['id']).execute()
+            return ok(action='skipped_regression_guard')
         update = {}
         if d.get('business_name'): update['business_name'] = d.get('business_name')
         if d.get('business_city'): update['business_city'] = d.get('business_city')
@@ -540,6 +567,7 @@ def save_progress():
     phone = d.get('phone', '')
     if not phone:
         return err('Phone required')
+    log.info(f'save_progress: incoming for phone={phone}, step={d.get("step")}, form.business_name={(d.get("form") or {}).get("business_name")}, form.business_city={(d.get("form") or {}).get("business_city")}')
     state = json.dumps({'step': d.get('step', 0), 'form': d.get('form', {}), 'saved_at': datetime.now().isoformat()})
     existing = sb.table('prospects').select('*').eq('phone', phone).execute()
     # Same protection as create_prospect: only ever write form_state to an
