@@ -9,6 +9,7 @@ import os
 import json
 import logging
 from datetime import datetime, timedelta
+from urllib.parse import quote
 from flask import Flask, request, jsonify
 from supabase import create_client, Client
 import sys
@@ -498,7 +499,20 @@ def create_prospect():
         'status':        'prospect',
         'last_step_reached': 'landing',
     }
-    sb.table('prospects').insert(row).execute()
+    # Do NOT swallow insert failures — a prior version of this endpoint
+    # returned ok(action='created') unconditionally even if the insert
+    # never wrote a row. If the same phone already has a 'converted'
+    # row and a UNIQUE constraint exists on prospects.phone, this insert
+    # will throw — that must surface as a real error, not a silent 500
+    # that the frontend's try/catch then hides from the user entirely.
+    try:
+        result = sb.table('prospects').insert(row).execute()
+        if not result.data:
+            log.error(f'create_prospect: insert returned no data for phone={phone}, row={row}')
+            return err('Failed to create prospect row (no data returned)', 500)
+    except Exception as e:
+        log.error(f'create_prospect: insert failed for phone={phone}: {e}')
+        return err(f'Failed to create prospect row: {e}', 500)
     return ok(action='created')
 
 @app.route('/api/prospect/progress', methods=['POST'])
@@ -515,15 +529,28 @@ def save_progress():
     # with whatever the current in-progress draft was — exactly what
     # corrupted the Clippers historical record on 2026-06-20.
     active_row = next((r for r in (existing.data or []) if r.get('status') != 'converted'), None)
-    if active_row:
-        update = {'form_state': state, 'last_step_reached': str(d.get('step', 0))}
-        form = d.get('form', {})
-        if form.get('tier'):
-            update['plan_selected'] = form.get('tier')
-        if form.get('platforms'):
-            plat = form.get('platforms')
-            update['platforms_selected'] = ','.join(plat) if isinstance(plat, list) else str(plat)
-        sb.table('prospects').update(update).eq('id', active_row['id']).execute()
+    if not active_row:
+        # Previously fell through to `return ok(action='saved')` here even
+        # though nothing was written — a silent false-positive that would
+        # mask exactly the failure mode where create_prospect()'s insert
+        # never landed a row in the first place. Surface it instead.
+        log.error(f'save_progress: no active (non-converted) prospect row found for phone={phone}; nothing saved')
+        return err('No active prospect row to save progress against', 404)
+    update = {'form_state': state, 'last_step_reached': str(d.get('step', 0))}
+    form = d.get('form', {})
+    if form.get('tier'):
+        update['plan_selected'] = form.get('tier')
+    if form.get('platforms'):
+        plat = form.get('platforms')
+        update['platforms_selected'] = ','.join(plat) if isinstance(plat, list) else str(plat)
+    try:
+        result = sb.table('prospects').update(update).eq('id', active_row['id']).execute()
+        if not result.data:
+            log.error(f'save_progress: update returned no data for phone={phone}, id={active_row["id"]}')
+            return err('Failed to save progress (no data returned)', 500)
+    except Exception as e:
+        log.error(f'save_progress: update failed for phone={phone}, id={active_row["id"]}: {e}')
+        return err(f'Failed to save progress: {e}', 500)
     return ok(action='saved')
 
 @app.route('/api/prospect/progress', methods=['GET'])
@@ -702,7 +729,20 @@ def email_pause():
 def email_reengagement():
     d = request.json or {}
     if EMAIL_AVAILABLE:
-        send_reengagement_email(d.get('email',''), d.get('business_name','there'), 'https://onboarding.posst.app')
+        # Previously this always sent the bare https://onboarding.posst.app
+        # URL with no phone or mode param at all — meaning the "Complete
+        # my setup" link forced the user to retype their phone number with
+        # zero context, and never triggered the login framing or resume
+        # path. Now includes mode=login (clean login framing, no "Step 1
+        # of 7" onboarding badge) + resume=1&phone=... (reuses the
+        # existing, already-tested pre-fill path used by the portal's
+        # "Resume signup" switcher entry).
+        phone = d.get('phone', '')
+        if phone:
+            resume_url = f'https://onboarding.posst.app?mode=login&resume=1&phone={quote(phone)}'
+        else:
+            resume_url = 'https://onboarding.posst.app?mode=login'
+        send_reengagement_email(d.get('email',''), d.get('business_name','there'), resume_url)
     return ok()
 
 @app.route('/api/email/alert', methods=['POST'])
