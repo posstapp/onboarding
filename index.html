@@ -837,11 +837,18 @@ function renderSidebar() {
 
 // ── STEP 0: Phone ──────────────────────────────────────────
 function renderStep0() {
+  // mode=login (My Account / "Complete my setup" email link) shows a
+  // dedicated login framing instead of onboarding step 1 — previously
+  // this flag was set but never read anywhere, so login and fresh
+  // onboarding looked identical. The actual phone+OTP fields and the
+  // portal_lookup/loadProgress redirect logic after OTP verify were
+  // already correct; only the framing was missing.
+  const isLoginMode = sessionStorage.getItem('posst_login_mode') === '1';
   return `
     <div class="step-header">
-      <div class="step-tag">Step 1 of 7</div>
-      <h2 class="step-title">Enter your phone number</h2>
-      <p class="step-desc">We&#39;ll send a verification code via SMS. No email or passwords needed.</p>
+      ${isLoginMode ? '' : '<div class="step-tag">Step 1 of 7</div>'}
+      <h2 class="step-title">${isLoginMode ? 'Log in to your account' : 'Enter your phone number'}</h2>
+      <p class="step-desc">${isLoginMode ? "Enter your phone number and we&#39;ll send you a verification code." : "We&#39;ll send a verification code via SMS. No email or passwords needed."}</p>
     </div>
     ${!otpSent ? `
       <div class="form-group">
@@ -850,7 +857,7 @@ function renderStep0() {
           <select class="form-input form-select phone-code" onchange="F.phone_code=this.value">
             ${COUNTRY_CODES.map(c=>`<option value="${c.d}" ${F.phone_code===c.d?'selected':''}>${c.d} ${c.n}</option>`).join('')}
           </select>
-          <input class="form-input phone-num ${errors.phone?'err':''}" value="${esc(F.phone_number)}" placeholder="412 345 678" type="tel" oninput="F.phone_number=this.value">
+          <input class="form-input phone-num ${errors.phone?'err':''}" value="${esc(F.phone_number)}" placeholder="412 345 678" type="tel" oninput="F.phone_number=this.value" ${isLoginMode ? 'autofocus' : ''}>
         </div>
         ${errors.phone?`<div class="form-error">${errors.phone}</div>`:''}
         <div class="form-hint">We&#39;ll send a 6-digit code to verify your number.</div>
@@ -1569,27 +1576,50 @@ async function handleSaveAndExit(btn) {
 
 async function saveAndExit() {
   const phone = sessionStorage.getItem('posst_phone') || '';
+  let saveFailed = false;
+  let failReason = '';
   if(phone) {
     try {
       const sid = sessionStorage.getItem('posst_session_id') || '';
       const reName = F.business_name || sessionStorage.getItem('posst_business_name') || '';
       const reEmail = F.contact_email || '';
-      // Ensure prospect row exists before saving progress
-      await callAppsScript('updateProspect', {
+      // Ensure prospect row exists before saving progress.
+      // NOTE: proxyPost resolves (doesn't throw) even on a 4xx/5xx backend
+      // error, since the backend returns valid JSON error bodies — so the
+      // result.status field must be checked explicitly, not just whether
+      // the await threw. Previously this whole flow always showed
+      // "Progress saved!" regardless of whether anything was actually
+      // saved, which is exactly what masked the missing-prospect-row bug.
+      const r1 = await callAppsScript('updateProspect', {
         session_id: sid,
         phone: phone,
         business_name: reName,
         status: 'drop_off',
         last_step_reached: 'step_' + step
       });
-      await callAppsScript('saveProgress', { phone, step, form: F });
+      if (!r1 || r1.status !== 'success') { saveFailed = true; failReason = (r1 && r1.message) || 'prospect save failed'; }
+      const r2 = await callAppsScript('saveProgress', { phone, step, form: F });
+      if (!r2 || r2.status !== 'success') { saveFailed = true; failReason = (r2 && r2.message) || 'progress save failed'; }
       if(reEmail) {
         fetch(PROXY_URL + '/email/reengagement', {
           method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ email: reEmail, business_name: reName })
+          body: JSON.stringify({ email: reEmail, business_name: reName, phone: phone })
         }).catch(()=>{});
       }
-    } catch(e) { console.warn('saveAndExit error:', e); }
+    } catch(e) { console.warn('saveAndExit error:', e); saveFailed = true; failReason = String(e); }
+  }
+  if (saveFailed) {
+    console.error('saveAndExit failed to persist progress:', failReason);
+    $('main-content').innerHTML = `
+      <div style="text-align:center;padding:60px 20px">
+        <div style="font-size:48px;margin-bottom:16px">&#x26A0;&#xFE0F;</div>
+        <div style="font-family:var(--serif);font-size:24px;color:var(--ink);margin-bottom:12px">Couldn't save progress</div>
+        <p style="font-size:14px;color:var(--ink-mid);line-height:1.7;max-width:360px;margin:0 auto 24px">
+          Something went wrong saving your progress. Please try again, or contact us if this keeps happening.
+        </p>
+        <button onclick="render()" style="display:inline-block;background:var(--blue);color:white;border:none;text-decoration:none;padding:12px 28px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer">Try again</button>
+      </div>`;
+    return;
   }
   // Show saved confirmation
   $('main-content').innerHTML = `
