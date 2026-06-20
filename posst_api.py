@@ -446,17 +446,15 @@ def create_prospect():
     phone = d.get('phone', '')
     if not phone:
         return err('Phone required')
-    # Check if exists
-    existing = sb.table('prospects').select('id').eq('phone', phone).execute()
-    if existing.data:
-        # A phone can be reused across multiple signup attempts (e.g. someone
-        # starts onboarding a different business, or testing reuses a number).
-        # Previously this branch did nothing — the prospects row stayed frozen
-        # on whatever business/step was saved the very first time that phone
-        # was ever used, so later drop-offs silently vanished. Update instead,
-        # but only overwrite fields actually present in this call — several
-        # call sites (bridge_viewed, bridge_cta_clicked) intentionally omit
-        # business_name and shouldn't blank out a name saved by an earlier call.
+    existing = sb.table('prospects').select('*').eq('phone', phone).execute()
+    # Only ever update a row that is still an active, incomplete draft.
+    # A 'converted' row is a permanent historical record of a real past
+    # signup and must NEVER be overwritten by a later, unrelated attempt
+    # under the same phone (e.g. testing a different business) — an
+    # earlier version of this fix did exactly that and destroyed a real
+    # historical row on 2026-06-20. Converted rows are now untouchable.
+    active_row = next((r for r in (existing.data or []) if r.get('status') != 'converted'), None)
+    if active_row:
         update = {}
         if d.get('business_name'): update['business_name'] = d.get('business_name')
         if d.get('business_city'): update['business_city'] = d.get('business_city')
@@ -465,8 +463,12 @@ def create_prospect():
         if d.get('last_step_reached'): update['last_step_reached'] = d.get('last_step_reached')
         if d.get('session_id'):    update['session_id'] = d.get('session_id')
         if update:
-            sb.table('prospects').update(update).eq('phone', phone).execute()
+            sb.table('prospects').update(update).eq('id', active_row['id']).execute()
         return ok(action='updated')
+    # No active draft for this phone — either a first-ever attempt, or every
+    # prior row for this phone is already converted. Insert a fresh row;
+    # a phone genuinely can convert more than once over time (different
+    # businesses), so multiple historical rows per phone is correct.
     row = {
         'session_id':    d.get('session_id', ''),
         'phone':         phone,
