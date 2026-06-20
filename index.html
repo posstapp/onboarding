@@ -1693,6 +1693,16 @@ detectCountry();
   // If mode=login, show sign-in screen directly
   if (params.get('mode') === 'login') {
     sessionStorage.setItem('posst_login_mode', '1');
+    // Clear any leftover posst_new_business_mode flag from an earlier,
+    // abandoned "Add another business" attempt in this same tab. Without
+    // this, verifyOTP() checks that flag and — finding it still set from
+    // the dropped-off attempt — sends a legitimate login straight into the
+    // new-business search screen instead of the account portal, since
+    // nothing else ever clears this flag except a FULLY completed signup
+    // (submitForm()). Confirmed live: dropped off mid "Add another
+    // business", then clicking "My Account" landed back on the new-business
+    // search step instead of logging in, on 2026-06-21.
+    sessionStorage.removeItem('posst_new_business_mode');
   }
   // Pre-fill phone when resuming a draft from the portal switcher —
   // deliberately does NOT set posst_new_business_mode, so after OTP the
