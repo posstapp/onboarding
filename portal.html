@@ -481,8 +481,8 @@ function renderDashboard() {
           ${hasGBP ? `<div class="platform-row"><div class="platform-info"><span class="platform-icon">🗺️</span><div><div class="platform-name">Google Business</div><div class="platform-status">${cd.gbp_connected?'Connected':'Pending API access'}</div></div></div><span class="pill ${cd.gbp_connected?'pill-green':'pill-amber'}">${cd.gbp_connected?'✓ Connected':'⏳ Pending'}</span></div>` : ''}
           ${!hasFB && !hasIG && !hasGBP ? '<p style="font-size:13px;color:var(--ink-light);padding:12px 0">No platforms connected yet.</p>' : ''}
           <div style="margin-top:14px">
-            ${!hasFB ? `<button class="btn btn-secondary btn-sm" style="margin-right:8px;margin-bottom:8px" onclick="addPlatform('meta')">+ Add Facebook</button>` : ''}
-            ${!hasGBP ? `<button class="btn btn-secondary btn-sm" style="margin-bottom:8px" onclick="addPlatform('google')">+ Add Google Business</button>` : ''}
+            ${(!hasFB || !hasIG) ? `<button class="btn btn-secondary btn-sm" style="margin-right:8px;margin-bottom:8px" onclick="addPlatform('meta')">+ Add Facebook${!hasIG?' / Instagram':''}</button>` : ''}
+            <button class="btn btn-secondary btn-sm" style="margin-bottom:8px;opacity:0.55;border-style:dashed;cursor:default" disabled title="Coming soon">🗺️ Google Business — Coming Soon</button>
           </div>
         </div>
       </div>
