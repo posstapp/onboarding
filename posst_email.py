@@ -134,6 +134,8 @@ def send_go_live_email(client):
     else:
         upgrade_section = btn("Manage my account &rarr;", "https://onboarding.posst.app/portal.html")
 
+    another_biz_section = f'{sec("Got more than one business?")}{para("You can add another business to posst.app any time from your account portal &mdash; same login, switch between them whenever you like.")}'
+
     body = wrap(f'''
         {hero("&#x1F680;", "You are live!", "Your social media is now posting automatically.")}
         {hi(client.get("business_name") or "there")}
@@ -147,6 +149,7 @@ def send_go_live_email(client):
         {drive_section}
         {hl("You can still post manually anytime &mdash; it will not affect the automation.", "&#x2705;")}
         {upgrade_section}
+        {another_biz_section}
         {sign_off()}
     ''')
     return send_email(client.get('contact_email'), "You are live! Your social media is now posting automatically", body)
