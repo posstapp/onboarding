@@ -89,9 +89,24 @@ def create_client_record():
     client_id = generate_client_id()
     pending_token = generate_token()
 
-    # Compute UTC posting time
+    # Compute UTC posting time — the calculation was previously missing
+    # entirely despite this comment claiming otherwise. Every client created
+    # via onboarding had posting_time_utc left unset, so the n8n posting
+    # workflow (which schedules off the UTC field) fell back to whatever
+    # default it assumed instead of the business's actual chosen time.
     posting_time = d.get('posting_time', '11:00')
     timezone = d.get('timezone', 'Australia/Melbourne')
+    posting_time_utc = None
+    try:
+        from zoneinfo import ZoneInfo
+        from datetime import datetime as dt
+        local_h, local_m = map(int, posting_time.split(':'))
+        tz = ZoneInfo(timezone)
+        local_dt = dt.now(tz).replace(hour=local_h, minute=local_m, second=0, microsecond=0)
+        utc_dt = local_dt.astimezone(ZoneInfo('UTC'))
+        posting_time_utc = utc_dt.strftime('%H:%M')
+    except Exception as e:
+        log.warning(f'Could not calculate posting_time_utc at creation: {e}')
 
     posting_days = d.get('posting_days', 'Mon,Tue,Wed,Thu,Fri,Sat,Sun')
     if isinstance(posting_days, dict):
@@ -129,6 +144,7 @@ def create_client_record():
         'gbp_name':            d.get('gbp_name', ''),
         'posting_days':        posting_days,
         'posting_time':        posting_time,
+        'posting_time_utc':    posting_time_utc,
         'timezone':            timezone,
         'monthly_report_day':  datetime.now().day,
         'notes':               notes,
