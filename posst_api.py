@@ -390,9 +390,28 @@ def portal_lookup():
             'contact_email':    client.get('contact_email', ''),
         }
     # Return primary client + full list for switcher
+    # Check for an incomplete prospect (a separate, never-converted signup attempt)
+    # for this same phone — without this, a returning user with a real client AND
+    # an abandoned new-business attempt would never see the abandoned one again,
+    # since prospects and clients are different tables and this endpoint only
+    # ever looked at clients. Surfaced as 'draft_prospect' so the switcher can
+    # show it as a resumable entry rather than it silently disappearing.
+    draft_prospect = None
+    prospect_res = sb.table('prospects').select('*').execute()
+    for prow in (prospect_res.data or []):
+        stored_phone = (prow.get('phone') or '').replace(' ', '').lstrip("'")
+        if stored_phone == phone and prow.get('status') != 'converted' and prow.get('business_name'):
+            draft_prospect = {
+                'business_name':      prow.get('business_name', ''),
+                'last_step_reached':  prow.get('last_step_reached', ''),
+                'status':             'Draft',
+            }
+            break
+
     return ok({
         **fmt(primary),
-        'all_clients': [{'client_id': c['client_id'], 'business_name': c['business_name'], 'status': c['status']} for c in clients]
+        'all_clients': [{'client_id': c['client_id'], 'business_name': c['business_name'], 'status': c['status']} for c in clients],
+        'draft_prospect': draft_prospect,
     })
 
 # ── PENDING TOKEN ─────────────────────────────────────────────
@@ -430,7 +449,24 @@ def create_prospect():
     # Check if exists
     existing = sb.table('prospects').select('id').eq('phone', phone).execute()
     if existing.data:
-        return ok(action='exists')
+        # A phone can be reused across multiple signup attempts (e.g. someone
+        # starts onboarding a different business, or testing reuses a number).
+        # Previously this branch did nothing — the prospects row stayed frozen
+        # on whatever business/step was saved the very first time that phone
+        # was ever used, so later drop-offs silently vanished. Update instead,
+        # but only overwrite fields actually present in this call — several
+        # call sites (bridge_viewed, bridge_cta_clicked) intentionally omit
+        # business_name and shouldn't blank out a name saved by an earlier call.
+        update = {}
+        if d.get('business_name'): update['business_name'] = d.get('business_name')
+        if d.get('business_city'): update['business_city'] = d.get('business_city')
+        if d.get('business_type'): update['business_type'] = d.get('business_type')
+        if d.get('status'):        update['status'] = d.get('status')
+        if d.get('last_step_reached'): update['last_step_reached'] = d.get('last_step_reached')
+        if d.get('session_id'):    update['session_id'] = d.get('session_id')
+        if update:
+            sb.table('prospects').update(update).eq('phone', phone).execute()
+        return ok(action='updated')
     row = {
         'session_id':    d.get('session_id', ''),
         'phone':         phone,
