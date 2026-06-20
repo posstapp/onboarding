@@ -404,6 +404,7 @@ def portal_lookup():
         return {
             'client_id':        client['client_id'],
             'business_name':    client['business_name'],
+            'business_city':    client.get('business_city', ''),
             'email':            client['contact_email'],
             'plan':             client['plan'],
             'platforms':        client['platforms'],
