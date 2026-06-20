@@ -561,6 +561,20 @@ def save_progress():
     if form.get('platforms'):
         plat = form.get('platforms')
         update['platforms_selected'] = ','.join(plat) if isinstance(plat, list) else str(plat)
+    # Also sync the top-level descriptive columns (business_name/city/type)
+    # from the form payload whenever present. Previously these columns were
+    # ONLY ever set once, at OTP-verify time in create_prospect() — fine for
+    # the landing-page flow (business already picked via Google Places
+    # before OTP, so the data exists immediately), but for the "Add another
+    # business" flow OTP happens BEFORE business selection, so the initial
+    # insert always had these blank and nothing ever went back to fill them
+    # in once a business was actually chosen. Combined with convert_prospect()
+    # wiping form_state to {} on conversion, this meant a converted row from
+    # that flow ended up permanently blank with no recoverable business data.
+    # Confirmed live: posst.app prospect row (id 22) on 2026-06-20.
+    if form.get('business_name'): update['business_name'] = form.get('business_name')
+    if form.get('business_city'): update['business_city'] = form.get('business_city')
+    if form.get('business_type'): update['business_type'] = form.get('business_type')
     try:
         result = sb.table('prospects').update(update).eq('id', active_row['id']).execute()
         if not result.data:
