@@ -313,8 +313,18 @@ async function switchBusiness(clientId) {
   document.getElementById('loading').style.display = 'block';
   document.getElementById('dashboard').style.display = 'none';
   try {
-    const resp = await fetch(PROXY_URL + '/client/' + clientId, {
-      method: 'GET', headers: {'Content-Type': 'application/json'}
+    // NOTE: previously called GET /client/:id, which returns the raw
+    // Supabase row — that endpoint never computes fb_connected/ig_connected/
+    // gbp_connected at all (those are only derived inside portal_lookup's
+    // fmt()). So switching businesses silently lost connection-status data
+    // entirely: cd.fb_connected was just undefined, making the Platforms
+    // card show "None connected" regardless of actual connection state.
+    // Confirmed live against posst.app on 2026-06-21. portal_lookup
+    // already supports filtering by client_id, so reuse it directly
+    // instead of duplicating the connection-status logic in two endpoints.
+    const resp = await fetch(PROXY_URL + '/portal_lookup', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ phone, client_id: clientId })
     });
     const result = await resp.json();
     if (result.status === 'success') {
