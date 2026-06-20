@@ -612,6 +612,44 @@ async function verifyOTP() {
         window.scrollTo(0,0);
         return;
       }
+      function goToPortalOrContinue() {
+        callAppsScript('portal_lookup', {phone: fullPhone}).then(function(portalRes) {
+          const clientStatus = portalRes && portalRes.status === 'success' && portalRes.data ? (portalRes.data.status || '') : '';
+          if(['Active','Provisioning','Paused','Cancelled'].includes(clientStatus)) {
+            window.location.href = 'https://onboarding.posst.app/portal.html?phone=' + encodeURIComponent(fullPhone);
+            return;
+          }
+          next();
+        }).catch(function() { next(); });
+      }
+      var isResume = urlParams.get('resume') === '1';
+      if (isResume) {
+        // User explicitly clicked "Resume signup" on a specific draft from
+        // the portal switcher — this must take priority over the default
+        // "redirect to portal if any active client exists" behavior below.
+        // Without this, Resume signup was unusable for exactly the
+        // population it exists for: you only ever see that option when you
+        // ALREADY have another active business under the same phone, which
+        // is precisely the condition that made portal_lookup hijack every
+        // resume attempt straight back to the portal before loadProgress
+        // ever ran. Confirmed broken live: clicking Resume signup on an
+        // abandoned Angelicurio draft while Clippers/posst.app were both
+        // Active just bounced to the portal instead of resuming Angelicurio,
+        // on 2026-06-21. If no resumable draft actually exists, fall back
+        // to the normal portal-or-continue behavior.
+        callAppsScript('loadProgress', {phone: fullPhone}).then(function(res) {
+          if(res && res.success && res.step > 1 && res.form) {
+            Object.assign(F, res.form);
+            step = res.step;
+            sessionStorage.setItem('posst_resumed', '1');
+            sessionStorage.setItem('posst_resume_name', res.business_name || '');
+            render(); window.scrollTo(0,0);
+          } else {
+            goToPortalOrContinue();
+          }
+        }).catch(function() { goToPortalOrContinue(); });
+        return;
+      }
       callAppsScript('portal_lookup', {phone: fullPhone}).then(function(portalRes) {
         const clientStatus = portalRes && portalRes.status === 'success' && portalRes.data ? (portalRes.data.status || '') : '';
         if(['Active','Provisioning','Paused','Cancelled'].includes(clientStatus)) {
