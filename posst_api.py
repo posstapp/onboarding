@@ -492,8 +492,14 @@ def save_progress():
     if not phone:
         return err('Phone required')
     state = json.dumps({'step': d.get('step', 0), 'form': d.get('form', {}), 'saved_at': datetime.now().isoformat()})
-    existing = sb.table('prospects').select('id').eq('phone', phone).execute()
-    if existing.data:
+    existing = sb.table('prospects').select('*').eq('phone', phone).execute()
+    # Same protection as create_prospect: only ever write form_state to an
+    # active, non-converted draft row. This endpoint previously matched by
+    # phone alone and would silently overwrite a converted row's form_state
+    # with whatever the current in-progress draft was — exactly what
+    # corrupted the Clippers historical record on 2026-06-20.
+    active_row = next((r for r in (existing.data or []) if r.get('status') != 'converted'), None)
+    if active_row:
         update = {'form_state': state, 'last_step_reached': str(d.get('step', 0))}
         form = d.get('form', {})
         if form.get('tier'):
@@ -501,7 +507,7 @@ def save_progress():
         if form.get('platforms'):
             plat = form.get('platforms')
             update['platforms_selected'] = ','.join(plat) if isinstance(plat, list) else str(plat)
-        sb.table('prospects').update(update).eq('phone', phone).execute()
+        sb.table('prospects').update(update).eq('id', active_row['id']).execute()
     return ok(action='saved')
 
 @app.route('/api/prospect/progress', methods=['GET'])
