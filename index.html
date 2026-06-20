@@ -1167,6 +1167,7 @@ function renderStep2() {
       <label class="form-label">Which platforms? *${tip('platforms')}</label>
       <div class="platform-grid">
         ${PLATFORMS.map(p=>`<div class="platform-card ${F.platforms.includes(p.id)?'selected':''}" onclick="togglePlatform('${p.id}')"><div class="platform-icon">${p.icon}</div><div class="platform-name">${p.name}</div><div class="platform-sub">${p.sub}</div></div>`).join('')}
+        <div class="platform-card" style="cursor:default;opacity:0.55;border-style:dashed" title="Coming soon"><div class="platform-icon">&#128506;</div><div class="platform-name">Google Business Profile</div><div class="platform-sub" style="color:var(--blue);font-weight:600">Coming Soon</div></div>
       </div>
       ${errors.platforms?`<div class="form-error" style="margin-top:6px">${errors.platforms}</div>`:''}
     </div>
