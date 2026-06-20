@@ -272,7 +272,25 @@ def update_token(client_id):
     if d.get('ig_handle'):         update['ig_handle'] = d['ig_handle']
     if d.get('gbp_refresh_token'): update['gbp_refresh_token'] = d['gbp_refresh_token']
     if d.get('gbp_location_id'):   update['gbp_location_id'] = d['gbp_location_id']
-    if d.get('status'):            update['status'] = d['status']
+    if d.get('status'):
+        # The OAuth flow (oauth_connect_v4.py) sends status='Token_Received' on
+        # EVERY completed connection, including when an already-Active/Paused/
+        # Cancelled client reconnects or adds a platform later (e.g. adding
+        # Instagram to an FB-only client from the portal). Previously this
+        # blindly overwrote status, which downgraded an established client
+        # back to Token_Received — and a separate (n8n) job polling for
+        # Token_Received clients then re-ran full go-live provisioning,
+        # re-sending the "you're live" go-live email and logging a duplicate
+        # provisioning_log entry for a client that was already live.
+        # Confirmed happening live on 2026-06-20 15:20 UTC against Clippers.
+        # Token_Received should only ever apply to a client's first-ever
+        # connection — never downgrade a client already past that point.
+        existing = sb.table('clients').select('status').eq('client_id', client_id).single().execute()
+        current_status = (existing.data or {}).get('status', '')
+        if d['status'] == 'Token_Received' and current_status in ('Active', 'Paused', 'Cancelled'):
+            log.info(f'update_token: skipping status downgrade to Token_Received for {client_id} (currently {current_status})')
+        else:
+            update['status'] = d['status']
     if d.get('pending_token') is not None: update['pending_token'] = d['pending_token']
     sb.table('clients').update(update).eq('client_id', client_id).execute()
     return ok()
