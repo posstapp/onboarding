@@ -864,8 +864,19 @@ async function submitForm() {
 // ── SIDEBAR ────────────────────────────────────────────────
 function renderSidebar() {
   // Bridge is always shown; Drive is hidden for Standard
+  const isNewBizSidebar = sessionStorage.getItem('posst_new_business_mode') === '1';
+  // Collapse new_business mode's extra "search" step (index 1) onto the
+  // same conceptual index as "bridge" before applying the existing
+  // Pro/Standard Drive-skip logic below. STEPS has no separate "search"
+  // entry by design — search and bridge both represent "Your results" in
+  // the sidebar. Without this, the sidebar ran one step behind for the
+  // entire "Add another business" flow (e.g. highlighting "Your results"
+  // while the business-search screen was actually showing), since the
+  // Drive-skip math below was only ever written against normal mode's
+  // step numbering. Confirmed visually on 2026-06-21.
+  const baseStep = isNewBizSidebar ? (step <= 1 ? step : step - 1) : step;
   const visibleSteps = isPro() ? STEPS : STEPS.filter((_,i) => i !== 5);
-  const visibleStep = isPro() ? step : (step >= 6 ? step - 1 : step);
+  const visibleStep = isPro() ? baseStep : (baseStep >= 6 ? baseStep - 1 : baseStep);
   $('steps-nav').innerHTML = visibleSteps.map((s,i) => {
     const cls = i<visibleStep?'s-done':i===visibleStep?'s-active':'s-future';
     return `<div class="step-item ${cls}"><div class="step-dot">${i<visibleStep?'&#10003;':i+1}</div><div class="step-label"><div class="step-name">${s.name}</div><div class="step-sub">${s.sub}</div></div></div>${i<visibleSteps.length-1?'<div class="connector"></div>':''}`;
