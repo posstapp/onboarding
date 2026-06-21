@@ -522,6 +522,7 @@ def create_prospect():
         if d.get('business_name'): update['business_name'] = d.get('business_name')
         if d.get('business_city'): update['business_city'] = d.get('business_city')
         if d.get('business_type'): update['business_type'] = d.get('business_type')
+        if d.get('email'):         update['email'] = d.get('email')
         if d.get('status'):        update['status'] = d.get('status')
         if d.get('last_step_reached'): update['last_step_reached'] = d.get('last_step_reached')
         if d.get('session_id'):    update['session_id'] = d.get('session_id')
@@ -538,6 +539,7 @@ def create_prospect():
         'business_name': d.get('business_name', ''),
         'business_city': d.get('business_city', ''),
         'business_type': d.get('business_type', ''),
+        'email':         d.get('email', ''),
         'google_score':  d.get('google_score'),
         'search_volume': d.get('search_volume'),
         'review_count':  d.get('review_count'),
@@ -604,6 +606,12 @@ def save_progress():
     if form.get('business_name'): update['business_name'] = form.get('business_name')
     if form.get('business_city'): update['business_city'] = form.get('business_city')
     if form.get('business_type'): update['business_type'] = form.get('business_type')
+    # Same gap as business_name above, but for email: contact_email was
+    # captured into the in-memory form and used exactly once, live, to fire
+    # the reengagement email — then discarded. It was never written to a
+    # queryable column, meaning the prospects table couldn't be used as a
+    # contact/outreach list at all despite being the obvious place for it.
+    if form.get('contact_email'): update['email'] = form.get('contact_email')
     try:
         result = sb.table('prospects').update(update).eq('id', active_row['id']).execute()
         if not result.data:
