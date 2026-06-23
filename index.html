@@ -1788,6 +1788,15 @@ detectCountry();
      'posst_search_volume','posst_resumed','posst_resume_name'].forEach(function(k) {
       sessionStorage.removeItem(k);
     });
+    // createProspect normally fires inside verifyOTP(), but since we skip OTP
+    // entirely for the new-business flow, we must fire it here instead.
+    // Without this, save_progress() calls have no active row to write against
+    // and silently fail — leaving zero prospect data for the new business signup.
+    callAppsScript('createProspect', {
+      phone:             prePhone,
+      status:            'otp_verified',
+      last_step_reached: 'otp'
+    });
     step = 1; // Go directly to search screen
   }
   if (params.get('bn')) {
