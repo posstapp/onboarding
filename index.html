@@ -1778,6 +1778,17 @@ detectCountry();
       F.phone_number = prePhone.slice(matched.length).replace(/\s/g,'');
     }
     sessionStorage.setItem('posst_new_business_mode', '1');
+    sessionStorage.setItem('posst_phone', prePhone);
+    // User is already authenticated in the portal — skip phone/OTP entirely
+    // and go directly to the business search screen. Re-verifying an already-
+    // authenticated user serves no purpose and adds unnecessary friction.
+    // Clear any stale business data from a previous signup so search starts fresh.
+    ['posst_business_name','posst_business_city','posst_business_type',
+     'posst_google_score','posst_review_count','posst_competitor_avg',
+     'posst_search_volume','posst_resumed','posst_resume_name'].forEach(function(k) {
+      sessionStorage.removeItem(k);
+    });
+    step = 1; // Go directly to search screen
   }
   if (params.get('bn')) {
     sessionStorage.setItem('posst_business_name',  params.get('bn') || '');
