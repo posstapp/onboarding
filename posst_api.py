@@ -19,7 +19,8 @@ try:
         send_go_live_email, send_cancellation_email, send_pause_email,
         send_day1_email, send_day7_standard_email, send_day7_pro_email,
         send_trial_ending_email, send_monthly_email, send_missing_platform_email,
-        send_reengagement_email, send_internal_alert, send_upgrade_email
+        send_reengagement_email, send_internal_alert, send_upgrade_email,
+        send_connection_error_email
     )
     EMAIL_AVAILABLE = True
 except Exception as e:
@@ -871,6 +872,70 @@ def run_campaigns():
     if EMAIL_AVAILABLE:
         send_internal_alert('Daily Campaigns Complete', str(results), 'info')
     return ok(results=results)
+
+
+# ── POST STATUS (called by n8n after each posting run) ────────
+@app.route('/api/client/post_status', methods=['POST'])
+def update_post_status():
+    """
+    Called by n8n after every posting run.
+    Receives fb_status, ig_status, gbp_status per client.
+    Writes error flags to Supabase and sends connection error email if needed.
+    """
+    from datetime import datetime, timezone
+    d   = request.json or {}
+    cid = d.get('client_id')
+    if not cid:
+        return err('Missing client_id', 400)
+
+    fb_status  = d.get('fb_status', 'N/A')
+    ig_status  = d.get('ig_status', 'N/A')
+    gbp_status = d.get('gbp_status', 'N/A')
+    now_ts     = datetime.now(timezone.utc).isoformat()
+
+    update = {}
+    failed_platforms = []
+
+    if fb_status == 'FAILED':
+        update['fb_error']    = fb_status
+        update['fb_error_at'] = now_ts
+        failed_platforms.append({'name': 'Facebook', 'icon': '📘'})
+    elif fb_status == 'POSTED':
+        update['fb_error']    = None
+        update['fb_error_at'] = None
+
+    if ig_status == 'FAILED':
+        update['ig_error']    = ig_status
+        update['ig_error_at'] = now_ts
+        failed_platforms.append({'name': 'Instagram', 'icon': '📸'})
+    elif ig_status == 'POSTED':
+        update['ig_error']    = None
+        update['ig_error_at'] = None
+
+    if gbp_status == 'FAILED':
+        update['gbp_error']    = gbp_status
+        update['gbp_error_at'] = now_ts
+        failed_platforms.append({'name': 'Google Business', 'icon': '🗺️'})
+    elif gbp_status == 'POSTED':
+        update['gbp_error']    = None
+        update['gbp_error_at'] = None
+
+    if update:
+        sb.table('clients').update(update).eq('client_id', cid).execute()
+
+    email_sent = False
+    if failed_platforms and EMAIL_AVAILABLE:
+        client_row = sb.table('clients').select('*').eq('client_id', cid).single().execute()
+        if client_row.data:
+            send_connection_error_email(client_row.data, failed_platforms)
+            email_sent = True
+
+    return ok(
+        client_id=cid,
+        flags_written=list(update.keys()),
+        failed_platforms=[p['name'] for p in failed_platforms],
+        email_sent=email_sent
+    )
 
 
 # ── OTP SYSTEM ────────────────────────────────────────────────

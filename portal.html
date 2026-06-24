@@ -373,9 +373,13 @@ function renderDashboard() {
   // in Supabase (ig_business_id + ig_handle populated) but the portal kept
   // prompting to add it.
   const platforms = (cd.platforms || '').toLowerCase().split(',').map(p => p.trim()).filter(Boolean);
-  const hasFB = !!cd.fb_connected;
-  const hasIG = !!cd.ig_connected;
+  const hasFB  = !!cd.fb_connected;
+  const hasIG  = !!cd.ig_connected;
   const hasGBP = !!cd.gbp_connected;
+  // Connection error flags written by n8n on post failure
+  const fbErr  = !!cd.fb_error;
+  const igErr  = !!cd.ig_error;
+  const gbpErr = !!cd.gbp_error;
 
   // Parse day themes from notes
   let dayThemes = {};

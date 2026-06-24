@@ -328,6 +328,59 @@ def send_internal_alert(title, message, level='alert'):
     ''')
     return send_email(NOTIFY_EMAIL, f'[POSST] {title}', body)
 
+def send_connection_error_email(client, failed_platforms):
+    """
+    Sent when n8n detects a post failure on one or more platforms.
+    failed_platforms: list of dicts like [{'name': 'Instagram', 'icon': '📸'}]
+    """
+    RED      = '#DC2626'
+    RED_DIM  = '#FEF2F2'
+
+    platform_rows = ''.join([
+        f'<tr><td style="padding:10px 16px;font-size:14px;color:{INK};">{p["icon"]} {p["name"]}</td>' +
+        f'<td style="padding:10px 16px;font-size:13px;font-weight:700;color:{RED};">⚠️ Connection issue</td></tr>'
+        for p in failed_platforms
+    ])
+
+    platform_table = (
+        f'<table width="100%" cellpadding="0" cellspacing="0" border="0" ' +
+        f'style="border-radius:10px;overflow:hidden;border:1px solid #FECACA;margin-bottom:24px;">' +
+        platform_rows +
+        '</table>'
+    )
+
+    platform_names = ' and '.join([p['name'] for p in failed_platforms])
+
+    body = wrap(f'''
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+          <tr><td style="background:{RED};border-radius:10px;padding:20px 24px;">
+            <p style="margin:0 0 4px;font-size:22px;font-weight:700;color:#FFFFFF;">⚠️ Action required: reconnect {platform_names}</p>
+            <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.80);">Your scheduled post could not be published today.</p>
+          </td></tr>
+        </table>
+        {hi(client.get("business_name") or "there")}
+        {para(f"Today\'s scheduled post could not be published to {platform_names}. This is usually caused by a temporary disruption with the platform connection.")}
+        {platform_table}
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+          <tr><td style="background:{RED_DIM};border:1px solid #FECACA;border-radius:10px;padding:16px 20px;">
+            <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:{RED};">What to do</p>
+            <p style="margin:0;font-size:13px;color:{INK};line-height:1.7;">
+              1. Log in to your posst.app account.<br>
+              2. Go to <strong>Platforms</strong> and click <strong>Reconnect</strong> next to the affected platform.<br>
+              3. Complete the login flow — this takes less than a minute.
+            </p>
+          </td></tr>
+        </table>
+        {btn("Go to my account → reconnect now", "https://onboarding.posst.app/portal.html")}
+        {para("If you have already reconnected or continue to see this issue, reply to this email and we will investigate.")}
+        {sign_off()}
+    ''')
+    return send_email(
+        client.get('contact_email'),
+        f"Action required: {platform_names} connection issue — posst.app",
+        body
+    )
+
 if __name__ == '__main__':
     # Test
     print('Testing email...')
