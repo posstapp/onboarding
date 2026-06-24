@@ -332,54 +332,54 @@ def send_connection_error_email(client, failed_platforms):
     """
     Sent when n8n detects a post failure on one or more platforms.
     failed_platforms: list of dicts like [{'name': 'Instagram', 'icon': '📸'}]
+    Tone: warm handoff — posst.app takes ownership, guides client to reconnect.
     """
-    RED      = '#DC2626'
-    RED_DIM  = '#FEF2F2'
+    platform_names = ' and '.join([p['name'] for p in failed_platforms])
 
-    platform_rows = ''.join([
-        f'<tr><td style="padding:10px 16px;font-size:14px;color:{INK};">{p["icon"]} {p["name"]}</td>' +
-        f'<td style="padding:10px 16px;font-size:13px;font-weight:700;color:{RED};">⚠️ Connection issue</td></tr>'
+    # Subject line — singular vs plural
+    if len(failed_platforms) == 1:
+        subject = f"Your {failed_platforms[0]['name']} post didn't go out today — here's how to fix it"
+    else:
+        subject = f"Your {platform_names} posts didn't go out today — here's how to fix it"
+
+    # Reconnect instruction — FB/IG share a token, GBP is separate
+    is_gbp_only = all(p['name'] == 'Google Business' for p in failed_platforms)
+    has_meta    = any(p['name'] in ('Facebook', 'Instagram') for p in failed_platforms)
+    has_gbp     = any(p['name'] == 'Google Business' for p in failed_platforms)
+
+    if is_gbp_only:
+        reconnect_step = 'Tap <strong>Reconnect</strong> next to <strong>Google Business</strong>'
+    elif has_meta and not has_gbp:
+        # FB and IG share same token — one reconnect fixes both
+        reconnect_step = 'Tap <strong>Reconnect</strong> next to <strong>Facebook</strong> — this reconnects Instagram at the same time'
+    else:
+        # Both meta and GBP failed
+        reconnect_step = 'Tap <strong>Reconnect</strong> next to each affected platform'
+
+    platform_list = ''.join([
+        f'<p style="margin:0 0 6px;font-size:14px;color:{INK};">{p["icon"]} <strong>{p["name"]}</strong></p>'
         for p in failed_platforms
     ])
 
-    platform_table = (
-        f'<table width="100%" cellpadding="0" cellspacing="0" border="0" ' +
-        f'style="border-radius:10px;overflow:hidden;border:1px solid #FECACA;margin-bottom:24px;">' +
-        platform_rows +
-        '</table>'
-    )
-
-    platform_names = ' and '.join([p['name'] for p in failed_platforms])
-
     body = wrap(f'''
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
-          <tr><td style="background:{RED};border-radius:10px;padding:20px 24px;">
-            <p style="margin:0 0 4px;font-size:22px;font-weight:700;color:#FFFFFF;">⚠️ Action required: reconnect {platform_names}</p>
-            <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.80);">Your scheduled post could not be published today.</p>
-          </td></tr>
-        </table>
+        {hero("📭", f"Today's post didn't go out", f"{platform_names} — quick fix needed.")}
         {hi(client.get("business_name") or "there")}
-        {para(f"Today\'s scheduled post could not be published to {platform_names}. This is usually caused by a temporary disruption with the platform connection.")}
-        {platform_table}
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
-          <tr><td style="background:{RED_DIM};border:1px solid #FECACA;border-radius:10px;padding:16px 20px;">
-            <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:{RED};">What to do</p>
-            <p style="margin:0;font-size:13px;color:{INK};line-height:1.7;">
-              1. Log in to your posst.app account.<br>
-              2. Go to <strong>Platforms</strong> and click <strong>Reconnect</strong> next to the affected platform.<br>
-              3. Complete the login flow — this takes less than a minute.
-            </p>
-          </td></tr>
-        </table>
+        {para(f"Today's scheduled post couldn't go out on <strong>{platform_names}</strong>. This happens occasionally when your connection to the platform refreshes — it's a quick fix and takes less than a minute.")}
+        <div style="background:{BLUE_DIM};border-left:4px solid {BLUE};border-radius:0 10px 10px 0;padding:18px 22px;margin:0 0 24px;">
+          <p style="margin:0 0 12px;font-size:13px;font-weight:700;color:{INK};">Affected platform{'s' if len(failed_platforms) > 1 else ''}:</p>
+          {platform_list}
+        </div>
+        {sec("Here's what to do")}
+        {step(1, "Open your posst.app account", "Tap the button below — it takes you straight there.")}
+        {step(2, "Go to Platforms", "You'll see the affected platform marked with a warning.")}
+        {step(3, reconnect_step, "You'll be prompted to log in to " + ("Facebook" if has_meta else "Google") + " — just follow the steps.")}
+        {step(4, "Done — you're reconnected", "Your posting will resume automatically from the next scheduled time.")}
         {btn("Go to my account → reconnect now", "https://onboarding.posst.app/portal.html")}
-        {para("If you have already reconnected or continue to see this issue, reply to this email and we will investigate.")}
+        {hl("If you run into any trouble, just reply to this email and we'll sort it out straight away.", "💬")}
         {sign_off()}
     ''')
-    return send_email(
-        client.get('contact_email'),
-        f"Action required: {platform_names} connection issue — posst.app",
-        body
-    )
+
+    return send_email(client.get('contact_email'), subject, body)
 
 if __name__ == '__main__':
     # Test
