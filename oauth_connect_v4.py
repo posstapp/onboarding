@@ -545,6 +545,23 @@ def save_meta_page(client_id, fb_page_id, page_name, ig_biz_id, ig_username, ll_
     session['fb_page_name'] = page_name
     session['ig_username']  = ig_username
 
+    # Send reconnect confirmation email for existing Active clients only
+    # (new signups are Token_Received at this point — they get the go-live email instead)
+    try:
+        client_row = get_client(client_id)
+        if client_row and client_row.get('status') == 'Active':
+            platforms_connected = []
+            if fb_page_id:   platforms_connected.append('Facebook')
+            if ig_biz_id:    platforms_connected.append('Instagram')
+            api_post('/api/email/reconnect_confirmation', {
+                'client_id':    client_id,
+                'posting_time': client_row.get('posting_time', ''),
+                'timezone':     client_row.get('timezone', 'Australia/Melbourne'),
+                'platforms':    platforms_connected,
+            })
+    except Exception as e:
+        log.error(f'Reconnect confirmation email error for {client_id}: {e}')
+
     return redirect(f'/connect?client_id={client_id}&_return=1')
 
 

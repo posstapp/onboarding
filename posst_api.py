@@ -20,7 +20,7 @@ try:
         send_day1_email, send_day7_standard_email, send_day7_pro_email,
         send_trial_ending_email, send_monthly_email, send_missing_platform_email,
         send_reengagement_email, send_internal_alert, send_upgrade_email,
-        send_connection_error_email
+        send_connection_error_email, send_reconnect_confirmation_email
     )
     EMAIL_AVAILABLE = True
 except Exception as e:
@@ -931,6 +931,25 @@ def run_campaigns():
 
 
 # ── POST STATUS (called by n8n after each posting run) ────────
+# ── RECONNECT CONFIRMATION EMAIL ──────────────────────────────
+@app.route('/api/email/reconnect_confirmation', methods=['POST'])
+def send_reconnect_email():
+    d          = request.json or {}
+    client_id  = d.get('client_id')
+    if not client_id:
+        return err('Missing client_id', 400)
+    client_row = sb.table('clients').select('*').eq('client_id', client_id).single().execute()
+    if not client_row.data:
+        return err('Client not found', 404)
+    if EMAIL_AVAILABLE:
+        send_reconnect_confirmation_email(
+            client_row.data,
+            d.get('posting_time', client_row.data.get('posting_time', '')),
+            d.get('timezone',     client_row.data.get('timezone', 'Australia/Melbourne')),
+            d.get('platforms',    ['Facebook', 'Instagram']),
+        )
+    return ok(sent=EMAIL_AVAILABLE)
+
 # ── OTP SYSTEM ────────────────────────────────────────────────
 import re as _re
 import time as _time
