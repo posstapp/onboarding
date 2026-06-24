@@ -831,6 +831,58 @@ def run_campaigns():
     for c in (clients.data or []):
         cid = c.get('client_id','')
         try:
+            # ── Check posts_log for recent failures (last 2 days) ──────────
+            from datetime import timezone
+            two_days_ago = (datetime.utcnow().replace(tzinfo=timezone.utc) - __import__('datetime').timedelta(days=2)).isoformat()
+            recent = sb.table('posts_log').select('fb_status,ig_status,gbp_status,posted_at') \
+                       .eq('client_id', cid) \
+                       .gte('posted_at', two_days_ago) \
+                       .order('posted_at', desc=True) \
+                       .limit(5) \
+                       .execute()
+            recent_rows = recent.data or []
+            if recent_rows:
+                failed_platforms = []
+                error_update = {}
+                now_ts = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
+                # Check most recent row for each platform
+                last = recent_rows[0]
+                if last.get('fb_status') == 'FAILED':
+                    failed_platforms.append({'name': 'Facebook', 'icon': '📘'})
+                    error_update['fb_error'] = 'FAILED'
+                    error_update['fb_error_at'] = now_ts
+                elif last.get('fb_status') == 'POSTED':
+                    error_update['fb_error'] = None
+                    error_update['fb_error_at'] = None
+                if last.get('ig_status') == 'FAILED':
+                    failed_platforms.append({'name': 'Instagram', 'icon': '📸'})
+                    error_update['ig_error'] = 'FAILED'
+                    error_update['ig_error_at'] = now_ts
+                elif last.get('ig_status') == 'POSTED':
+                    error_update['ig_error'] = None
+                    error_update['ig_error_at'] = None
+                if last.get('gbp_status') == 'FAILED':
+                    failed_platforms.append({'name': 'Google Business', 'icon': '🗺️'})
+                    error_update['gbp_error'] = 'FAILED'
+                    error_update['gbp_error_at'] = now_ts
+                elif last.get('gbp_status') == 'POSTED':
+                    error_update['gbp_error'] = None
+                    error_update['gbp_error_at'] = None
+                if error_update:
+                    sb.table('clients').update(error_update).eq('client_id', cid).execute()
+                # Only send email if this is a new failure (not already flagged)
+                if failed_platforms:
+                    already_flagged = any([
+                        c.get('fb_error') and 'Facebook' in [p['name'] for p in failed_platforms],
+                        c.get('ig_error') and 'Instagram' in [p['name'] for p in failed_platforms],
+                        c.get('gbp_error') and 'Google Business' in [p['name'] for p in failed_platforms],
+                    ])
+                    if not already_flagged and EMAIL_AVAILABLE:
+                        send_connection_error_email(c, failed_platforms)
+                        results.setdefault('connection_errors', 0)
+                        results['connection_errors'] += 1
+            # ── End failure check ──────────────────────────────────────────
+
             # Use trial_start if available, otherwise fall back to provisioned_at
             trial_start = c.get('trial_start') or c.get('provisioned_at')
             if not trial_start: continue
