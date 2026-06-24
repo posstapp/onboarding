@@ -408,25 +408,16 @@ def connect_page():
         if not incoming_token:
             return render_template_string(TOKEN_ERROR_PAGE, reason='missing'), 403
         try:
-            # Reconnect flow — active clients have meta_token but empty pending_token.
-            # If client is Active and incoming token matches their meta_token, allow through.
-            client_row = get_client(client_id)
-            is_active_client = client_row and client_row.get('status') == 'Active'
-            active_meta_token = (client_row or {}).get('meta_token', '')
-            if is_active_client and active_meta_token and incoming_token.strip() == active_meta_token.strip():
-                # Valid reconnect — skip pending_token check
-                session['validated_token'] = incoming_token
-            else:
-                result = api_get(f'/api/client/{client_id}/pending_token')
-                if not result or result.get('status') != 'success':
-                    return render_template_string(TOKEN_ERROR_PAGE, reason='not_found'), 403
-                sheet_token = result.get('token', '')
-                if not sheet_token or sheet_token.strip() != incoming_token.strip():
-                    return render_template_string(TOKEN_ERROR_PAGE, reason='invalid'), 403
-                session['validated_token'] = incoming_token
+            result = api_get(f'/api/client/{client_id}/pending_token')
+            if not result or result.get('status') != 'success':
+                return render_template_string(TOKEN_ERROR_PAGE, reason='not_found'), 403
+            sheet_token = result.get('token', '')
+            if not sheet_token or sheet_token.strip() != incoming_token.strip():
+                return render_template_string(TOKEN_ERROR_PAGE, reason='invalid'), 403
         except Exception as e:
             log.error(f'Token validation error for {client_id}: {e}')
             return render_template_string(TOKEN_ERROR_PAGE, reason='error'), 500
+        session['validated_token'] = incoming_token
 
     meta_done    = session.get('meta_done', False)
     gbp_done     = session.get('gbp_done', False)
