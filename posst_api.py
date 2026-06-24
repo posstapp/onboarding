@@ -446,6 +446,7 @@ def portal_lookup():
             'trial_start':      client.get('trial_start', ''),
             'drive_categories': client.get('drive_categories', []),
             'pending_token':    client.get('pending_token', ''),
+            'meta_token':       client.get('meta_token', ''),
             'contact_email':    client.get('contact_email', ''),
             # Operational status — derived from posts_log, never stored on clients
             'fb_error':         post_status['fb_error'],
