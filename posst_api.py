@@ -401,7 +401,29 @@ def portal_lookup():
     else:
         # Default to first Active client, else first client
         primary = next((c for c in clients if c.get('status') == 'Active'), clients[0])
+    def get_latest_post_status(client_id):
+        """Query posts_log for the most recent row — derive error flags from it."""
+        try:
+            res = sb.table('posts_log') \
+                    .select('fb_status,ig_status,gbp_status,posted_at') \
+                    .eq('client_id', client_id) \
+                    .order('posted_at', desc=True) \
+                    .limit(1) \
+                    .execute()
+            if res.data:
+                row = res.data[0]
+                return {
+                    'fb_error':      row['fb_status']  == 'FAILED',
+                    'ig_error':      row['ig_status']  == 'FAILED',
+                    'gbp_error':     row['gbp_status'] == 'FAILED',
+                    'last_post_at':  row['posted_at'],
+                }
+        except Exception:
+            pass
+        return {'fb_error': False, 'ig_error': False, 'gbp_error': False, 'last_post_at': None}
+
     def fmt(client):
+        post_status = get_latest_post_status(client['client_id'])
         return {
             'client_id':        client['client_id'],
             'business_name':    client['business_name'],
@@ -425,6 +447,11 @@ def portal_lookup():
             'drive_categories': client.get('drive_categories', []),
             'pending_token':    client.get('pending_token', ''),
             'contact_email':    client.get('contact_email', ''),
+            # Operational status — derived from posts_log, never stored on clients
+            'fb_error':         post_status['fb_error'],
+            'ig_error':         post_status['ig_error'],
+            'gbp_error':        post_status['gbp_error'],
+            'last_post_at':     post_status['last_post_at'],
         }
     # Return primary client + full list for switcher
     # Check for an incomplete prospect (a separate, never-converted signup attempt)
@@ -831,54 +858,31 @@ def run_campaigns():
     for c in (clients.data or []):
         cid = c.get('client_id','')
         try:
-            # ── Check posts_log for recent failures (last 2 days) ──────────
+            # ── Check posts_log for recent failures ────────────────────────
+            # posts_log is the operational record — we never write error flags
+            # to the clients table. Error state is always derived from posts_log.
             from datetime import timezone
-            two_days_ago = (datetime.utcnow().replace(tzinfo=timezone.utc) - __import__('datetime').timedelta(days=2)).isoformat()
             recent = sb.table('posts_log').select('fb_status,ig_status,gbp_status,posted_at') \
                        .eq('client_id', cid) \
-                       .gte('posted_at', two_days_ago) \
                        .order('posted_at', desc=True) \
-                       .limit(5) \
+                       .limit(1) \
                        .execute()
             recent_rows = recent.data or []
             if recent_rows:
-                failed_platforms = []
-                error_update = {}
-                now_ts = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
-                # Check most recent row for each platform
                 last = recent_rows[0]
-                if last.get('fb_status') == 'FAILED':
-                    failed_platforms.append({'name': 'Facebook', 'icon': '📘'})
-                    error_update['fb_error'] = 'FAILED'
-                    error_update['fb_error_at'] = now_ts
-                elif last.get('fb_status') == 'POSTED':
-                    error_update['fb_error'] = None
-                    error_update['fb_error_at'] = None
-                if last.get('ig_status') == 'FAILED':
-                    failed_platforms.append({'name': 'Instagram', 'icon': '📸'})
-                    error_update['ig_error'] = 'FAILED'
-                    error_update['ig_error_at'] = now_ts
-                elif last.get('ig_status') == 'POSTED':
-                    error_update['ig_error'] = None
-                    error_update['ig_error_at'] = None
-                if last.get('gbp_status') == 'FAILED':
-                    failed_platforms.append({'name': 'Google Business', 'icon': '🗺️'})
-                    error_update['gbp_error'] = 'FAILED'
-                    error_update['gbp_error_at'] = now_ts
-                elif last.get('gbp_status') == 'POSTED':
-                    error_update['gbp_error'] = None
-                    error_update['gbp_error_at'] = None
-                if error_update:
-                    sb.table('clients').update(error_update).eq('client_id', cid).execute()
-                # Only send email if this is a new failure (not already flagged)
+                failed_platforms = []
+                if last.get('fb_status')  == 'FAILED': failed_platforms.append({'name': 'Facebook',        'icon': '📘'})
+                if last.get('ig_status')  == 'FAILED': failed_platforms.append({'name': 'Instagram',       'icon': '📸'})
+                if last.get('gbp_status') == 'FAILED': failed_platforms.append({'name': 'Google Business', 'icon': '🗺️'})
                 if failed_platforms:
-                    already_flagged = any([
-                        c.get('fb_error') and 'Facebook' in [p['name'] for p in failed_platforms],
-                        c.get('ig_error') and 'Instagram' in [p['name'] for p in failed_platforms],
-                        c.get('gbp_error') and 'Google Business' in [p['name'] for p in failed_platforms],
-                    ])
-                    if not already_flagged and EMAIL_AVAILABLE:
+                    # Deduplicate — only email once per day per client using email_campaign_log
+                    from datetime import date
+                    camp_key = f"connection_error_{date.today().isoformat()}"
+                    already_sent = bool(sb.table('email_campaign_log').select('id')
+                                         .eq('client_id', cid).eq('campaign', camp_key).execute().data)
+                    if not already_sent and EMAIL_AVAILABLE:
                         send_connection_error_email(c, failed_platforms)
+                        sb.table('email_campaign_log').insert({'client_id': cid, 'campaign': camp_key, 'email': c.get('contact_email','')}).execute()
                         results.setdefault('connection_errors', 0)
                         results['connection_errors'] += 1
             # ── End failure check ──────────────────────────────────────────
@@ -927,69 +931,6 @@ def run_campaigns():
 
 
 # ── POST STATUS (called by n8n after each posting run) ────────
-@app.route('/api/client/post_status', methods=['POST'])
-def update_post_status():
-    """
-    Called by n8n after every posting run.
-    Receives fb_status, ig_status, gbp_status per client.
-    Writes error flags to Supabase and sends connection error email if needed.
-    """
-    from datetime import datetime, timezone
-    d   = request.json or {}
-    cid = d.get('client_id')
-    if not cid:
-        return err('Missing client_id', 400)
-
-    fb_status  = d.get('fb_status', 'N/A')
-    ig_status  = d.get('ig_status', 'N/A')
-    gbp_status = d.get('gbp_status', 'N/A')
-    now_ts     = datetime.now(timezone.utc).isoformat()
-
-    update = {}
-    failed_platforms = []
-
-    if fb_status == 'FAILED':
-        update['fb_error']    = fb_status
-        update['fb_error_at'] = now_ts
-        failed_platforms.append({'name': 'Facebook', 'icon': '📘'})
-    elif fb_status == 'POSTED':
-        update['fb_error']    = None
-        update['fb_error_at'] = None
-
-    if ig_status == 'FAILED':
-        update['ig_error']    = ig_status
-        update['ig_error_at'] = now_ts
-        failed_platforms.append({'name': 'Instagram', 'icon': '📸'})
-    elif ig_status == 'POSTED':
-        update['ig_error']    = None
-        update['ig_error_at'] = None
-
-    if gbp_status == 'FAILED':
-        update['gbp_error']    = gbp_status
-        update['gbp_error_at'] = now_ts
-        failed_platforms.append({'name': 'Google Business', 'icon': '🗺️'})
-    elif gbp_status == 'POSTED':
-        update['gbp_error']    = None
-        update['gbp_error_at'] = None
-
-    if update:
-        sb.table('clients').update(update).eq('client_id', cid).execute()
-
-    email_sent = False
-    if failed_platforms and EMAIL_AVAILABLE:
-        client_row = sb.table('clients').select('*').eq('client_id', cid).single().execute()
-        if client_row.data:
-            send_connection_error_email(client_row.data, failed_platforms)
-            email_sent = True
-
-    return ok(
-        client_id=cid,
-        flags_written=list(update.keys()),
-        failed_platforms=[p['name'] for p in failed_platforms],
-        email_sent=email_sent
-    )
-
-
 # ── OTP SYSTEM ────────────────────────────────────────────────
 import re as _re
 import time as _time
