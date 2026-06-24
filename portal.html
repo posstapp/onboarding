@@ -96,6 +96,7 @@ body{font-family:var(--sans);background:var(--cream);color:var(--ink);min-height
 .btn-secondary{background:white;color:var(--ink);border:1.5px solid var(--border)}
 .btn-secondary:hover{border-color:var(--blue);color:var(--blue)}
 .btn-danger{background:var(--red-dim);color:var(--red);border:1.5px solid #FECACA}
+.btn-warning{background:#FEF3C7;color:#92400E;border:1.5px solid #FCD34D}
 .btn-success{background:var(--green-dim);color:var(--green);border:1.5px solid #BBF7D0}
 .btn-full{width:100%;justify-content:center;padding:12px}
 .btn-sm{padding:7px 14px;font-size:12px}
@@ -497,7 +498,7 @@ function renderDashboard() {
       <div class="card-divider"></div>
       <div class="card-body" id="body-platforms">
         <div style="padding-top:4px">
-          ${hasFB ? `<div class="platform-row"><div class="platform-info"><span class="platform-icon">📘</span><div><div class="platform-name">Facebook</div><div class="platform-status">${esc(cd.fb_page_name||'Connected')}</div></div></div><span class="pill pill-green">✓ Connected</span></div>` : ''}
+          ${hasFB ? `<div class="platform-row"><div class="platform-info"><span class="platform-icon">📘</span><div><div class="platform-name">Facebook</div><div class="platform-status">${esc(cd.fb_page_name||'Connected')}</div></div></div><div style="display:flex;align-items:center;gap:8px"><span class="pill pill-green">✓ Connected</span><button class="btn btn-secondary btn-sm" onclick="confirmReconnect()" style="font-size:11px;padding:4px 10px">Reconnect</button></div></div>` : ''}
           ${hasIG ? `<div class="platform-row"><div class="platform-info"><span class="platform-icon">📸</span><div><div class="platform-name">Instagram</div><div class="platform-status">${esc(cd.ig_handle||'Connected')}</div></div></div><span class="pill pill-green">✓ Connected</span></div>` : ''}
           ${hasGBP ? `<div class="platform-row"><div class="platform-info"><span class="platform-icon">🗺️</span><div><div class="platform-name">Google Business</div><div class="platform-status">${cd.gbp_connected?'Connected':'Pending API access'}</div></div></div><span class="pill ${cd.gbp_connected?'pill-green':'pill-amber'}">${cd.gbp_connected?'✓ Connected':'⏳ Pending'}</span></div>` : ''}
           ${!hasFB && !hasIG && !hasGBP ? '<p style="font-size:13px;color:var(--ink-light);padding:12px 0">No platforms connected yet.</p>' : ''}
@@ -968,10 +969,29 @@ function showCancelConfirm() {
     'Yes, cancel account', 'btn-danger', 'cancel');
 }
 
+function confirmReconnect() {
+  showModal(
+    '⚠️',
+    'Reconnect Facebook & Instagram?',
+    'Only reconnect if posst.app support has confirmed there is an issue with your connection. Reconnecting will take you through the Facebook login flow again and may temporarily pause your scheduled posts.\n\nDo not reconnect if your posts are running normally.',
+    'Yes, reconnect',
+    'btn-warning',
+    'reconnect'
+  );
+}
+
 async function modalConfirm() {
   const btn = document.getElementById('modal-confirm-btn');
   btn.disabled = true;
   btn.textContent = 'Processing...';
+
+  // Reconnect is handled client-side — no API call needed, just redirect to OAuth
+  if (modalAction === 'reconnect') {
+    closeModal();
+    addPlatform('meta');
+    return;
+  }
+
   const endpoint = modalAction; // 'cancel' | 'pause' | 'resume' — all map directly to API routes
   try {
     const resp = await fetch(PROXY_URL + '/client/' + clientData.client_id + '/' + endpoint, {
