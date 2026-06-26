@@ -682,13 +682,16 @@ def convert_prospect():
 @app.route('/api/posts_log', methods=['POST'])
 def log_post():
     d = request.json or {}
+    fb_status  = d.get('fb_status', '')
+    ig_status  = d.get('ig_status', '')
+    gbp_status = d.get('gbp_status', 'N/A')
     row = {
         'client_id':    d.get('client_id'),
         'business_name':d.get('business_name', ''),
         'pillar':       d.get('pillar', ''),
-        'fb_status':    d.get('fb_status', ''),
-        'ig_status':    d.get('ig_status', ''),
-        'gbp_status':   d.get('gbp_status', 'N/A'),
+        'fb_status':    fb_status,
+        'ig_status':    ig_status,
+        'gbp_status':   gbp_status,
         'image_url':    d.get('image_url', ''),
         'fb_post_id':   d.get('fb_post_id', ''),
         'ig_post_id':   d.get('ig_post_id', ''),
@@ -698,9 +701,68 @@ def log_post():
         'gbp_caption':  d.get('gbp_caption', ''),
         'image_prompt': d.get('image_prompt', ''),
         'image_source': d.get('image_source', 'ai'),
+        # Error fields — populated on FAILED status
+        'fb_error':     fb_status  == 'FAILED',
+        'fb_error_msg': d.get('fb_error_msg', '') if fb_status  == 'FAILED' else '',
+        'ig_error':     ig_status  == 'FAILED',
+        'ig_error_msg': d.get('ig_error_msg', '') if ig_status  == 'FAILED' else '',
+        'gbp_error':    gbp_status == 'FAILED',
+        'gbp_error_msg':d.get('gbp_error_msg', '') if gbp_status == 'FAILED' else '',
     }
     sb.table('posts_log').insert(row).execute()
     return ok()
+
+
+# ── NOTIFY ERROR ───────────────────────────────────────────────
+# Called by n8n immediately when a posting attempt fails.
+# Sends platform-aware customer email. Deduplicates via email_campaign_log.
+@app.route('/api/notify_error', methods=['POST'])
+def notify_error():
+    d = request.json or {}
+    client_id = d.get('client_id', '')
+    if not client_id:
+        return err('client_id required')
+
+    # Load full client row for email
+    res = sb.table('clients').select('*').eq('client_id', client_id).single().execute()
+    if not res.data:
+        return err(f'Client not found: {client_id}')
+    c = res.data
+
+    # Only email Active clients — not new signups or paused
+    if c.get('status') != 'Active':
+        return ok(action='skipped', reason='client not active')
+
+    # Build failed platforms list from payload
+    failed_platforms = []
+    if d.get('fb_failed'):  failed_platforms.append({'name': 'Facebook',        'icon': '📘'})
+    if d.get('ig_failed'):  failed_platforms.append({'name': 'Instagram',       'icon': '📸'})
+    if d.get('gbp_failed'): failed_platforms.append({'name': 'Google Business', 'icon': '🗺️'})
+
+    if not failed_platforms:
+        return ok(action='skipped', reason='no failed platforms')
+
+    # Deduplicate — one email per client per day per error type
+    from datetime import date
+    camp_key = f"connection_error_{date.today().isoformat()}"
+    already_sent = bool(
+        sb.table('email_campaign_log').select('id')
+          .eq('client_id', client_id).eq('campaign', camp_key).execute().data
+    )
+    if already_sent:
+        return ok(action='skipped', reason='already sent today')
+
+    if not EMAIL_AVAILABLE:
+        return err('Email service unavailable')
+
+    send_connection_error_email(c, failed_platforms)
+    sb.table('email_campaign_log').insert({
+        'client_id': client_id,
+        'campaign':  camp_key,
+        'email':     c.get('contact_email', '')
+    }).execute()
+
+    return ok(action='sent', platforms=[p['name'] for p in failed_platforms])
 
 # ── PROVISIONING LOG ──────────────────────────────────────────
 @app.route('/api/provisioning_log', methods=['POST'])
@@ -858,11 +920,13 @@ def run_campaigns():
     for c in (clients.data or []):
         cid = c.get('client_id','')
         try:
-            # ── Check posts_log for recent failures ────────────────────────
-            # posts_log is the operational record — we never write error flags
-            # to the clients table. Error state is always derived from posts_log.
-            from datetime import timezone
-            recent = sb.table('posts_log').select('fb_status,ig_status,gbp_status,posted_at') \
+            # ── Safety net: catch any failures not caught by notify_error ──
+            # Primary error emails are sent immediately by /api/notify_error
+            # called from n8n at post time. This is a daily safety net only —
+            # email_campaign_log deduplication ensures no double-send.
+            from datetime import timezone, date
+            recent = sb.table('posts_log') \
+                       .select('fb_status,ig_status,gbp_status,posted_at') \
                        .eq('client_id', cid) \
                        .order('posted_at', desc=True) \
                        .limit(1) \
@@ -875,8 +939,6 @@ def run_campaigns():
                 if last.get('ig_status')  == 'FAILED': failed_platforms.append({'name': 'Instagram',       'icon': '📸'})
                 if last.get('gbp_status') == 'FAILED': failed_platforms.append({'name': 'Google Business', 'icon': '🗺️'})
                 if failed_platforms:
-                    # Deduplicate — only email once per day per client using email_campaign_log
-                    from datetime import date
                     camp_key = f"connection_error_{date.today().isoformat()}"
                     already_sent = bool(sb.table('email_campaign_log').select('id')
                                          .eq('client_id', cid).eq('campaign', camp_key).execute().data)
@@ -885,7 +947,7 @@ def run_campaigns():
                         sb.table('email_campaign_log').insert({'client_id': cid, 'campaign': camp_key, 'email': c.get('contact_email','')}).execute()
                         results.setdefault('connection_errors', 0)
                         results['connection_errors'] += 1
-            # ── End failure check ──────────────────────────────────────────
+            # ── End safety net ─────────────────────────────────────────────
 
             # Use trial_start if available, otherwise fall back to provisioned_at
             trial_start = c.get('trial_start') or c.get('provisioned_at')
