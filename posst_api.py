@@ -713,6 +713,27 @@ def log_post():
     return ok()
 
 
+# Returns the most recent posts_log row per active client — used by health check
+@app.route('/api/posts_log/recent', methods=['GET'])
+def get_recent_posts():
+    # Get all active client IDs
+    clients_res = sb.table('clients').select('client_id').eq('status', 'Active').execute()
+    client_ids  = [c['client_id'] for c in (clients_res.data or [])]
+    if not client_ids:
+        return ok([], count=0)
+    # Fetch last 5 rows per client (enough for health check)
+    rows = []
+    for cid in client_ids:
+        res = sb.table('posts_log') \
+                .select('client_id,business_name,fb_status,ig_status,gbp_status,fb_error,ig_error,gbp_error,fb_error_msg,ig_error_msg,posted_at') \
+                .eq('client_id', cid) \
+                .order('posted_at', desc=True) \
+                .limit(5) \
+                .execute()
+        rows.extend(res.data or [])
+    return ok(rows, count=len(rows))
+
+
 # ── NOTIFY ERROR ───────────────────────────────────────────────
 # Called by n8n immediately when a posting attempt fails.
 # Sends platform-aware customer email. Deduplicates via email_campaign_log.
