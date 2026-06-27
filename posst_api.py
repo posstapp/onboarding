@@ -905,6 +905,73 @@ def email_pause():
     if r.data and EMAIL_AVAILABLE: send_pause_email(r.data)
     return ok()
 
+@app.route('/api/prospects/eligible', methods=['GET'])
+def prospects_eligible():
+    """Return prospects eligible for re-engagement email."""
+    try:
+        now = datetime.now(timezone.utc)
+        two_hours_ago = (now - timedelta(hours=2)).isoformat()
+        MAX_ATTEMPTS = 3
+        THREE_DAYS_MS = 3 * 24 * 60 * 60
+
+        # Fetch prospects with eligible statuses created > 2 hours ago
+        res = sb.table('prospects') \
+            .select('*') \
+            .in_('status', ['otp_verified', 'bridge_viewed', 'bridge_cta_clicked']) \
+            .lt('created_at', two_hours_ago) \
+            .execute()
+
+        eligible = []
+        for row in (res.data or []):
+            re_log_raw = row.get('re_engagement_log') or ''
+            if not re_log_raw:
+                eligible.append(row)
+                continue
+            try:
+                log = json.loads(re_log_raw)
+                if not isinstance(log, list): continue
+                if len(log) >= MAX_ATTEMPTS: continue
+                last_sent = datetime.fromisoformat(log[-1]['sent_at'].replace('Z', '+00:00'))
+                if (now - last_sent).total_seconds() < THREE_DAYS_MS: continue
+                eligible.append(row)
+            except Exception:
+                continue
+
+        return jsonify(eligible)
+    except Exception as e:
+        log.error(f'prospects_eligible error: {e}')
+        return err(str(e), 500)
+
+
+@app.route('/api/prospects/log_reengagement', methods=['POST'])
+def log_reengagement():
+    """Log a re-engagement attempt on a prospect row."""
+    try:
+        d = request.json or {}
+        prospect_id = d.get('prospect_id')
+        if not prospect_id:
+            return err('prospect_id required')
+
+        res = sb.table('prospects').select('re_engagement_log').eq('id', prospect_id).execute()
+        if not res.data:
+            return err('Prospect not found', 404)
+
+        raw = res.data[0].get('re_engagement_log') or '[]'
+        try:
+            log_entries = json.loads(raw)
+            if not isinstance(log_entries, list): log_entries = []
+        except Exception:
+            log_entries = []
+
+        log_entries.append({'sent_at': datetime.now(timezone.utc).isoformat(), 'attempt': len(log_entries) + 1})
+
+        sb.table('prospects').update({'re_engagement_log': json.dumps(log_entries)}).eq('id', prospect_id).execute()
+        return ok(action='logged', attempts=len(log_entries))
+    except Exception as e:
+        log.error(f'log_reengagement error: {e}')
+        return err(str(e), 500)
+
+
 @app.route('/api/email/reengagement', methods=['POST'])
 def email_reengagement():
     d = request.json or {}
