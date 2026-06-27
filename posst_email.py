@@ -389,7 +389,7 @@ def send_reconnect_confirmation_email(client, posting_time, timezone, platforms)
     platform_names = ' and '.join(platforms) if platforms else 'your social media'
 
     body = wrap(f'''
-        {hero("✅", "You\'re all reconnected!", f"{platform_names} — posts resuming from your next scheduled time.")}
+        {hero("✅", "You're all reconnected!", f"{platform_names} — posts resuming from your next scheduled time.")}
         {hi(client.get("business_name") or "there")}
         {para(f"Great news — your {platform_names} connection has been successfully restored. Your scheduled posts will resume automatically at your next posting time.")}
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
@@ -398,13 +398,13 @@ def send_reconnect_confirmation_email(client, posting_time, timezone, platforms)
             <p style="margin:0;font-size:14px;color:{INK};">🕐 {posting_time} daily · {timezone}</p>
           </td></tr>
         </table>
-        {para("You don\'t need to do anything else — we\'ll take it from here. If you have any questions, just reply to this email.")}
+        {para("You don't need to do anything else — we'll take it from here. If you have any questions, just reply to this email.")}
         {sign_off()}
     ''')
 
     return send_email(
         client.get('contact_email'),
-        f"You\'re reconnected — posts resuming soon",
+        "You're reconnected — posts resuming soon",
         body
     )
 
