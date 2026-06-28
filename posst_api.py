@@ -907,19 +907,36 @@ def email_pause():
 
 @app.route('/api/prospects/eligible', methods=['GET'])
 def prospects_eligible():
-    """Return prospects eligible for re-engagement — not yet sent, eligible status, created >2hrs ago."""
+    """Return prospects eligible for re-engagement.
+    Rules:
+    - status != converted (stop if converted)
+    - created > 2 hours ago
+    - re_engagement_sent_at IS NULL (never sent) OR last sent > 7 days ago
+    """
     try:
         now = datetime.now(timezone.utc)
-        two_hours_ago = (now - timedelta(hours=2)).isoformat()
+        two_hours_ago  = (now - timedelta(hours=2)).isoformat()
+        seven_days_ago = (now - timedelta(days=7)).isoformat()
 
+        # Fetch all non-converted prospects created > 2 hours ago
         res = sb.table('prospects') \
-            .select('id,phone,email,business_name,status,created_at') \
-            .in_('status', ['otp_verified', 'bridge_viewed', 'bridge_cta_clicked']) \
-            .eq('re_engagement_sent', False) \
+            .select('id,phone,email,business_name,status,created_at,re_engagement_sent_at') \
+            .neq('status', 'converted') \
             .lt('created_at', two_hours_ago) \
             .execute()
 
-        return jsonify(res.data or [])
+        eligible = []
+        for row in (res.data or []):
+            sent_at = row.get('re_engagement_sent_at')
+            if not sent_at:
+                # Never sent — eligible
+                eligible.append(row)
+            elif sent_at < seven_days_ago:
+                # Last sent > 7 days ago — eligible again
+                eligible.append(row)
+            # else: sent within last 7 days — skip
+
+        return jsonify(eligible)
     except Exception as e:
         log.error(f'prospects_eligible error: {e}')
         return err(str(e), 500)
@@ -927,13 +944,16 @@ def prospects_eligible():
 
 @app.route('/api/prospects/mark_reengaged', methods=['POST'])
 def mark_reengaged():
-    """Set re_engagement_sent = true on a prospect row."""
+    """Set re_engagement_sent_at = now on a prospect row."""
     try:
         d = request.json or {}
         prospect_id = d.get('prospect_id')
         if not prospect_id:
             return err('prospect_id required')
-        sb.table('prospects').update({'re_engagement_sent': True}).eq('id', prospect_id).execute()
+        sb.table('prospects').update({
+            're_engagement_sent': True,
+            're_engagement_sent_at': datetime.now(timezone.utc).isoformat()
+        }).eq('id', prospect_id).execute()
         return ok(action='marked')
     except Exception as e:
         log.error(f'mark_reengaged error: {e}')
