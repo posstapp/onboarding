@@ -529,6 +529,13 @@ def save_meta_page(client_id, fb_page_id, page_name, ig_biz_id, ig_username, ll_
 
     log.info(f'Saving page {fb_page_id} ({page_name}) for {client_id}, IG: {ig_biz_id}')
 
+    # Read client status BEFORE patching the token so the reconnect email decision
+    # is based on a reliable pre-patch read — not a post-patch get_client() call
+    # that could fail and silently skip the email.
+    pre_patch_client = get_client(client_id)
+    pre_status       = (pre_patch_client or {}).get('status', '')
+    log.info(f'meta_callback: client {client_id} pre-patch status = {pre_status!r}')
+
     # Write to Supabase via posst-api
     api_patch(f'/api/client/{client_id}/token', {
         'fb_page_id':        fb_page_id,
@@ -545,22 +552,27 @@ def save_meta_page(client_id, fb_page_id, page_name, ig_biz_id, ig_username, ll_
     session['fb_page_name'] = page_name
     session['ig_username']  = ig_username
 
-    # Send reconnect confirmation email for existing Active clients only
-    # (new signups are Token_Received at this point — they get the go-live email instead)
-    try:
-        client_row = get_client(client_id)
-        if client_row and client_row.get('status') == 'Active':
+    # Send reconnect confirmation email for existing Active clients only.
+    # (new signups have status Token_Received/Pending here — they get go-live email instead)
+    # Uses pre_status captured before the patch to avoid a second API call that could fail.
+    if pre_status == 'Active':
+        try:
             platforms_connected = []
-            if fb_page_id:   platforms_connected.append('Facebook')
-            if ig_biz_id:    platforms_connected.append('Instagram')
-            api_post('/api/email/reconnect_confirmation', {
+            if fb_page_id: platforms_connected.append('Facebook')
+            if ig_biz_id:  platforms_connected.append('Instagram')
+            log.info(f'meta_callback: sending reconnect confirmation email for {client_id} '
+                     f'platforms={platforms_connected}')
+            result = api_post('/api/email/reconnect_confirmation', {
                 'client_id':    client_id,
-                'posting_time': client_row.get('posting_time', ''),
-                'timezone':     client_row.get('timezone', 'Australia/Melbourne'),
+                'posting_time': pre_patch_client.get('posting_time', ''),
+                'timezone':     pre_patch_client.get('timezone', 'Australia/Melbourne'),
                 'platforms':    platforms_connected,
             })
-    except Exception as e:
-        log.error(f'Reconnect confirmation email error for {client_id}: {e}')
+            log.info(f'meta_callback: reconnect email result for {client_id}: {result}')
+        except Exception as e:
+            log.error(f'meta_callback: reconnect confirmation email FAILED for {client_id}: {e}')
+    else:
+        log.info(f'meta_callback: skipping reconnect email for {client_id} (status={pre_status!r}, not Active)')
 
     return redirect(f'/connect?client_id={client_id}&_return=1')
 
