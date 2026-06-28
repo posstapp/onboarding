@@ -401,8 +401,13 @@ def portal_lookup():
     else:
         # Default to first Active client, else first client
         primary = next((c for c in clients if c.get('status') == 'Active'), clients[0])
-    def get_latest_post_status(client_id):
-        """Query posts_log for the most recent row — derive error flags from it."""
+    def get_latest_post_status(client_id, client_updated_at=None):
+        """Query posts_log for the most recent row — derive error flags from it.
+
+        If a FAILED row exists but the client row was updated (token refreshed)
+        AFTER that failure, the error is stale — clear it so the portal stops
+        showing Reconnect after a successful OAuth flow.
+        """
         try:
             res = sb.table('posts_log') \
                     .select('fb_status,ig_status,gbp_status,posted_at') \
@@ -412,10 +417,37 @@ def portal_lookup():
                     .execute()
             if res.data:
                 row = res.data[0]
+                fb_failed  = row['fb_status']  == 'FAILED'
+                ig_failed  = row['ig_status']  == 'FAILED'
+                gbp_failed = row['gbp_status'] == 'FAILED'
+
+                # If any platform failed, check whether the token was refreshed
+                # after that failure. If so, the error is stale — suppress it.
+                # Guard: only apply if both timestamps are present and parseable.
+                if (fb_failed or ig_failed or gbp_failed) and client_updated_at and row.get('posted_at'):
+                    try:
+                        from datetime import timezone as _tz
+                        def _parse(ts):
+                            # Handle both offset-aware and naive timestamps from Supabase
+                            import dateutil.parser
+                            return dateutil.parser.parse(ts)
+                        t_updated = _parse(str(client_updated_at))
+                        t_posted  = _parse(str(row['posted_at']))
+                        if t_updated > t_posted:
+                            # Token was refreshed after this failure — stale error, clear it
+                            log.info(f'get_latest_post_status: clearing stale error for {client_id} '
+                                     f'(token refreshed {t_updated} after failure {t_posted})')
+                            fb_failed  = False
+                            ig_failed  = False
+                            gbp_failed = False
+                    except Exception as te:
+                        # If timestamp parsing fails, fall back to showing the error (safe default)
+                        log.warning(f'get_latest_post_status: timestamp compare failed for {client_id}: {te}')
+
                 return {
-                    'fb_error':      row['fb_status']  == 'FAILED',
-                    'ig_error':      row['ig_status']  == 'FAILED',
-                    'gbp_error':     row['gbp_status'] == 'FAILED',
+                    'fb_error':      fb_failed,
+                    'ig_error':      ig_failed,
+                    'gbp_error':     gbp_failed,
                     'last_post_at':  row['posted_at'],
                 }
         except Exception:
@@ -423,7 +455,7 @@ def portal_lookup():
         return {'fb_error': False, 'ig_error': False, 'gbp_error': False, 'last_post_at': None}
 
     def fmt(client):
-        post_status = get_latest_post_status(client['client_id'])
+        post_status = get_latest_post_status(client['client_id'], client.get('updated_at'))
         return {
             'client_id':        client['client_id'],
             'business_name':    client['business_name'],
