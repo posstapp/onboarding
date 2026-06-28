@@ -1019,6 +1019,36 @@ def email_alert():
         send_internal_alert(d.get('title','Alert'), d.get('message',''), d.get('level','alert'))
     return ok()
 
+@app.route('/api/health_check/dedup', methods=['POST'])
+def health_check_dedup():
+    """
+    Called by n8n Health Check before sending an alert email.
+    Returns already_sent=True if health alert already sent today -> n8n skips email.
+    Returns already_sent=False and records it -> n8n sends email.
+    Uses client_id='SYSTEM' in email_campaign_log. Resets daily.
+    """
+    from datetime import date
+    camp_key = f"health_check_{date.today().isoformat()}"
+    try:
+        already = bool(
+            sb.table('email_campaign_log')
+              .select('id')
+              .eq('client_id', 'SYSTEM')
+              .eq('campaign', camp_key)
+              .execute().data
+        )
+        if already:
+            return ok(already_sent=True)
+        sb.table('email_campaign_log').insert({
+            'client_id': 'SYSTEM',
+            'campaign':  camp_key,
+            'email':     'chief@posst.app',
+        }).execute()
+        return ok(already_sent=False)
+    except Exception as e:
+        log.error(f'health_check_dedup error: {e}')
+        return ok(already_sent=False)
+
 @app.route('/api/email/campaigns', methods=['POST'])
 def run_campaigns():
     from datetime import datetime
