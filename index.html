@@ -656,6 +656,17 @@ async function verifyOTP() {
           window.location.href = 'https://onboarding.posst.app/portal.html?phone=' + encodeURIComponent(fullPhone);
           return;
         }
+        // Pending_Token = client row exists but Stripe not yet completed.
+        // User pressed Back from Stripe checkout. Restore them to the payment
+        // step so they can retry without losing their data.
+        if(clientStatus === 'Pending_Token' && portalRes.data && portalRes.data.client_id) {
+          savedClientId    = portalRes.data.client_id;
+          savedPendingToken = portalRes.data.pending_token || '';
+          const _isNewBizRestore = sessionStorage.getItem('posst_new_business_mode') === '1';
+          step = _isNewBizRestore ? 9 : 8;
+          render(); window.scrollTo(0,0);
+          return;
+        }
         // Not active — try to resume onboarding progress
         callAppsScript('loadProgress', {phone: fullPhone}).then(function(res) {
           if(res && res.success && res.step > 1 && res.form) {
@@ -1233,7 +1244,7 @@ function renderStep2() {
       <div class="step-tag" style="margin-bottom:12px">Facebook details</div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Page name</label>
+          <label class="form-label">Page name *</label>
           <input class="form-input" value="${esc(F.facebook_page_name)}" placeholder="Joe&#39;s Bakery" oninput="F.facebook_page_name=this.value">
         </div>
         <div class="form-group">
@@ -1255,7 +1266,7 @@ function renderStep2() {
           ${errors.ig_handle?`<div class="form-error">${errors.ig_handle}</div>`:''}
         </div>
         <div class="form-group">
-          <label class="form-label">Profile URL <span class="form-label-opt">optional</span></label>
+          <label class="form-label">Profile URL *</label>
           <input class="form-input" value="${esc(F.ig_url)}" placeholder="instagram.com/joesbakery" oninput="F.ig_url=this.value">
         </div>
       </div>`:''}
