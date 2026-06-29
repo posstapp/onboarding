@@ -271,6 +271,7 @@ def update_token(client_id):
     if d.get('fb_page_name'):      update['fb_page_name'] = d['fb_page_name']
     if d.get('ig_business_id'):    update['ig_business_id'] = d['ig_business_id']
     if d.get('ig_handle'):         update['ig_handle'] = d['ig_handle']
+    if d.get('meta_user_token'):   update['meta_user_token'] = d['meta_user_token']
     if d.get('gbp_refresh_token'): update['gbp_refresh_token'] = d['gbp_refresh_token']
     if d.get('gbp_location_id'):   update['gbp_location_id'] = d['gbp_location_id']
     if d.get('status'):
