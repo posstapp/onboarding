@@ -715,7 +715,8 @@ def tokens_refresh():
 
     log.info(f'tokens_refresh complete: {len(results["refreshed"])} refreshed, '
              f'{len(results["failed"])} failed, {len(results["skipped"])} skipped')
-    return ok(results=results)
+    from flask import jsonify
+    return jsonify({'status': 'success', 'results': results})
 
 
 @app.route('/connect/google/callback')
