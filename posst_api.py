@@ -1144,6 +1144,14 @@ def send_reconnect_email():
     client_row = sb.table('clients').select('*').eq('client_id', client_id).single().execute()
     if not client_row.data:
         return err('Client not found', 404)
+    # Dedup: one reconnect confirmation email per client per day
+    from datetime import date
+    camp_key = f"reconnect_confirm_{date.today().isoformat()}"
+    already  = bool(sb.table('email_campaign_log').select('id')
+                      .eq('client_id', client_id).eq('campaign', camp_key).execute().data)
+    if already:
+        log.info(f'send_reconnect_email: already sent today for {client_id}, skipping')
+        return ok(sent=False, skipped=True)
     if EMAIL_AVAILABLE:
         send_reconnect_confirmation_email(
             client_row.data,
@@ -1151,6 +1159,11 @@ def send_reconnect_email():
             d.get('timezone',     client_row.data.get('timezone', 'Australia/Melbourne')),
             d.get('platforms',    ['Facebook', 'Instagram']),
         )
+        sb.table('email_campaign_log').insert({
+            'client_id': client_id,
+            'campaign':  camp_key,
+            'email':     client_row.data.get('contact_email', ''),
+        }).execute()
     return ok(sent=EMAIL_AVAILABLE)
 
 # ── OTP SYSTEM ────────────────────────────────────────────────
