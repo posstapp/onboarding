@@ -544,6 +544,7 @@ def save_meta_page(client_id, fb_page_id, page_name, ig_biz_id, ig_username, ll_
         'ig_handle':         ig_username,
         'meta_token':        encrypt_token(page_token),
         'meta_token_expiry': expiry_str,
+        'meta_user_token':   encrypt_token(ll_token),
         'status':            'Token_Received',
         'pending_token':     '',
     })
@@ -575,6 +576,146 @@ def save_meta_page(client_id, fb_page_id, page_name, ig_biz_id, ig_username, ll_
         log.info(f'meta_callback: skipping reconnect email for {client_id} (status={pre_status!r}, not Active)')
 
     return redirect(f'/connect?client_id={client_id}&_return=1')
+
+
+@app.route('/tokens/refresh', methods=['POST'])
+def tokens_refresh():
+    """
+    Auto-refresh Meta tokens for all Active clients whose token expires within 45 days.
+    Called daily by n8n at 22:00 UTC (08:00 AEST).
+
+    Tiered behaviour:
+      > 45 days left  : skip (too early)
+      15-45 days left : refresh silently
+      7-14 days left  : refresh + warn client via connection_error email
+      < 7 days left   : refresh + urgent email to client
+      refresh fails   : send connection_error email immediately (don't wait for post to fail)
+    """
+    from datetime import date, timezone as _tz
+    import dateutil.parser
+
+    results = {'refreshed': [], 'failed': [], 'skipped': [], 'errors': []}
+
+    # Fetch all active clients
+    clients_res = api_get('/api/clients/active')
+    clients = (clients_res or {}).get('data', [])
+
+    for c in clients:
+        cid        = c.get('client_id', '')
+        biz        = c.get('business_name', cid)
+        user_token_enc = c.get('meta_user_token', '')
+        expiry_str = c.get('meta_token_expiry', '')  # DD/MM/YYYY
+
+        if not cid:
+            continue
+
+        # Skip if no user token stored (client hasn't reconnected since this feature launched)
+        if not user_token_enc:
+            results['skipped'].append(f'{cid}: no meta_user_token yet')
+            continue
+
+        # Parse expiry date
+        days_left = None
+        if expiry_str:
+            try:
+                exp_date = datetime.strptime(expiry_str, '%d/%m/%Y').date()
+                days_left = (exp_date - date.today()).days
+            except Exception:
+                pass
+
+        # Skip if token is fresh (> 45 days left)
+        if days_left is not None and days_left > 45:
+            results['skipped'].append(f'{cid}: {days_left} days left, not due')
+            continue
+
+        # Attempt refresh
+        try:
+            # Decrypt the stored user token
+            dec_res = requests.post('http://127.0.0.1:5679/decrypt',
+                                    json={'token': user_token_enc}, timeout=10)
+            user_token = dec_res.json().get('token', '')
+            if not user_token:
+                raise ValueError('Decrypt returned empty token')
+
+            # Call Meta to extend the user token
+            refresh_res = requests.get('https://graph.facebook.com/v19.0/oauth/access_token',
+                params={
+                    'grant_type':       'fb_exchange_token',
+                    'client_id':        META_APP_ID,
+                    'client_secret':    META_APP_SECRET,
+                    'fb_exchange_token': user_token,
+                }, timeout=15)
+            refresh_data = refresh_res.json()
+
+            if 'error' in refresh_data:
+                raise ValueError(f"Meta error: {refresh_data['error'].get('message', str(refresh_data))}")
+
+            new_user_token = refresh_data.get('access_token', '')
+            expires_in     = refresh_data.get('expires_in', 5184000)
+            new_expiry     = (datetime.now() + timedelta(seconds=expires_in)).strftime('%d/%m/%Y')
+
+            if not new_user_token:
+                raise ValueError('Meta returned empty access_token')
+
+            # Get fresh page token
+            fb_page_id = c.get('fb_page_id', '')
+            page_token = new_user_token  # fallback
+            if fb_page_id:
+                pt_res = requests.get(f'https://graph.facebook.com/v19.0/{fb_page_id}',
+                    params={'fields': 'access_token', 'access_token': new_user_token},
+                    timeout=10)
+                page_token = pt_res.json().get('access_token', new_user_token)
+
+            # Save back to Supabase via posst-api
+            api_patch(f'/api/client/{cid}/token', {
+                'meta_token':        encrypt_token(page_token),
+                'meta_token_expiry': new_expiry,
+                'meta_user_token':   encrypt_token(new_user_token),
+            })
+
+            log.info(f'tokens_refresh: refreshed {cid} ({biz}) — new expiry {new_expiry}')
+            results['refreshed'].append(f'{cid}: new expiry {new_expiry}')
+
+            # Warn client if in danger zone (7-14 days) even though refresh succeeded
+            # (next refresh might fail if Meta revokes between now and then)
+            if days_left is not None and days_left <= 14:
+                api_post('/api/notify_error', {
+                    'client_id': cid,
+                    'fb_failed': False,
+                    'ig_failed': False,
+                    'gbp_failed': False,
+                    'fb_error_msg': '',
+                    'ig_error_msg': f'Your Meta connection is being automatically maintained. No action needed.',
+                    'gbp_error_msg': '',
+                })
+
+        except Exception as e:
+            log.error(f'tokens_refresh: FAILED for {cid} ({biz}): {e}')
+            results['failed'].append(f'{cid}: {str(e)[:100]}')
+            results['errors'].append(cid)
+
+            # Token refresh failed — alert client NOW before their post fails tonight
+            try:
+                failed_platforms = []
+                if c.get('fb_page_id'):  failed_platforms.append({'name': 'Facebook',  'icon': '📘'})
+                if c.get('ig_biz_id') or c.get('ig_business_id'):
+                    failed_platforms.append({'name': 'Instagram', 'icon': '📸'})
+                if failed_platforms:
+                    api_post('/api/notify_error', {
+                        'client_id':   cid,
+                        'fb_failed':   bool(c.get('fb_page_id')),
+                        'ig_failed':   bool(c.get('ig_biz_id') or c.get('ig_business_id')),
+                        'gbp_failed':  False,
+                        'fb_error_msg':  f'Token refresh failed: {str(e)[:80]}',
+                        'ig_error_msg':  f'Token refresh failed: {str(e)[:80]}',
+                        'gbp_error_msg': '',
+                    })
+            except Exception as email_err:
+                log.error(f'tokens_refresh: failed to send alert for {cid}: {email_err}')
+
+    log.info(f'tokens_refresh complete: {len(results["refreshed"])} refreshed, '
+             f'{len(results["failed"])} failed, {len(results["skipped"])} skipped')
+    return ok(results=results)
 
 
 @app.route('/connect/google/callback')
