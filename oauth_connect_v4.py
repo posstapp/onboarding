@@ -11,7 +11,7 @@ import json
 import logging
 import requests
 from datetime import datetime, timedelta
-from flask import Flask, request, redirect, session, render_template_string
+from flask import Flask, request, redirect, session, render_template_string, jsonify
 from cryptography.fernet import Fernet
 
 app = Flask(__name__)
@@ -755,17 +755,22 @@ def tokens_recover():
         if not user_token:
             raise ValueError('Decrypt returned empty token — client must reconnect manually')
 
-        # 3. Re-derive page access token from user token
+        # 3. Re-derive page access token via /me/accounts (same as tokens_refresh)
         page_token = user_token  # fallback if page lookup fails
         if fb_page_id:
-            pt_res = requests.get(
-                f'https://graph.facebook.com/v19.0/{fb_page_id}',
-                params={'fields': 'access_token', 'access_token': user_token},
+            accounts_res = requests.get(
+                'https://graph.facebook.com/v19.0/me/accounts',
+                params={'access_token': user_token, 'fields': 'id,access_token'},
                 timeout=10)
-            pt_data = pt_res.json()
-            if 'error' in pt_data:
-                raise ValueError(f"Meta page token error: {pt_data['error'].get('message', str(pt_data))}")
-            page_token = pt_data.get('access_token', user_token)
+            accounts_data = accounts_res.json()
+            if 'error' in accounts_data:
+                raise ValueError(f"Meta accounts error: {accounts_data['error'].get('message', str(accounts_data))}")
+            pages = accounts_data.get('data', [])
+            matched = next((p for p in pages if str(p.get('id')) == str(fb_page_id)), None)
+            if matched:
+                page_token = matched.get('access_token', user_token)
+            else:
+                raise ValueError(f'Page {fb_page_id} not found in /me/accounts — client must reconnect')
 
         # 4. Save fresh page token back to Supabase (keep same expiry — token cycle unchanged)
         api_patch(f'/api/client/{client_id}/token', {
