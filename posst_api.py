@@ -748,6 +748,42 @@ def log_post():
     return ok()
 
 
+@app.route('/api/posts_log/update', methods=['POST'])
+def update_post_log():
+    """
+    Update an existing posts_log row after a same-day retry.
+    Matches by client_id + posted_at (the original failed row).
+    Called by n8n Retry Post node after token recovery.
+    """
+    d          = request.json or {}
+    client_id  = d.get('client_id', '')
+    posted_at  = d.get('posted_at', '')
+    fb_status  = d.get('fb_status', '')
+    ig_status  = d.get('ig_status', '')
+
+    if not client_id or not posted_at:
+        return err('client_id and posted_at required', 400)
+
+    update = {
+        'fb_status':    fb_status,
+        'ig_status':    ig_status,
+        'fb_post_id':   d.get('fb_post_id', ''),
+        'ig_post_id':   d.get('ig_post_id', ''),
+        'fb_error':     fb_status  == 'FAILED',
+        'fb_error_msg': d.get('fb_error_msg', '') if fb_status  == 'FAILED' else '',
+        'ig_error':     ig_status  == 'FAILED',
+        'ig_error_msg': d.get('ig_error_msg', '') if ig_status  == 'FAILED' else '',
+    }
+
+    sb.table('posts_log') \
+        .update(update) \
+        .eq('client_id', client_id) \
+        .eq('posted_at', posted_at) \
+        .execute()
+
+    return ok()
+
+
 # Returns the most recent posts_log row per active client — used by health check
 @app.route('/api/posts_log/recent', methods=['GET'])
 def get_recent_posts():
