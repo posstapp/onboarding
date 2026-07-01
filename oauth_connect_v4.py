@@ -719,6 +719,67 @@ def tokens_refresh():
     return jsonify({'status': 'success', 'results': results})
 
 
+@app.route('/tokens/recover', methods=['POST'])
+def tokens_recover():
+    """
+    Recover a broken Meta page token for a single client.
+    Called by n8n sub-workflow when a post fails with OAuthException / permissions error.
+    Uses the stored meta_user_token to re-derive a fresh page_access_token.
+
+    Body: { "client_id": "POSST_20260620_002" }
+    Returns: { "recovered": true } or { "recovered": false, "reason": "..." }
+    """
+    data      = request.get_json(force=True) or {}
+    client_id = data.get('client_id', '').strip()
+
+    if not client_id:
+        return jsonify({'recovered': False, 'reason': 'missing client_id'}), 400
+
+    try:
+        # 1. Fetch client from Supabase
+        client_res = api_get(f'/api/client/{client_id}')
+        c = (client_res or {}).get('data')
+        if not c:
+            raise ValueError(f'Client {client_id} not found')
+
+        user_token_enc = c.get('meta_user_token', '')
+        fb_page_id     = c.get('fb_page_id', '')
+
+        if not user_token_enc:
+            raise ValueError('No meta_user_token stored — client must reconnect manually')
+
+        # 2. Decrypt the stored user token via posst-r2
+        dec_res    = requests.post('http://127.0.0.1:5679/decrypt',
+                                   json={'token': user_token_enc}, timeout=10)
+        user_token = dec_res.json().get('token', '')
+        if not user_token:
+            raise ValueError('Decrypt returned empty token — client must reconnect manually')
+
+        # 3. Re-derive page access token from user token
+        page_token = user_token  # fallback if page lookup fails
+        if fb_page_id:
+            pt_res = requests.get(
+                f'https://graph.facebook.com/v19.0/{fb_page_id}',
+                params={'fields': 'access_token', 'access_token': user_token},
+                timeout=10)
+            pt_data = pt_res.json()
+            if 'error' in pt_data:
+                raise ValueError(f"Meta page token error: {pt_data['error'].get('message', str(pt_data))}")
+            page_token = pt_data.get('access_token', user_token)
+
+        # 4. Save fresh page token back to Supabase (keep same expiry — token cycle unchanged)
+        api_patch(f'/api/client/{client_id}/token', {
+            'meta_token': encrypt_token(page_token),
+        })
+
+        log.info(f'tokens_recover: recovered {client_id} — fresh page token saved')
+        return jsonify({'recovered': True, 'client_id': client_id})
+
+    except Exception as e:
+        log.error(f'tokens_recover: FAILED for {client_id}: {e}')
+        return jsonify({'recovered': False, 'reason': str(e)}), 200
+
+
 @app.route('/connect/google/callback')
 def google_callback():
     code      = request.args.get('code', '')
