@@ -766,11 +766,13 @@ def tokens_recover():
             if 'error' in accounts_data:
                 raise ValueError(f"Meta accounts error: {accounts_data['error'].get('message', str(accounts_data))}")
             pages = accounts_data.get('data', [])
+            page_ids_found = [str(p.get('id')) for p in pages]
+            log.info(f'tokens_recover: {client_id} /me/accounts returned page ids: {page_ids_found}')
             matched = next((p for p in pages if str(p.get('id')) == str(fb_page_id)), None)
             if matched:
                 page_token = matched.get('access_token', user_token)
             else:
-                raise ValueError(f'Page {fb_page_id} not found in /me/accounts — client must reconnect')
+                raise ValueError(f'Page {fb_page_id} not found in /me/accounts — found: {page_ids_found} — client must reconnect')
 
         # 4. Save fresh page token back to Supabase (keep same expiry — token cycle unchanged)
         api_patch(f'/api/client/{client_id}/token', {
