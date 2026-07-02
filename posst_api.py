@@ -38,6 +38,205 @@ API_SECRET       = os.environ.get('POSST_API_SECRET', 'posst-api-secret-2026')
 
 sb: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# ── IMAGE STYLE ROUTING (Phase B, Jul 1 2026) ─────────────────
+# See ai/style_library.md, ai/style_routing_map.md, ai/subject_nature_map.md.
+# Lesson 178: kept as Python dict (Beta mode) because it mirrors BIZ_CATEGORIES
+# in onboarding/index.html and is protected by _sanity_check_style_mapping() below.
+# Update this dict whenever a new business_type is added to onboarding.
+
+BUSINESS_TYPE_TO_CATEGORY = {
+    # Food & Hospitality
+    'Bakery': 'Food & Hospitality', 'Brewery / Craft Beer': 'Food & Hospitality',
+    'Butcher': 'Food & Hospitality', 'Cafe / Coffee Shop': 'Food & Hospitality',
+    'Catering': 'Food & Hospitality', 'Catering Equipment Hire': 'Food & Hospitality',
+    'Deli': 'Food & Hospitality', 'Dessert Shop': 'Food & Hospitality',
+    'Fish & Chips': 'Food & Hospitality', 'Food Truck': 'Food & Hospitality',
+    'Ice Cream Shop': 'Food & Hospitality', 'Juice Bar': 'Food & Hospitality',
+    'Meal Prep / Delivery': 'Food & Hospitality', 'Pizza Shop': 'Food & Hospitality',
+    'Restaurant': 'Food & Hospitality', 'Takeaway / Fast Food': 'Food & Hospitality',
+    'Wine Bar': 'Food & Hospitality',
+    # Beauty & Health
+    'Barber Shop': 'Beauty & Health', 'Beauty Salon': 'Beauty & Health',
+    'Brow & Lash Studio': 'Beauty & Health', 'Chiropractor': 'Beauty & Health',
+    'Cosmetic Tattoo': 'Beauty & Health', 'Dental Clinic': 'Beauty & Health',
+    'Dietitian / Nutritionist': 'Beauty & Health', 'Hair Salon / Hairdresser': 'Beauty & Health',
+    'Hearing Clinic': 'Beauty & Health', 'Health Spa': 'Beauty & Health',
+    'Massage Therapist': 'Beauty & Health', 'Medical Practice': 'Beauty & Health',
+    'Nail Salon': 'Beauty & Health', 'Natural Therapies': 'Beauty & Health',
+    'Occupational Therapist': 'Beauty & Health', 'Optical': 'Beauty & Health',
+    'Osteopath': 'Beauty & Health', 'Pharmacy': 'Beauty & Health',
+    'Podiatrist': 'Beauty & Health', 'Psychologist / Counsellor': 'Beauty & Health',
+    'Skin Clinic': 'Beauty & Health', 'Speech Therapist': 'Beauty & Health',
+    # Fitness & Leisure
+    'Boxing / MMA Gym': 'Fitness & Leisure', 'CrossFit / Functional Fitness': 'Fitness & Leisure',
+    'Cycling Studio': 'Fitness & Leisure', 'Dance Studio': 'Fitness & Leisure',
+    'Golf Coaching': 'Fitness & Leisure', 'Gym / Fitness Studio': 'Fitness & Leisure',
+    'Gym / Fitness Training': 'Fitness & Leisure', 'Martial Arts': 'Fitness & Leisure',
+    'Personal Trainer': 'Fitness & Leisure', 'Personal Training': 'Fitness & Leisure',
+    'Pilates Studio': 'Fitness & Leisure', 'Rock Climbing': 'Fitness & Leisure',
+    'Sports Complex': 'Fitness & Leisure', 'Swimming School': 'Fitness & Leisure',
+    'Tennis Coaching': 'Fitness & Leisure', 'Yoga Studio': 'Fitness & Leisure',
+    # Pet Services
+    'Aquarium & Fish': 'Pet Services', 'Aviary': 'Pet Services',
+    'Aviary & Bird Services': 'Pet Services', 'Boarding Kennels': 'Pet Services',
+    'Dog Grooming': 'Pet Services', 'Dog Training': 'Pet Services',
+    'Exotic Pets': 'Pet Services', 'Fresh Pet Food': 'Pet Services',
+    'Pet Grooming (Cats)': 'Pet Services', 'Pet Photography': 'Pet Services',
+    'Pet Shop': 'Pet Services', 'Pet Sitting / Dog Walking': 'Pet Services',
+    'Veterinary Clinic': 'Pet Services',
+    # Retail
+    'Appliances': 'Retail', 'Baby & Kids': 'Retail', 'Bookshop': 'Retail',
+    'Clothing & Fashion': 'Retail', 'Craft & Hobby': 'Retail', 'Electronics': 'Retail',
+    'Florist': 'Retail', 'Furniture': 'Retail', 'Gift Shop': 'Retail',
+    'Health Food Store': 'Retail', 'Homewares': 'Retail', 'Jewellery': 'Retail',
+    'Newsagency': 'Retail', 'Phone & Tech Accessories': 'Retail',
+    'Pharmacy / Chemist': 'Retail', 'Sporting Goods': 'Retail',
+    'Supplement Store': 'Retail', 'Toy Shop': 'Retail',
+    'Vape & Smoke Shop': 'Retail', 'Vintage & Secondhand': 'Retail',
+    # Automotive
+    'Auto Parts': 'Automotive', 'Car Dealership': 'Automotive',
+    'Car Detailing': 'Automotive', 'Car Repair': 'Automotive', 'Car Wash': 'Automotive',
+    'Caravan & RV': 'Automotive', 'Mechanic / Auto Repair': 'Automotive',
+    'Motorcycle Dealer / Repair': 'Automotive', 'Panel Beating': 'Automotive',
+    'Roadside Assistance': 'Automotive', 'Second Hand Car Sales': 'Automotive',
+    'Tyres & Accessories': 'Automotive', 'Vehicle Wrapping': 'Automotive',
+    # Home & Garden
+    'Air Conditioning / HVAC': 'Home & Garden', 'Building & Construction': 'Home & Garden',
+    'Carpet & Flooring': 'Home & Garden', 'Cleaning Services': 'Home & Garden',
+    'Electrical': 'Home & Garden', 'Fencing': 'Home & Garden',
+    'Interior Design': 'Home & Garden', 'Landscaping / Gardening': 'Home & Garden',
+    'Painting & Decorating': 'Home & Garden', 'Pest Control': 'Home & Garden',
+    'Plumbing': 'Home & Garden', 'Pool Services': 'Home & Garden',
+    'Removalist': 'Home & Garden', 'Roofing': 'Home & Garden',
+    'Security Systems': 'Home & Garden', 'Skip Bin Hire': 'Home & Garden',
+    'Solar & Energy': 'Home & Garden', 'Tiling': 'Home & Garden',
+    # Professional Services
+    'Accounting / Bookkeeping': 'Professional Services', 'Architecture': 'Professional Services',
+    'Bookkeeping': 'Professional Services', 'Consulting': 'Professional Services',
+    'Copywriting': 'Professional Services', 'Engineering': 'Professional Services',
+    'Event Planning': 'Professional Services', 'Financial Planning': 'Professional Services',
+    'Graphic Design': 'Professional Services', 'Insurance': 'Professional Services',
+    'IT / Technology': 'Professional Services', 'Legal': 'Professional Services',
+    'Marketing Agency': 'Professional Services', 'Photography': 'Professional Services',
+    'PR & Communications': 'Professional Services', 'Real Estate': 'Professional Services',
+    'Recruitment': 'Professional Services', 'Social Media Marketing': 'Professional Services',
+    'Surveying': 'Professional Services', 'Translation': 'Professional Services',
+    'Video Production': 'Professional Services', 'Web Design & Development': 'Professional Services',
+    # Education & Childcare
+    'After School Care': 'Education & Childcare', 'Art Classes': 'Education & Childcare',
+    'Child Care / Daycare': 'Education & Childcare', 'Coding School': 'Education & Childcare',
+    'Driving School': 'Education & Childcare', 'Early Childhood / Kindergarten': 'Education & Childcare',
+    'Language School': 'Education & Childcare', 'Music School': 'Education & Childcare',
+    'Sports Coaching (Kids)': 'Education & Childcare', 'Tutoring': 'Education & Childcare',
+    'Vocational Training': 'Education & Childcare',
+    # Accommodation & Tourism
+    'Amusement / Entertainment Centre': 'Accommodation & Tourism',
+    'B&B / Guest House': 'Accommodation & Tourism', 'Escape Room': 'Accommodation & Tourism',
+    'Event / Function Centre': 'Accommodation & Tourism',
+    'Glamping / Eco Stays': 'Accommodation & Tourism',
+    'Holiday Park / Caravan Park': 'Accommodation & Tourism',
+    'Hotel / Motel': 'Accommodation & Tourism',
+    'Serviced Apartments': 'Accommodation & Tourism',
+    'Tour Operator': 'Accommodation & Tourism', 'Travel Agency': 'Accommodation & Tourism',
+    # Online & eCommerce
+    'Digital Products': 'Online & eCommerce', 'Dropshipping': 'Online & eCommerce',
+    'Marketplace Seller': 'Online & eCommerce', 'Online Courses / Education': 'Online & eCommerce',
+    'Online Store': 'Online & eCommerce', 'Print on Demand': 'Online & eCommerce',
+    'SaaS / Software': 'Online & eCommerce', 'Subscription Box': 'Online & eCommerce',
+    # Health & Wellness
+    'Aged Care': 'Health & Wellness', 'Community Services': 'Health & Wellness',
+    'Disability Services': 'Health & Wellness', 'Fertility Clinic': 'Health & Wellness',
+    'Life Coaching': 'Health & Wellness', 'Meditation & Mindfulness': 'Health & Wellness',
+    'Sleep Clinic': 'Health & Wellness',
+    # Spiritual & Alternative Wellness
+    'Acupuncture': 'Spiritual & Alternative Wellness',
+    'Aromatherapy': 'Spiritual & Alternative Wellness',
+    'Astrologer': 'Spiritual & Alternative Wellness',
+    'Crystal Healing': 'Spiritual & Alternative Wellness',
+    'Herbalist': 'Spiritual & Alternative Wellness',
+    'Hypnotherapy': 'Spiritual & Alternative Wellness',
+    'Kinesiology': 'Spiritual & Alternative Wellness',
+    'Naturopath': 'Spiritual & Alternative Wellness',
+    'Numerologist': 'Spiritual & Alternative Wellness',
+    'Psychic / Clairvoyant': 'Spiritual & Alternative Wellness',
+    'Reiki / Energy Healing': 'Spiritual & Alternative Wellness',
+    'Sound Healing': 'Spiritual & Alternative Wellness',
+    'Spiritual Coaching': 'Spiritual & Alternative Wellness',
+    'Tarot Reader': 'Spiritual & Alternative Wellness',
+    # Events & Entertainment
+    'Comedy Club': 'Events & Entertainment', 'Cinema': 'Events & Entertainment',
+    'DJ / Entertainment': 'Events & Entertainment',
+    'Festival / Market Organiser': 'Events & Entertainment',
+    'Live Music Venue': 'Events & Entertainment',
+    'Photography Studio': 'Events & Entertainment', 'Theatre': 'Events & Entertainment',
+    'Wedding Venue': 'Events & Entertainment',
+    # Food & Drink Production
+    'Artisan Food Producer': 'Food & Drink Production',
+    'Distillery': 'Food & Drink Production',
+    'Farmers Market Vendor': 'Food & Drink Production',
+    'Microbrewery': 'Food & Drink Production',
+    'Specialty Coffee Roaster': 'Food & Drink Production',
+    'Winery': 'Food & Drink Production',
+    # Kids & Family
+    'Childrens Clothing': 'Kids & Family', 'Jumping Castle Hire': 'Kids & Family',
+    'Kids Gym / Play Centre': 'Kids & Family', 'Party Entertainment': 'Kids & Family',
+    'Toy Library': 'Kids & Family',
+    # Trade & Industrial
+    'Crane & Heavy Equipment': 'Trade & Industrial',
+    'Industrial Cleaning': 'Trade & Industrial',
+    'Scaffolding': 'Trade & Industrial',
+    'Waste Management': 'Trade & Industrial',
+    'Welding & Fabrication': 'Trade & Industrial',
+}
+
+SAFE_FALLBACK_POOL = ['documentary_candid', 'wide_environment', 'macro_detail']
+ABSOLUTE_FALLBACK_TEMPLATE = 'Photorealistic mid-action shot. Natural indoor daylight. No human faces.'
+
+
+def _sanity_check_style_mapping():
+    """
+    Boot-time check: verify every business_type in BIZ_CATEGORIES (onboarding/index.html)
+    is mapped in BUSINESS_TYPE_TO_CATEGORY. Fails loud on mismatch, warns on GitHub outage.
+    Lessons 178, 179.
+    """
+    import re, base64, requests
+    gh_token = os.environ.get('GH_ONBOARDING_TOKEN', '')
+    headers = {'Authorization': f'token {gh_token}'} if gh_token else {}
+    try:
+        r = requests.get(
+            'https://api.github.com/repos/posstapp/onboarding/contents/index.html',
+            headers=headers, timeout=10
+        )
+        r.raise_for_status()
+        content = base64.b64decode(r.json()['content']).decode()
+        start = content.find('BIZ_CATEGORIES')
+        end = content.find('];', start)
+        if start < 0 or end < 0:
+            log.warning('[SANITY CHECK SKIPPED] BIZ_CATEGORIES block not found in index.html')
+            return
+        block = content[start:end]
+        # Types appear as single-quoted strings inside `types: [...]` arrays.
+        # Exclude keys ('group','types') and group names by filtering against known categories.
+        strings = re.findall(r"'([^']+)'", block)
+        known_categories = set(BUSINESS_TYPE_TO_CATEGORY.values())
+        live_types = [s for s in strings if s not in ('group', 'types') and s not in known_categories]
+        missing = sorted(set(t for t in live_types if t not in BUSINESS_TYPE_TO_CATEGORY))
+        if missing:
+            raise RuntimeError(
+                f'[SANITY CHECK FAILED] BIZ_CATEGORIES has {len(missing)} unmapped types: '
+                f'{missing[:10]}{"..." if len(missing) > 10 else ""}. '
+                f'Add them to BUSINESS_TYPE_TO_CATEGORY in posst_api.py.'
+            )
+        log.info(f'[SANITY CHECK OK] All {len(set(live_types))} BIZ_CATEGORIES types mapped.')
+    except RuntimeError:
+        raise
+    except Exception as e:
+        log.warning(f'[SANITY CHECK SKIPPED] Could not verify BIZ_CATEGORIES: {e}')
+
+
+_sanity_check_style_mapping()
+
+
 # ── AUTH MIDDLEWARE ───────────────────────────────────────────
 def require_auth(f):
     @wraps(f)
@@ -713,6 +912,121 @@ def convert_prospect():
     sb.table('prospects').update({'status': 'converted', 'converted_at': datetime.now().isoformat(), 'form_state': {}}).eq('phone', phone).execute()
     return ok(action='converted')
 
+# ── IMAGE STYLE SELECTION ─────────────────────────────────────
+# Called by n8n sub-workflow v8 Select Style node (Phase C, Jul 1 2026).
+# Returns one style chosen from the client's category/business_type routing
+# pool, excluding the last 2 styles used (anti-repeat). All fallbacks logged.
+# See ai/style_library.md, ai/style_routing_map.md.
+
+def _fetch_style_pool(category, business_type):
+    """Type-override wins over category default. Empty list if no rule."""
+    try:
+        r = sb.table('style_routing_map') \
+            .select('style_ids') \
+            .eq('category', category) \
+            .eq('business_type', business_type) \
+            .limit(1) \
+            .execute()
+        if r.data:
+            return r.data[0]['style_ids']
+        r = sb.table('style_routing_map') \
+            .select('style_ids') \
+            .eq('category', category) \
+            .is_('business_type', 'null') \
+            .limit(1) \
+            .execute()
+        return r.data[0]['style_ids'] if r.data else []
+    except Exception as e:
+        log.error(f'[style/select] pool fetch failed for {category!r}/{business_type!r}: {e}')
+        return []
+
+
+def _fetch_recent_styles(client_id, limit=2):
+    """Return last N style_id_used for this client (newest first). Empty on first post."""
+    try:
+        r = sb.table('posts_log') \
+            .select('style_id_used,posted_at') \
+            .eq('client_id', client_id) \
+            .not_.is_('style_id_used', 'null') \
+            .order('posted_at', desc=True) \
+            .limit(limit) \
+            .execute()
+        return [row['style_id_used'] for row in r.data if row.get('style_id_used')]
+    except Exception as e:
+        log.warning(f'[style/select] recent-styles fetch failed for {client_id}: {e}')
+        return []
+
+
+def _resolve_style_row(style_id):
+    """Look up the style_template. Returns (style_id, style_template) or absolute fallback."""
+    try:
+        r = sb.table('prompt_style_library') \
+            .select('style_id,style_template') \
+            .eq('style_id', style_id) \
+            .limit(1) \
+            .execute()
+        if r.data:
+            return r.data[0]['style_id'], r.data[0]['style_template']
+    except Exception as e:
+        log.error(f'[style/select] style resolve failed for {style_id!r}: {e}')
+    # Referential integrity failure — routing points at a missing library row.
+    log.error(f'[style/select] REFERENTIAL INTEGRITY: style_id {style_id!r} missing from prompt_style_library')
+    return style_id, ABSOLUTE_FALLBACK_TEMPLATE
+
+
+@app.route('/api/style/select', methods=['POST'])
+def style_select():
+    """
+    Pick an image style for the next post.
+    Body: { "client_id": "...", "business_type": "..." }
+    Returns: { "style_id": "...", "style_template": "...", "source": "primary|fallback_pool|absolute" }
+    """
+    import random
+    d = request.json or {}
+    client_id     = d.get('client_id', '')
+    business_type = d.get('business_type', '') or ''
+
+    if not client_id:
+        return err('client_id required', 400)
+
+    # Step 1: business_type → category (Beta lookup; Lesson 178).
+    category = BUSINESS_TYPE_TO_CATEGORY.get(business_type)
+    if not category:
+        log.warning(
+            f"[style/select] Unmapped business_type '{business_type}' for {client_id}. "
+            f'Using SAFE_FALLBACK_POOL.'
+        )
+        chosen = random.choice(SAFE_FALLBACK_POOL)
+        sid, tpl = _resolve_style_row(chosen)
+        return jsonify({'status': 'success', 'style_id': sid, 'style_template': tpl,
+                        'source': 'fallback_pool'})
+
+    # Step 2: routing lookup (type override first, category default fallback).
+    pool = _fetch_style_pool(category, business_type)
+    if not pool:
+        log.warning(
+            f"[style/select] No routing rule for category={category!r}, "
+            f'business_type={business_type!r}. Using SAFE_FALLBACK_POOL.'
+        )
+        chosen = random.choice(SAFE_FALLBACK_POOL)
+        sid, tpl = _resolve_style_row(chosen)
+        return jsonify({'status': 'success', 'style_id': sid, 'style_template': tpl,
+                        'source': 'fallback_pool'})
+
+    # Step 3: anti-repeat — exclude last 2 styles.
+    recent = _fetch_recent_styles(client_id, limit=2)
+    eligible = [s for s in pool if s not in recent]
+    if not eligible:
+        log.info(f'[style/select] Anti-repeat exhausted pool for {client_id}; using full pool.')
+        eligible = pool
+
+    # Step 4: pick + resolve.
+    chosen = random.choice(eligible)
+    sid, tpl = _resolve_style_row(chosen)
+    return jsonify({'status': 'success', 'style_id': sid, 'style_template': tpl,
+                    'source': 'primary'})
+
+
 # ── POSTS LOG ─────────────────────────────────────────────────
 @app.route('/api/posts_log', methods=['POST'])
 def log_post():
@@ -736,6 +1050,7 @@ def log_post():
         'gbp_caption':  d.get('gbp_caption', ''),
         'image_prompt': d.get('image_prompt', ''),
         'image_source': d.get('image_source', 'ai'),
+        'style_id_used':d.get('style_id_used', '') or None,  # Image style rotation (Phase B/C, Jul 1 2026)
         # Error fields — populated on FAILED status
         'fb_error':     fb_status  == 'FAILED',
         'fb_error_msg': d.get('fb_error_msg', '') if fb_status  == 'FAILED' else '',
