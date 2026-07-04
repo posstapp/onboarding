@@ -148,6 +148,7 @@ def send_go_live_email(client):
         {step(3, "Post goes live", "Published on your platforms at your chosen time")}
         {drive_section}
         {hl("You can still post manually anytime &mdash; it will not affect the automation.", "&#x2705;")}
+        {hl("If you ever need to reconnect your Facebook, it will ask which pages to share &mdash; select all of them, then pick the right one on the next screen.", "&#x1F4A1;")}
         {upgrade_section}
         {another_biz_section}
         {sign_off()}
@@ -413,3 +414,4 @@ if __name__ == '__main__':
     print('Testing email...')
     result = send_internal_alert('posst-email.py test', 'Gmail SMTP is working correctly from the VPS.')
     print('Sent:', result)
+
