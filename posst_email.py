@@ -372,7 +372,7 @@ def send_connection_error_email(client, failed_platforms):
         {sec("Here's what to do")}
         {step(1, "Open your posst.app account", "Tap the button below — it takes you straight there.")}
         {step(2, "Go to Platforms", "You'll see the affected platform marked with a warning.")}
-        {step(3, reconnect_step, "You'll be prompted to log in to " + ("Facebook" if has_meta else "Google") + " — just follow the steps.")}
+        {step(3, reconnect_step, "You'll be prompted to log in to " + ("Facebook" if has_meta else "Google") + " — just follow the steps." + (" If you manage multiple Facebook pages, grant access to all of them when prompted — you'll pick the right one on the next screen." if has_meta else ""))}
         {step(4, "Done — you're reconnected", "Your posting will resume automatically from the next scheduled time.")}
         {btn("Go to my account → reconnect now", "https://onboarding.posst.app/portal.html")}
         {hl("If you run into any trouble, just reply to this email and we'll sort it out straight away.", "💬")}

@@ -130,9 +130,9 @@ CONNECT_PAGE = """
     <div style="font-size:12px;font-weight:700;color:#C2410C;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">⚠️ Important — read before connecting</div>
     <div style="font-size:13px;color:#7C2D12;line-height:1.6">
       You are connecting accounts for <strong>{{ business }}</strong>.<br><br>
-      <strong>Step 1 — If Meta shows a "Reconnect" screen:</strong> click <strong>Edit settings</strong> to see your full page list and select the correct one.<br><br>
-      <strong>Step 2 — Select pages:</strong> choose only the Facebook page for <strong>{{ business }}</strong> — uncheck any other pages.<br><br>
-      <strong>Step 3 — Select Instagram:</strong> choose the Instagram account linked to <strong>{{ business }}</strong> — uncheck any others.<br><br>
+      <strong>Step 1 — Grant access to ALL pages:</strong> When Facebook asks which pages to share, select <strong>all</strong> your Facebook pages — even if you manage more than one. This keeps your connection working correctly.<br><br>
+      <strong>Step 2 — Select Instagram:</strong> Select <strong>all</strong> Instagram accounts linked to your pages.<br><br>
+      <strong>Step 3 — Choose your page:</strong> After returning to posst.app, you'll pick the specific page for <strong>{{ business }}</strong> on the next screen.<br><br>
       Complete all steps — both Facebook and Instagram must be selected to finish.
     </div>
   </div>
@@ -223,7 +223,7 @@ PAGE_SELECT_PAGE = """
   <p>We found {{ pages|length }} Facebook page{{ 's' if pages|length > 1 else '' }}. Select the page for <strong>{{ business }}</strong>.</p>
   {% if pages|length > 1 %}
   <div style="background:#FFF7ED;border:1.5px solid #FED7AA;border-radius:10px;padding:12px 14px;margin-bottom:16px;text-align:left;font-size:13px;color:#92400E">
-    ⚠️ You manage multiple pages — make sure you select the correct one for <strong>{{ business }}</strong>.
+    ⚠️ You manage multiple pages — choose the one that posst.app will post to for <strong>{{ business }}</strong>.
   </div>
   {% endif %}
   {% for page in pages %}
