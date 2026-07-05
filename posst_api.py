@@ -277,6 +277,58 @@ def ok(data=None, **kwargs):
 def err(message, code=400):
     return jsonify({'status': 'error', 'message': message}), code
 
+# ── INPUT SANITIZATION (Form Security Hardening, Jul 5 2026) ─
+import html as _html
+
+# Field-level max lengths — server-side enforcement
+_FIELD_LIMITS = {
+    'business_name': 200, 'business_city': 200, 'business_suburb': 200,
+    'business_country': 200, 'business_desc': 3000, 'business_description': 3000,
+    'contact_email': 254, 'business_type': 200, 'fb_page_name': 200,
+    'facebook_page_url': 500, 'ig_handle': 200, 'ig_url': 500,
+    'gbp_name': 200, 'brand_keywords': 500, 'business_phone': 30,
+    'phone': 30, 'email': 254, 'google_drive_url': 500,
+    'caption_cta_email': 254, 'caption_cta_phone': 30,
+}
+
+def _sanitize(value, maxlen=1000):
+    """Escape HTML entities and truncate. Safe for all string fields."""
+    if not isinstance(value, str):
+        return value
+    return _html.escape(value.strip(), quote=True)[:maxlen]
+
+def _sanitize_dict(d, fields=None):
+    """Sanitize all string values in a dict, respecting per-field max lengths."""
+    if not isinstance(d, dict):
+        return d
+    out = {}
+    for k, v in d.items():
+        if isinstance(v, str):
+            maxlen = _FIELD_LIMITS.get(k, 1000)
+            if fields is None or k in fields:
+                out[k] = _sanitize(v, maxlen)
+            else:
+                out[k] = v
+        else:
+            out[k] = v
+    return out
+
+# ── CORS ALLOWLIST (Form Security Hardening, Jul 5 2026) ─────
+_CORS_ALLOWED_ORIGINS = [
+    'https://posst.app',
+    'https://www.posst.app',
+    'https://onboarding.posst.app',
+    'https://connect.posst.app',
+]
+
+def _cors_origin():
+    """Return the Origin header if it's in the allowlist, else empty string."""
+    origin = request.headers.get('Origin', '')
+    # Allow localhost in dev
+    if origin.startswith('http://localhost:') or origin.startswith('http://127.0.0.1:'):
+        return origin
+    return origin if origin in _CORS_ALLOWED_ORIGINS else ''
+
 # ── HEALTH ────────────────────────────────────────────────────
 @app.route('/health')
 def health():
@@ -287,6 +339,12 @@ def health():
 def create_client_record():
     """Create new client — called from onboarding form submit."""
     d = request.json or {}
+    # Rate limit: 10 client creations per IP per hour
+    client_ip = request.headers.get('X-Real-IP', request.remote_addr or 'unknown')
+    if not _check_rate('create_client_ip_' + str(client_ip), 10):
+        return err('Too many requests. Please try again later.', 429)
+    # Sanitize all string inputs before storage
+    d = _sanitize_dict(d)
     client_id = generate_client_id()
     pending_token = generate_token()
 
@@ -580,7 +638,7 @@ def resume_client(client_id):
 @app.route('/api/portal_lookup', methods=['POST'])
 def portal_lookup():
     d = request.json or {}
-    phone_raw = d.get('phone', '').strip()
+    phone_raw = _sanitize(d.get('phone', ''), 30)
     if not phone_raw:
         return err('Phone required')
     # Normalize — remove all spaces for comparison
@@ -741,9 +799,15 @@ def get_token_received_clients():
 @app.route('/api/prospect', methods=['POST'])
 def create_prospect():
     d = request.json or {}
-    phone = d.get('phone', '')
+    phone = _sanitize(d.get('phone', ''), 30)
     if not phone:
         return err('Phone required')
+    # Rate limit: 10 prospect creations per IP per hour
+    client_ip = request.headers.get('X-Real-IP', request.remote_addr or 'unknown')
+    if not _check_rate('create_prospect_ip_' + str(client_ip), 10):
+        return err('Too many requests. Please try again later.', 429)
+    # Sanitize all string inputs
+    d = _sanitize_dict(d)
     log.info(f'create_prospect: incoming payload for phone={phone}: {d}')
     existing = sb.table('prospects').select('*').eq('phone', phone).execute()
     # Only ever update a row that is still an active, incomplete draft.
@@ -828,9 +892,14 @@ def create_prospect():
 @app.route('/api/prospect/progress', methods=['POST'])
 def save_progress():
     d = request.json or {}
-    phone = d.get('phone', '')
+    phone = _sanitize(d.get('phone', ''), 30)
     if not phone:
         return err('Phone required')
+    # Sanitize the nested form object if present
+    form = d.get('form', {})
+    if isinstance(form, dict):
+        form = _sanitize_dict(form)
+        d['form'] = form
     log.info(f'save_progress: incoming for phone={phone}, step={d.get("step")}, form.business_name={(d.get("form") or {}).get("business_name")}, form.business_city={(d.get("form") or {}).get("business_city")}')
     state = json.dumps({'step': d.get('step', 0), 'form': d.get('form', {}), 'saved_at': datetime.now().isoformat()})
     existing = sb.table('prospects').select('*').eq('phone', phone).execute()
@@ -1659,7 +1728,9 @@ def chat():
     if not _check_rate('chat_ip_' + str(client_ip), MAX_CHAT_PER_IP):
         return jsonify({'status': 'error', 'message': 'Too many messages. Please try again later.'}), 429
     # Cap history to last 20 messages to control cost/payload size
-    messages = messages[-20:]
+    # Cap each message content to 2000 chars to prevent abuse
+    messages = [{'role': m.get('role', 'user'), 'content': (m.get('content') or '')[:2000]}
+                for m in messages[-20:] if isinstance(m, dict)]
     import urllib.request as _ur
     payload = json.dumps({
         'model': 'claude-sonnet-4-6',
