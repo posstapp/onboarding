@@ -1783,6 +1783,18 @@ detectCountry();
 // ── Read bridge data from URL params (passed from posst.app landing page) ──
 (function() {
   var params = new URLSearchParams(window.location.search);
+  // Fresh page load (no mode, no resume, no bridge data params) — clear
+  // ALL posst_ sessionStorage to prevent stale data from a previous session.
+  // Without this, bridge/Google score data from a DIFFERENT business search
+  // persists in the browser tab and leaks onto the bridge screen — a privacy
+  // issue where the user sees another business's score they never shared.
+  // Safe because server-side loadProgress restores legitimate form data after OTP.
+  var isFreshLoad = !params.get('mode') && !params.get('resume') && !params.get('bn');
+  if (isFreshLoad) {
+    Object.keys(sessionStorage).forEach(function(k) {
+      if (k.startsWith('posst_')) sessionStorage.removeItem(k);
+    });
+  }
   // If mode=login, show sign-in screen directly
   if (params.get('mode') === 'login') {
     sessionStorage.setItem('posst_login_mode', '1');
