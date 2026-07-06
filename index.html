@@ -271,11 +271,31 @@ function callAppsScript(action, data) {
 }
 
 function proxyPost(path, data) {
+  // Sanitize all string values before sending (Form Security Hardening, Jul 5 2026)
+  data = _sanitizeObj(data || {});
   return fetch(PROXY_URL + '/' + path, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(data || {})
+    body: JSON.stringify(data)
   }).then(function(r) { return r.json(); }).catch(function(e) { console.warn('Proxy error:', e); return {}; });
+}
+
+// ── INPUT SANITIZATION (Form Security Hardening, Jul 5 2026) ──
+function _sanitizeStr(s) {
+  if (typeof s !== 'string') return s;
+  return s.trim().replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function _sanitizeObj(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  var out = Array.isArray(obj) ? [] : {};
+  for (var k in obj) {
+    if (!obj.hasOwnProperty(k)) continue;
+    var v = obj[k];
+    if (typeof v === 'string') out[k] = _sanitizeStr(v);
+    else if (typeof v === 'object' && v !== null) out[k] = _sanitizeObj(v);
+    else out[k] = v;
+  }
+  return out;
 }
 
 function proxyGet(path, params) {
@@ -837,8 +857,10 @@ async function submitForm() {
     posting_days: postingDaysObj, posting_time: F.posting_time, tier: F.tier,
     google_drive_url: F.google_drive_url, drive_categories: F.drive_categories, google_drive_intent: F.google_drive_intent,
   };
+  // Sanitize before submission (Form Security Hardening, Jul 5 2026)
+  const sanitizedPayload = _sanitizeObj(payload);
   try {
-    const resp = await fetch(PROXY_URL + '/client', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    const resp = await fetch(PROXY_URL + '/client', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(sanitizedPayload) });
     let result;
     try { result = await resp.json(); } catch(jsonErr) {
       throw new Error('Server returned invalid response (HTTP ' + resp.status + ')');
@@ -917,7 +939,7 @@ function renderStep0() {
           <select class="form-input form-select phone-code" onchange="F.phone_code=this.value">
             ${COUNTRY_CODES.map(c=>`<option value="${c.d}" ${F.phone_code===c.d?'selected':''}>${c.d} ${c.n}</option>`).join('')}
           </select>
-          <input class="form-input phone-num ${errors.phone?'err':''}" value="${esc(F.phone_number)}" placeholder="412 345 678" type="tel" oninput="F.phone_number=this.value" ${isLoginMode ? 'autofocus' : ''}>
+          <input class="form-input phone-num ${errors.phone?'err':''}" value="${esc(F.phone_number)}" placeholder="412 345 678" type="tel" maxlength="20" oninput="F.phone_number=this.value" ${isLoginMode ? 'autofocus' : ''}>
         </div>
         ${errors.phone?`<div class="form-error">${errors.phone}</div>`:''}
         <div class="form-hint">We&#39;ll send a 6-digit code to verify your number.</div>
@@ -1150,12 +1172,12 @@ function renderStep1() {
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Business name *${tip('business_name')}</label>
-        <input class="form-input ${errors.business_name?'err':''}" value="${esc(F.business_name)}" placeholder="Joe&#39;s Bakery" oninput="F.business_name=this.value">
+        <input class="form-input ${errors.business_name?'err':''}" value="${esc(F.business_name)}" placeholder="Joe&#39;s Bakery" maxlength="200" oninput="F.business_name=this.value">
         ${errors.business_name?`<div class="form-error">${errors.business_name}</div>`:''}
       </div>
       <div class="form-group">
         <label class="form-label">Contact email *${tip('contact_email')}</label>
-        <input class="form-input ${errors.contact_email?'err':''}" value="${esc(F.contact_email)}" placeholder="joe@joesbakery.com.au" type="email" oninput="F.contact_email=this.value">
+        <input class="form-input ${errors.contact_email?'err':''}" value="${esc(F.contact_email)}" placeholder="joe@joesbakery.com.au" type="email" maxlength="254" oninput="F.contact_email=this.value">
         ${errors.contact_email?`<div class="form-error">${errors.contact_email}</div>`:''}
       </div>
     </div>
@@ -1168,13 +1190,13 @@ function renderStep1() {
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">City *${tip('city')}</label>
-        <input class="form-input ${errors.business_city?'err':''}" id="city-input" value="${esc(F.business_city)}" placeholder="Start typing your city..." oninput="F.business_city=this.value">
+        <input class="form-input ${errors.business_city?'err':''}" id="city-input" value="${esc(F.business_city)}" placeholder="Start typing your city..." maxlength="200" oninput="F.business_city=this.value">
         ${errors.business_city?`<div class="form-error">${errors.business_city}</div>`:''}
         <div class="form-hint">Used for local SEO and content</div>
       </div>
       <div class="form-group">
         <label class="form-label">Suburb *${tip('suburb')}</label>
-        <input class="form-input ${errors.business_suburb?'err':''}" id="suburb-input" value="${esc(F.business_suburb)}" placeholder="Start typing your suburb..." oninput="F.business_suburb=this.value">
+        <input class="form-input ${errors.business_suburb?'err':''}" id="suburb-input" value="${esc(F.business_suburb)}" placeholder="Start typing your suburb..." maxlength="200" oninput="F.business_suburb=this.value">
         ${errors.business_suburb?`<div class="form-error">${errors.business_suburb}</div>`:''}
         <div class="form-hint">Used in post captions</div>
       </div>
@@ -1198,24 +1220,24 @@ function renderStep1() {
     </div>
     <div class="form-group">
       <label class="form-label">Describe your business *${tip('biz_description')}</label>
-      <textarea class="form-input ${errors.business_description?'err':''}" placeholder="What do you offer? Who are your customers? What makes you different?" oninput="F.business_description=this.value" style="min-height:120px">${esc(F.business_description)}</textarea>
+      <textarea class="form-input ${errors.business_description?'err':''}" placeholder="What do you offer? Who are your customers? What makes you different?" maxlength="3000" oninput="F.business_description=this.value" style="min-height:120px">${esc(F.business_description)}</textarea>
       ${errors.business_description?`<div class="form-error">${errors.business_description}</div>`:''}
       <div class="form-hint">This is used to write your captions and generate relevant images. Be specific.</div>
     </div>
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Brand keywords${tip('brand_keywords')} <span class="form-label-opt">optional</span></label>
-        <input class="form-input" value="${esc(F.brand_keywords)}" placeholder="warm, local, premium, trusted..." oninput="F.brand_keywords=this.value">
+        <input class="form-input" value="${esc(F.brand_keywords)}" placeholder="warm, local, premium, trusted..." maxlength="500" oninput="F.brand_keywords=this.value">
         <div class="form-hint">Words that describe your brand voice</div>
       </div>
       <div class="form-group">
         <label class="form-label">Email for post captions${tip('caption_email')} <span class="form-label-opt">optional</span></label>
-        <input class="form-input" value="${esc(F.caption_cta_email)}" placeholder="${esc(F.contact_email)||'bookings@yourbusiness.com'}" type="email" oninput="F.caption_cta_email=this.value">
+        <input class="form-input" value="${esc(F.caption_cta_email)}" placeholder="${esc(F.contact_email)||'bookings@yourbusiness.com'}" type="email" maxlength="254" oninput="F.caption_cta_email=this.value">
         <div class="form-hint">Booking or enquiry email shown in captions. Leave blank to use contact email above.</div>
       </div>
       <div class="form-group">
         <label class="form-label">Phone for post captions${tip('caption_phone')} <span class="form-label-opt">optional</span></label>
-        <input class="form-input" value="${esc(F.caption_cta_phone)}" placeholder="e.g. 0412 345 678" type="tel" oninput="F.caption_cta_phone=this.value">
+        <input class="form-input" value="${esc(F.caption_cta_phone)}" placeholder="e.g. 0412 345 678" type="tel" maxlength="30" oninput="F.caption_cta_phone=this.value">
         <div class="form-hint">Phone number shown in post captions. Leave blank to omit.</div>
       </div>
     </div>`;
@@ -1245,11 +1267,11 @@ function renderStep2() {
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Page name *</label>
-          <input class="form-input" value="${esc(F.facebook_page_name)}" placeholder="Joe&#39;s Bakery" oninput="F.facebook_page_name=this.value">
+          <input class="form-input" value="${esc(F.facebook_page_name)}" placeholder="Joe&#39;s Bakery" maxlength="200" oninput="F.facebook_page_name=this.value">
         </div>
         <div class="form-group">
           <label class="form-label">Page URL *${tip('fb_page_url')}</label>
-          <input class="form-input ${errors.facebook_page_url?'err':''}" value="${esc(F.facebook_page_url)}" placeholder="facebook.com/joesbakery" oninput="F.facebook_page_url=this.value">
+          <input class="form-input ${errors.facebook_page_url?'err':''}" value="${esc(F.facebook_page_url)}" placeholder="facebook.com/joesbakery" maxlength="500" oninput="F.facebook_page_url=this.value">
           ${errors.facebook_page_url?`<div class="form-error">${errors.facebook_page_url}</div>`:''}
         </div>
       </div>`:''}
@@ -1261,13 +1283,13 @@ function renderStep2() {
           <label class="form-label">Instagram handle *${tip('ig_handle')}</label>
           <div style="display:flex;align-items:center">
             <span style="padding:0 10px;height:44px;display:flex;align-items:center;background:#f7f4ef;border:1.5px solid ${errors.ig_handle?'#e53e3e':'var(--border)'};border-right:none;border-radius:8px 0 0 8px;font-size:15px;color:var(--ink-mid);font-weight:600">@</span>
-            <input class="form-input ${errors.ig_handle?'err':''}" style="border-radius:0 8px 8px 0;flex:1" value="${esc(F.ig_handle.replace(/^@/,''))}" placeholder="joesbakery" oninput="F.ig_handle=this.value.replace(/^@+/,'')">
+            <input class="form-input ${errors.ig_handle?'err':''}" style="border-radius:0 8px 8px 0;flex:1" value="${esc(F.ig_handle.replace(/^@/,''))}" placeholder="joesbakery" maxlength="200" oninput="F.ig_handle=this.value.replace(/^@+/,'')">
           </div>
           ${errors.ig_handle?`<div class="form-error">${errors.ig_handle}</div>`:''}
         </div>
         <div class="form-group">
           <label class="form-label">Profile URL *</label>
-          <input class="form-input" value="${esc(F.ig_url)}" placeholder="instagram.com/joesbakery" oninput="F.ig_url=this.value">
+          <input class="form-input" value="${esc(F.ig_url)}" placeholder="instagram.com/joesbakery" maxlength="500" oninput="F.ig_url=this.value">
         </div>
       </div>`:''}
     ${hasGBP()?`
@@ -1276,7 +1298,7 @@ function renderStep2() {
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">GBP listing name *${tip('gbp_name')}</label>
-          <input class="form-input ${errors.gbp_name?'err':''}" value="${esc(F.gbp_name)}" placeholder="Joe&#39;s Bakery Glen Waverley" oninput="F.gbp_name=this.value">
+          <input class="form-input ${errors.gbp_name?'err':''}" value="${esc(F.gbp_name)}" placeholder="Joe&#39;s Bakery Glen Waverley" maxlength="200" oninput="F.gbp_name=this.value">
           ${errors.gbp_name?`<div class="form-error">${errors.gbp_name}</div>`:''}
           <div class="form-hint">Exactly as it appears on Google Maps</div>
         </div>
@@ -1442,7 +1464,7 @@ function renderStep4GDrive() {
     const folderInput =
       '<div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">'+
       '<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px">Paste your main folder link' + tip('drive_url') + '</div>'+
-      '<input class="form-input '+(errors.google_drive_url?'err':'')+'" id="drive-url-input" value="'+esc(F.google_drive_url)+'" placeholder="https://drive.google.com/drive/folders/..." oninput="F.google_drive_url=this.value;driveValidated=false">'+
+      '<input class="form-input '+(errors.google_drive_url?'err':'')+'" id="drive-url-input" value="'+esc(F.google_drive_url)+'" placeholder="https://drive.google.com/drive/folders/..." maxlength="500" oninput="F.google_drive_url=this.value;driveValidated=false">'+
       (errors.google_drive_url?'<div class="form-error">'+errors.google_drive_url+'</div>':'')+
       '<div class="form-hint" style="margin-bottom:12px">Share the folder with <strong>posst-sheets-bot@posst-app.iam.gserviceaccount.com</strong> as Viewer first.</div>'+
       '<div style="display:flex;gap:10px;align-items:center">'+
