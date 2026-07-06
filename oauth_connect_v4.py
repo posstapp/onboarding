@@ -16,6 +16,8 @@ from cryptography.fernet import Fernet
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET', 'change-this-in-production')
+if app.secret_key == 'change-this-in-production':
+    logging.warning('[SECURITY] FLASK_SECRET env var not set — using insecure fallback. Set FLASK_SECRET in production.')
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -866,7 +868,7 @@ def health():
 def validate_drive():
     if request.method == 'OPTIONS':
         resp = app.make_response('')
-        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Access-Control-Allow-Origin'] = _allowed_origin() or 'https://posst.app'
         resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
         resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
         return resp
@@ -876,7 +878,7 @@ def validate_drive():
         if not drive_url:
             resp = app.make_response(json.dumps({'valid': False, 'error': 'No URL provided'}))
             resp.content_type = 'application/json'
-            resp.headers['Access-Control-Allow-Origin'] = '*'
+            resp.headers['Access-Control-Allow-Origin'] = _allowed_origin() or 'https://posst.app'
             return resp
 
         # Extract folder ID from URL
@@ -885,7 +887,7 @@ def validate_drive():
         if not match:
             resp = app.make_response(json.dumps({'valid': False, 'error': 'Invalid Google Drive folder URL'}))
             resp.content_type = 'application/json'
-            resp.headers['Access-Control-Allow-Origin'] = '*'
+            resp.headers['Access-Control-Allow-Origin'] = _allowed_origin() or 'https://posst.app'
             return resp
 
         folder_id = match.group(1)
@@ -900,7 +902,7 @@ def validate_drive():
             # No service account — return valid=True with empty structure (best effort)
             resp = app.make_response(json.dumps({'valid': True, 'structure': [], 'note': 'no_service_account'}))
             resp.content_type = 'application/json'
-            resp.headers['Access-Control-Allow-Origin'] = '*'
+            resp.headers['Access-Control-Allow-Origin'] = _allowed_origin() or 'https://posst.app'
             return resp
 
         creds = service_account.Credentials.from_service_account_file(
@@ -913,22 +915,31 @@ def validate_drive():
 
         resp = app.make_response(json.dumps({'valid': True, 'structure': folders}))
         resp.content_type = 'application/json'
-        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Access-Control-Allow-Origin'] = _allowed_origin() or 'https://posst.app'
         return resp
 
     except Exception as e:
         log.error(f'validate_drive error: {e}')
         resp = app.make_response(json.dumps({'valid': True, 'structure': [], 'error': str(e)}))
         resp.content_type = 'application/json'
-        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Access-Control-Allow-Origin'] = _allowed_origin() or 'https://posst.app'
         return resp
 
 # ── CORS PROXY ────────────────────────────────────────────────
 # Forwards browser calls to posst-api with proper CORS headers
 # Allows complete retirement of Apps Script for data operations
 
+_CORS_ALLOWED = ['https://posst.app', 'https://www.posst.app', 'https://onboarding.posst.app', 'https://connect.posst.app']
+
+def _allowed_origin():
+    origin = request.headers.get('Origin', '')
+    if origin.startswith('http://localhost:') or origin.startswith('http://127.0.0.1:'):
+        return origin
+    return origin if origin in _CORS_ALLOWED else ''
+
 def cors_headers(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
+    origin = _allowed_origin()
+    response.headers['Access-Control-Allow-Origin'] = origin if origin else 'https://posst.app'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PATCH, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
     return response
@@ -988,3 +999,4 @@ def stripe_webhook_proxy():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
+
