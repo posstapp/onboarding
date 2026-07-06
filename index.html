@@ -772,13 +772,21 @@ function validate() {
   return Object.keys(errors).length===0;
 }
 
+// Bridge screen should only show when real Google data exists.
+// Without data the screen displays meaningless placeholder scores.
+function _hasBridgeData() {
+  return !!(sessionStorage.getItem('posst_business_name'));
+}
+
 function next() {
   if(!validate()) { render(); window.scrollTo(0,0); return; }
   const isNewBiz = sessionStorage.getItem('posst_new_business_mode') === '1';
   const maxStep = isNewBiz ? 9 : 8;
   const driveStep = isNewBiz ? 6 : 5;
+  const bridgeStep = isNewBiz ? 2 : 1;
   if(step < maxStep) {
     step++;
+    if(step === bridgeStep && !_hasBridgeData()) step++;
     if(step === driveStep && !isPro()) step++;
     // Save progress after each step advance
     const phone = sessionStorage.getItem('posst_phone') || '';
@@ -791,9 +799,11 @@ function next() {
 function back() {
   const isNewBiz = sessionStorage.getItem('posst_new_business_mode') === '1';
   const driveStep = isNewBiz ? 6 : 5;
+  const bridgeStep = isNewBiz ? 2 : 1;
   if(step > 0) {
     step--;
     if(step === driveStep && !isPro()) step--;
+    if(step === bridgeStep && !_hasBridgeData()) step--;
     if(step < 0) { window.location.href='https://posst.app'; return; }
     render(); window.scrollTo(0,0);
   } else window.location.href='https://posst.app';
@@ -1189,16 +1199,16 @@ function renderStep1() {
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">City *${tip('city')}</label>
-        <input class="form-input ${errors.business_city?'err':''}" id="city-input" value="${esc(F.business_city)}" placeholder="Start typing your city..." maxlength="200" oninput="F.business_city=this.value">
-        ${errors.business_city?`<div class="form-error">${errors.business_city}</div>`:''}
-        <div class="form-hint">Used for local SEO and content</div>
-      </div>
-      <div class="form-group">
         <label class="form-label">Suburb *${tip('suburb')}</label>
         <input class="form-input ${errors.business_suburb?'err':''}" id="suburb-input" value="${esc(F.business_suburb)}" placeholder="Start typing your suburb..." maxlength="200" oninput="F.business_suburb=this.value">
         ${errors.business_suburb?`<div class="form-error">${errors.business_suburb}</div>`:''}
         <div class="form-hint">Used in post captions</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">City *${tip('city')}</label>
+        <input class="form-input ${errors.business_city?'err':''}" id="city-input" value="${esc(F.business_city)}" placeholder="Start typing your city..." maxlength="200" oninput="F.business_city=this.value">
+        ${errors.business_city?`<div class="form-error">${errors.business_city}</div>`:''}
+        <div class="form-hint">Used for local SEO and content</div>
       </div>
     </div>
     <div class="form-row">
