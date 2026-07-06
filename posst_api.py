@@ -418,6 +418,24 @@ def create_client_record():
         return err('Failed to create client')
 
     log.info(f'Client created: {client_id} — {d.get("business_name")}')
+
+    # Convert the prospect server-side so it never depends on a
+    # fire-and-forget frontend call. Without this, a network blip or
+    # closed tab leaves the prospect unconverted with stale form_state,
+    # which loadProgress then restores on the next visit — even if the
+    # client row was deleted in the meantime.
+    phone = d.get('business_phone', '')
+    if phone:
+        try:
+            sb.table('prospects').update({
+                'status': 'converted',
+                'converted_at': datetime.now().isoformat(),
+                'form_state': {}
+            }).eq('phone', phone).neq('status', 'converted').execute()
+            log.info(f'Prospect converted server-side for phone={phone}')
+        except Exception as e:
+            log.warning(f'Prospect conversion failed for phone={phone}: {e}')
+
     return ok(client_id=client_id, pending_token=pending_token)
 
 @app.route('/api/client/<client_id>', methods=['GET'])
@@ -959,8 +977,11 @@ def load_progress():
     result = sb.table('prospects').select('*').eq('phone', phone).execute()
     if not result.data:
         return jsonify({'success': False, 'error': 'no saved progress'})
-    row = result.data[0]
-    if row.get('status') == 'converted':
+    # Use the same active_row pattern as create_prospect and save_progress.
+    # Taking result.data[0] blindly could pick a converted row or the wrong
+    # row entirely when multiple prospect rows exist for the same phone.
+    row = next((r for r in result.data if r.get('status') != 'converted'), None)
+    if not row:
         return jsonify({'success': False, 'error': 'already converted'})
     form_state = row.get('form_state', {})
     if isinstance(form_state, str):
