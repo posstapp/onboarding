@@ -34,7 +34,9 @@ log = logging.getLogger(__name__)
 # ── CONFIG ────────────────────────────────────────────────────
 SUPABASE_URL     = os.environ.get('SUPABASE_URL', 'https://itlndeorkphlorvcohaw.supabase.co')
 SUPABASE_KEY     = os.environ.get('SUPABASE_SERVICE_KEY', '')
-API_SECRET       = os.environ.get('POSST_API_SECRET', 'posst-api-secret-2026')
+API_SECRET       = os.environ.get('POSST_API_SECRET', '')
+if not API_SECRET:
+    raise RuntimeError('[SECURITY] POSST_API_SECRET env var is not set. Refusing to start with no API key.')
 
 sb: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -239,7 +241,9 @@ _sanity_check_style_mapping()
 def require_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        auth = request.headers.get('X-API-Key') or request.json.get('api_key', '') if request.json else ''
+        # D1-3 Security: only accept API key from header, never from request body.
+        # Body fallback allowed trivial auth bypass via JSON payload.
+        auth = request.headers.get('X-API-Key', '')
         if auth != API_SECRET:
             return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
         return f(*args, **kwargs)
@@ -438,12 +442,32 @@ def create_client_record():
 
     return ok(client_id=client_id, pending_token=pending_token)
 
+# D1-5 Security: strip sensitive fields from client data for non-internal callers.
+# Internal callers (n8n, OAuth server) pass X-API-Key header + ?full=1 to get all fields.
+_SENSITIVE_FIELDS = {
+    'meta_token', 'meta_user_token', 'meta_token_expiry',
+    'stripe_customer_id', 'stripe_subscription_id', 'stripe_currency',
+    'gbp_refresh_token', 'pending_token',
+}
+
+def _safe_client(row):
+    """Return client data with sensitive fields stripped."""
+    if not row:
+        return row
+    return {k: v for k, v in row.items() if k not in _SENSITIVE_FIELDS}
+
+def _is_internal():
+    """Check if caller authenticated via X-API-Key and requesting full data."""
+    return request.headers.get('X-API-Key', '') == API_SECRET and request.args.get('full') == '1'
+
 @app.route('/api/client/<client_id>', methods=['GET'])
 def get_client(client_id):
     result = sb.table('clients').select('*').eq('client_id', client_id).single().execute()
     if not result.data:
         return err('Client not found', 404)
-    return ok(result.data)
+    if _is_internal():
+        return ok(result.data)
+    return ok(_safe_client(result.data))
 
 @app.route('/api/client/<client_id>/status', methods=['PATCH'])
 def update_client_status(client_id):
@@ -768,11 +792,14 @@ def portal_lookup():
     # since prospects and clients are different tables and this endpoint only
     # ever looked at clients. Surfaced as 'draft_prospect' so the switcher can
     # show it as a resumable entry rather than it silently disappearing.
+    # D1-5 / Scalability: filter prospects by phone in the DB query instead of
+    # loading the entire prospects table into memory. At 100+ prospects the full
+    # table scan was already slow and leaked all prospect data into server RAM.
     draft_prospect = None
-    prospect_res = sb.table('prospects').select('*').execute()
+    prospect_res = sb.table('prospects').select('id,phone,business_name,last_step_reached,status') \
+        .eq('phone', phone).neq('status', 'converted').execute()
     for prow in (prospect_res.data or []):
-        stored_phone = (prow.get('phone') or '').replace(' ', '').lstrip("'")
-        if stored_phone == phone and prow.get('status') != 'converted' and prow.get('business_name'):
+        if prow.get('business_name'):
             draft_prospect = {
                 'business_name':      prow.get('business_name', ''),
                 'last_step_reached':  prow.get('last_step_reached', ''),
