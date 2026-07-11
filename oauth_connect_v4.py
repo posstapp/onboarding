@@ -15,12 +15,41 @@ from flask import Flask, request, redirect, session, render_template_string, jso
 from cryptography.fernet import Fernet
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('FLASK_SECRET', 'change-this-in-production')
-if app.secret_key == 'change-this-in-production':
-    logging.warning('[SECURITY] FLASK_SECRET env var not set — using insecure fallback. Set FLASK_SECRET in production.')
+app.secret_key = os.environ.get('FLASK_SECRET', '')
+if not app.secret_key:
+    raise RuntimeError('[SECURITY] FLASK_SECRET env var is not set. Refusing to start.')
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
+
+# D1-6 Security: Server-side token store for OAuth flow.
+# Meta long-lived tokens were previously stored in Flask's signed cookie (client-side).
+# Anyone with the cookie value and FLASK_SECRET could read the Meta token.
+# Now tokens are stored server-side, keyed by session ID. The cookie only holds
+# a reference key. Tokens auto-expire after 30 minutes (OAuth flow is <5 min).
+import time as _time
+_token_store = {}  # key → {'ll_token': str, 'll_expiry': str, 'created': float}
+_TOKEN_TTL = 1800  # 30 minutes
+
+def _store_token(key, ll_token, ll_expiry):
+    """Store a Meta token server-side, keyed by session reference."""
+    _token_store[key] = {'ll_token': ll_token, 'll_expiry': ll_expiry, 'created': _time.time()}
+    # Cleanup expired entries (same pattern as rate limiting)
+    now = _time.time()
+    expired = [k for k, v in _token_store.items() if now - v['created'] > _TOKEN_TTL]
+    for k in expired:
+        del _token_store[k]
+
+def _get_token(key):
+    """Retrieve a stored token. Returns (ll_token, ll_expiry) or ('', '')."""
+    entry = _token_store.get(key)
+    if entry and _time.time() - entry['created'] < _TOKEN_TTL:
+        return entry['ll_token'], entry['ll_expiry']
+    return '', ''
+
+def _clear_token(key):
+    """Remove a token after use."""
+    _token_store.pop(key, None)
 
 META_APP_ID          = os.environ.get('META_APP_ID', '')
 META_APP_SECRET      = os.environ.get('META_APP_SECRET', '')
@@ -35,9 +64,15 @@ cipher               = Fernet(ENCRYPT_KEY.encode()) if ENCRYPT_KEY else None
 API_BASE        = 'http://127.0.0.1:5680'
 POSST_API_SECRET = os.environ.get('POSST_API_SECRET', 'posst-api-secret-2026')
 
+# D1-5: Internal API calls now pass X-API-Key header so they can request
+# full client data (including tokens) via ?full=1. Without this, the
+# _safe_client filter in posst_api.py would strip meta_token and
+# meta_user_token from token refresh/recover operations.
+_INTERNAL_HEADERS = {'X-API-Key': POSST_API_SECRET}
+
 def api_get(path):
     try:
-        r = requests.get(f'{API_BASE}{path}', timeout=10)
+        r = requests.get(f'{API_BASE}{path}', headers=_INTERNAL_HEADERS, timeout=10)
         return r.json()
     except Exception as e:
         log.error(f'API GET {path} error: {e}')
@@ -45,7 +80,7 @@ def api_get(path):
 
 def api_post(path, data):
     try:
-        r = requests.post(f'{API_BASE}{path}', json=data, timeout=10)
+        r = requests.post(f'{API_BASE}{path}', json=data, headers=_INTERNAL_HEADERS, timeout=10)
         return r.json()
     except Exception as e:
         log.error(f'API POST {path} error: {e}')
@@ -53,14 +88,15 @@ def api_post(path, data):
 
 def api_patch(path, data):
     try:
-        r = requests.patch(f'{API_BASE}{path}', json=data, timeout=10)
+        r = requests.patch(f'{API_BASE}{path}', json=data, headers=_INTERNAL_HEADERS, timeout=10)
         return r.json()
     except Exception as e:
         log.error(f'API PATCH {path} error: {e}')
         return None
 
 def get_client(client_id):
-    result = api_get(f'/api/client/{client_id}')
+    # ?full=1 requests unfiltered data — needed for token operations
+    result = api_get(f'/api/client/{client_id}?full=1')
     if result and result.get('status') == 'success':
         return result.get('data')
     return None
@@ -487,9 +523,12 @@ def meta_callback():
     if not pages_data:
         return '<p>No Facebook pages found. Make sure you have a business page and try again.</p>', 400
 
-    session['ll_token']  = ll_token
-    session['ll_expiry'] = ll_expiry.strftime('%d/%m/%Y')
-    session['client_id'] = client_id
+    # D1-6: Store token server-side, NOT in cookie. Cookie only holds a reference key.
+    import secrets as _secrets
+    token_ref = _secrets.token_hex(16)
+    _store_token(token_ref, ll_token, ll_expiry.strftime('%d/%m/%Y'))
+    session['_token_ref'] = token_ref
+    session['client_id']  = client_id
 
     page_list = []
     for p in pages_data:
@@ -512,8 +551,12 @@ def meta_page_select():
     ig_biz_id   = request.form.get('ig_biz_id', '')
     ig_username = request.form.get('ig_username', '')
     client_id   = session.get('client_id', '')
-    ll_token    = session.get('ll_token', '')
-    ll_expiry   = session.get('ll_expiry', '')
+    # D1-6: Read token from server-side store, not cookie
+    token_ref   = session.get('_token_ref', '')
+    ll_token, ll_expiry = _get_token(token_ref) if token_ref else ('', '')
+    if not ll_token:
+        return '<p>Session expired. Please <a href="/connect?client_id=' + client_id + '">start again</a>.</p>', 400
+    _clear_token(token_ref)  # One-time use — clean up after page selection
     return save_meta_page(client_id, page_id, page_name, ig_biz_id, ig_username, ll_token, ll_expiry)
 
 
@@ -946,10 +989,54 @@ def cors_headers(response):
 
 AUTH_HEADERS = {'X-API-Key': POSST_API_SECRET}
 
+# D1-2 Security: Only proxy the specific paths the frontend (onboarding + portal)
+# actually calls. Previously the proxy forwarded ANY path — including /clients/active
+# (all client data), /client/<id> (full row with encrypted tokens), and every admin
+# endpoint. An attacker could simply call /proxy/clients/active from their browser
+# and enumerate every client's data.
+import re as _proxy_re
+
+# Exact-match paths (no dynamic segments)
+_PROXY_EXACT = {
+    'portal_lookup', 'prospect', 'prospect/progress', 'prospect/convert',
+    'search_volume', 'otp/send', 'otp/verify', 'client', 'chat',
+    'stripe/checkout', 'stripe/coupon', 'stripe/portal',
+    'email/reengagement', 'email/upgrade',
+}
+
+# Pattern-match paths (client_id dynamic segment)
+# Each pattern is (compiled_regex, allowed_methods)
+_PROXY_PATTERNS = [
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/schedule$'),       {'PATCH'}),
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/themes$'),         {'PATCH'}),
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/drive$'),          {'PATCH'}),
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/plan$'),           {'PATCH'}),
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/pending_token$'),  {'GET', 'POST'}),
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/cancel$'),         {'POST'}),
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/pause$'),          {'POST'}),
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/resume$'),         {'POST'}),
+]
+
+def _proxy_allowed(path, method):
+    """Return True if this path+method is in the frontend allowlist."""
+    if path in _PROXY_EXACT:
+        return True
+    for pattern, methods in _PROXY_PATTERNS:
+        if pattern.match(path) and method in methods:
+            return True
+    return False
+
 @app.route('/proxy/<path:path>', methods=['GET', 'POST', 'PATCH', 'OPTIONS'])
 def proxy(path):
     if request.method == 'OPTIONS':
         return cors_headers(app.make_response(''))
+
+    if not _proxy_allowed(path, request.method):
+        log.warning(f'[PROXY BLOCKED] {request.method} /proxy/{path} from {request.headers.get("Origin", "unknown")}')
+        response = app.make_response(json.dumps({'status': 'error', 'message': 'Not allowed'}))
+        response.status_code = 403
+        response.content_type = 'application/json'
+        return cors_headers(response)
 
     try:
         method = request.method
@@ -973,7 +1060,7 @@ def proxy(path):
 
     except Exception as e:
         log.error(f'Proxy error for {path}: {e}')
-        response = app.make_response(json.dumps({'status': 'error', 'message': str(e)}))
+        response = app.make_response(json.dumps({'status': 'error', 'message': 'Internal error'}))
         response.status_code = 500
         response.content_type = 'application/json'
         return cors_headers(response)
