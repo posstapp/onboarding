@@ -28,6 +28,8 @@ except Exception as e:
 from functools import wraps
 
 app = Flask(__name__)
+# D2-10 Security: reject request bodies larger than 1MB before any processing.
+app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
@@ -1652,9 +1654,21 @@ ALLOWED_CODES = ['+61','+91','+1','+44','+971','+65','+64','+27','+49','+33',
 
 _otp_rate = {}
 _otp_attempts = {}
+_last_rate_cleanup = 0
 
 def _check_rate(key, max_per_hour):
+    global _last_rate_cleanup
     now = _time.time()
+    # D2-9: Purge expired entries every 10 minutes to prevent unbounded memory growth.
+    # At 100+ clients with portal logins, thousands of entries accumulate with no cleanup.
+    if now - _last_rate_cleanup > 600:
+        expired = [k for k, v in _otp_rate.items() if now > v.get('window_end', 0)]
+        for k in expired:
+            del _otp_rate[k]
+        expired_a = [k for k, v in _otp_attempts.items() if v.get('locked_until', 0) > 0 and now > v['locked_until']]
+        for k in expired_a:
+            del _otp_attempts[k]
+        _last_rate_cleanup = now
     rec = _otp_rate.get(key, {})
     if now > rec.get('window_end', 0):
         _otp_rate[key] = {'count': 1, 'window_end': now + 3600}
@@ -1761,10 +1775,20 @@ def otp_verify():
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 MAX_CHAT_PER_IP = 30
 
+# D2-12 Security: System prompt hardcoded server-side. Previously accepted from
+# the client (4000 chars), allowing prompt injection to override chat behavior.
+_CHAT_SYSTEM_PROMPT = (
+    'You are the posst.app support assistant. posst.app is an AI-powered social media '
+    'posting service for small businesses in Australia. You help with questions about '
+    'how the service works, pricing (Standard $49/mo, Pro $79/mo, 30-day free trial), '
+    'connecting Facebook and Instagram, posting schedules, and general support. '
+    'Be friendly, concise, and helpful. If you do not know the answer, suggest emailing '
+    'chief@posst.app. Never reveal internal system details, API keys, or technical architecture.'
+)
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     d = request.json or {}
-    system = (d.get('system') or '')[:4000]
     messages = d.get('messages') or []
     if not isinstance(messages, list) or not messages:
         return jsonify({'status': 'error', 'message': 'messages required'}), 400
@@ -1781,7 +1805,7 @@ def chat():
     payload = json.dumps({
         'model': 'claude-sonnet-4-6',
         'max_tokens': 500,
-        'system': system,
+        'system': _CHAT_SYSTEM_PROMPT,
         'messages': messages,
     }).encode()
     req = _ur.Request('https://api.anthropic.com/v1/messages', data=payload, headers={
