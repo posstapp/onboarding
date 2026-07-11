@@ -987,6 +987,25 @@ def cors_headers(response):
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
     return response
 
+# D2-11 Security: Add CSP and security headers to all responses from the OAuth server.
+# Prevents XSS on the /connect pages (which render user-supplied business names).
+@app.after_request
+def add_security_headers(response):
+    if 'text/html' in response.content_type:
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src https://fonts.gstatic.com; "
+            "img-src 'self' https://posst.app data:; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none';"
+        )
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
+
 AUTH_HEADERS = {'X-API-Key': POSST_API_SECRET}
 
 # D1-2 Security: Only proxy the specific paths the frontend (onboarding + portal)
