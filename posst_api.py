@@ -340,6 +340,7 @@ def health():
 
 # ── CLIENT CRUD ───────────────────────────────────────────────
 @app.route('/api/client', methods=['POST'])
+@require_auth
 def create_client_record():
     """Create new client — called from onboarding form submit."""
     d = request.json or {}
@@ -463,6 +464,7 @@ def _is_internal():
     return request.headers.get('X-API-Key', '') == API_SECRET and request.args.get('full') == '1'
 
 @app.route('/api/client/<client_id>', methods=['GET'])
+@require_auth
 def get_client(client_id):
     result = sb.table('clients').select('*').eq('client_id', client_id).single().execute()
     if not result.data:
@@ -472,6 +474,7 @@ def get_client(client_id):
     return ok(_safe_client(result.data))
 
 @app.route('/api/client/<client_id>/status', methods=['PATCH'])
+@require_auth
 def update_client_status(client_id):
     d = request.json or {}
     new_status = d.get('status')
@@ -487,6 +490,7 @@ def update_client_status(client_id):
     return ok()
 
 @app.route('/api/client/<client_id>/schedule', methods=['PATCH'])
+@require_auth
 def update_schedule(client_id):
     d = request.json or {}
     update = {}
@@ -510,6 +514,7 @@ def update_schedule(client_id):
     return ok()
 
 @app.route('/api/client/<client_id>/plan', methods=['PATCH'])
+@require_auth
 def update_plan(client_id):
     d = request.json or {}
     new_plan = d.get('plan', 'Pro')
@@ -549,6 +554,7 @@ def update_plan(client_id):
     return ok()
 
 @app.route('/api/client/<client_id>/drive', methods=['PATCH'])
+@require_auth
 def update_drive(client_id):
     d = request.json or {}
     update = {
@@ -561,6 +567,7 @@ def update_drive(client_id):
     return ok()
 
 @app.route('/api/client/<client_id>/token', methods=['PATCH'])
+@require_auth
 def update_token(client_id):
     d = request.json or {}
     update = {}
@@ -597,6 +604,7 @@ def update_token(client_id):
     return ok()
 
 @app.route('/api/client/<client_id>/themes', methods=['PATCH'])
+@require_auth
 def update_themes(client_id):
     d = request.json or {}
     result = sb.table('clients').select('notes').eq('client_id', client_id).single().execute()
@@ -609,6 +617,7 @@ def update_themes(client_id):
     return ok()
 
 @app.route('/api/client/<client_id>/cancel', methods=['POST'])
+@require_auth
 def cancel_client(client_id):
     # Cancel the actual Stripe subscription, not just the Supabase status —
     # same root-cause pattern as the plan/price drift bug (see /plan endpoint).
@@ -635,6 +644,7 @@ def cancel_client(client_id):
     return ok()
 
 @app.route('/api/client/<client_id>/pause', methods=['POST'])
+@require_auth
 def pause_client(client_id):
     # Pause billing via Stripe's native pause_collection (keeps the subscription
     # intact and resumable — distinct from cancel, which deletes it outright).
@@ -656,6 +666,7 @@ def pause_client(client_id):
     return ok()
 
 @app.route('/api/client/<client_id>/resume', methods=['POST'])
+@require_auth
 def resume_client(client_id):
     # Resumes billing for a paused client — clears pause_collection on Stripe
     # and restores Active status. No UI button yet (manual/portal use for now).
@@ -678,6 +689,7 @@ def resume_client(client_id):
 
 # ── PORTAL LOOKUP ─────────────────────────────────────────────
 @app.route('/api/portal_lookup', methods=['POST'])
+@require_auth
 def portal_lookup():
     d = request.json or {}
     phone_raw = _sanitize(d.get('phone', ''), 30)
@@ -817,6 +829,7 @@ def portal_lookup():
 
 # ── PENDING TOKEN ─────────────────────────────────────────────
 @app.route('/api/client/<client_id>/pending_token', methods=['GET'])
+@require_auth
 def get_pending_token(client_id):
     result = sb.table('clients').select('pending_token').eq('client_id', client_id).single().execute()
     if not result.data:
@@ -824,6 +837,7 @@ def get_pending_token(client_id):
     return ok(token=result.data.get('pending_token', ''))
 
 @app.route('/api/client/<client_id>/pending_token', methods=['POST'])
+@require_auth
 def generate_pending_token(client_id):
     token = generate_token()
     sb.table('clients').update({'pending_token': token}).eq('client_id', client_id).execute()
@@ -831,17 +845,20 @@ def generate_pending_token(client_id):
 
 # ── ACTIVE CLIENTS FOR POSTING ────────────────────────────────
 @app.route('/api/clients/active', methods=['GET'])
+@require_auth
 def get_active_clients():
     result = sb.table('clients').select('*').eq('status', 'Active').execute()
     return ok(result.data, count=len(result.data))
 
 @app.route('/api/clients/token_received', methods=['GET'])
+@require_auth
 def get_token_received_clients():
     result = sb.table('clients').select('*').eq('status', 'Token_Received').execute()
     return ok(result.data, count=len(result.data))
 
 # ── PROSPECTS ─────────────────────────────────────────────────
 @app.route('/api/prospect', methods=['POST'])
+@require_auth
 def create_prospect():
     d = request.json or {}
     phone = _sanitize(d.get('phone', ''), 30)
@@ -935,6 +952,7 @@ def create_prospect():
     return ok(action='created')
 
 @app.route('/api/prospect/progress', methods=['POST'])
+@require_auth
 def save_progress():
     d = request.json or {}
     phone = _sanitize(d.get('phone', ''), 30)
@@ -999,6 +1017,7 @@ def save_progress():
     return ok(action='saved')
 
 @app.route('/api/prospect/progress', methods=['GET'])
+@require_auth
 def load_progress():
     phone = request.args.get('phone', '').strip()
     if not phone:
@@ -1021,6 +1040,7 @@ def load_progress():
     return jsonify({'success': True, 'step': form_state.get('step', 0), 'form': form_state.get('form', {}), 'saved_at': form_state.get('saved_at', ''), 'business_name': row.get('business_name', '')})
 
 @app.route('/api/prospect/convert', methods=['POST'])
+@require_auth
 def convert_prospect():
     d = request.json or {}
     phone = d.get('phone', '')
@@ -1092,6 +1112,7 @@ def _resolve_style_row(style_id):
 
 
 @app.route('/api/style/select', methods=['POST'])
+@require_auth
 def style_select():
     """
     Pick an image style for the next post.
@@ -1146,6 +1167,7 @@ def style_select():
 
 # ── POSTS LOG ─────────────────────────────────────────────────
 @app.route('/api/posts_log', methods=['POST'])
+@require_auth
 def log_post():
     d = request.json or {}
     fb_status  = d.get('fb_status', '')
@@ -1181,6 +1203,7 @@ def log_post():
 
 
 @app.route('/api/posts_log/update', methods=['POST'])
+@require_auth
 def update_post_log():
     """
     Update an existing posts_log row after a same-day retry.
@@ -1218,6 +1241,7 @@ def update_post_log():
 
 # Returns the most recent posts_log row per active client — used by health check
 @app.route('/api/posts_log/recent', methods=['GET'])
+@require_auth
 def get_recent_posts():
     # Get all active client IDs
     clients_res = sb.table('clients').select('client_id').eq('status', 'Active').execute()
@@ -1241,6 +1265,7 @@ def get_recent_posts():
 # Called by n8n immediately when a posting attempt fails.
 # Sends platform-aware customer email. Deduplicates via email_campaign_log.
 @app.route('/api/notify_error', methods=['POST'])
+@require_auth
 def notify_error():
     d = request.json or {}
     client_id = d.get('client_id', '')
@@ -1290,6 +1315,7 @@ def notify_error():
 
 # ── PROVISIONING LOG ──────────────────────────────────────────
 @app.route('/api/provisioning_log', methods=['POST'])
+@require_auth
 def log_provisioning():
     d = request.json or {}
     row = {
@@ -1306,11 +1332,13 @@ def log_provisioning():
 
 # ── GBP CLIENTS ───────────────────────────────────────────────
 @app.route('/api/gbp_clients', methods=['GET'])
+@require_auth
 def get_gbp_clients():
     result = sb.table('gbp_clients').select('*').eq('active', True).eq('gbp_enabled', True).execute()
     return ok(result.data, count=len(result.data))
 
 @app.route('/api/gbp_clients', methods=['POST'])
+@require_auth
 def add_gbp_client():
     d = request.json or {}
     # Check if already exists
@@ -1339,6 +1367,7 @@ def add_gbp_client():
 
 # ── REVIEW LOG ────────────────────────────────────────────────
 @app.route('/api/review_log', methods=['POST'])
+@require_auth
 def log_review():
     d = request.json or {}
     row = {
@@ -1362,6 +1391,7 @@ def log_review():
 
 
 @app.route('/api/email/upgrade', methods=['POST'])
+@require_auth
 def email_upgrade():
     d = request.json or {}
     client_id = d.get('client_id', '')
@@ -1381,6 +1411,7 @@ def email_upgrade():
     return ok()
 
 @app.route('/api/email/go_live', methods=['POST'])
+@require_auth
 def email_go_live():
     d = request.json or {}
     cid = d.get('client_id')
@@ -1393,6 +1424,7 @@ def email_go_live():
     return ok()
 
 @app.route('/api/email/cancel', methods=['POST'])
+@require_auth
 def email_cancel():
     d = request.json or {}
     cid = d.get('client_id')
@@ -1401,6 +1433,7 @@ def email_cancel():
     return ok()
 
 @app.route('/api/email/pause', methods=['POST'])
+@require_auth
 def email_pause():
     d = request.json or {}
     cid = d.get('client_id')
@@ -1409,6 +1442,7 @@ def email_pause():
     return ok()
 
 @app.route('/api/prospects/eligible', methods=['GET'])
+@require_auth
 def prospects_eligible():
     """Return prospects eligible for re-engagement.
     Rules:
@@ -1446,6 +1480,7 @@ def prospects_eligible():
 
 
 @app.route('/api/prospects/mark_reengaged', methods=['POST'])
+@require_auth
 def mark_reengaged():
     """Set re_engagement_sent_at = now on a prospect row."""
     try:
@@ -1464,6 +1499,7 @@ def mark_reengaged():
 
 
 @app.route('/api/email/reengagement', methods=['POST'])
+@require_auth
 def email_reengagement():
     d = request.json or {}
     if EMAIL_AVAILABLE:
@@ -1484,6 +1520,7 @@ def email_reengagement():
     return ok()
 
 @app.route('/api/email/alert', methods=['POST'])
+@require_auth
 def email_alert():
     d = request.json or {}
     if EMAIL_AVAILABLE:
@@ -1491,6 +1528,7 @@ def email_alert():
     return ok()
 
 @app.route('/api/health_check/dedup', methods=['POST'])
+@require_auth
 def health_check_dedup():
     """
     Called by n8n Health Check before sending an alert email.
@@ -1521,6 +1559,7 @@ def health_check_dedup():
         return ok(already_sent=False)
 
 @app.route('/api/email/campaigns', methods=['POST'])
+@require_auth
 def run_campaigns():
     from datetime import datetime
     today = datetime.utcnow().replace(hour=0,minute=0,second=0,microsecond=0)
@@ -1604,6 +1643,7 @@ def run_campaigns():
 # ── POST STATUS (called by n8n after each posting run) ────────
 # ── RECONNECT CONFIRMATION EMAIL ──────────────────────────────
 @app.route('/api/email/reconnect_confirmation', methods=['POST'])
+@require_auth
 def send_reconnect_email():
     d          = request.json or {}
     client_id  = d.get('client_id')
@@ -1725,6 +1765,7 @@ def _twilio_verify(phone, code):
         return False
 
 @app.route('/api/otp/send', methods=['POST'])
+@require_auth
 def otp_send():
     d = request.json or {}
     phone = (d.get('phone') or '').strip()
@@ -1749,6 +1790,7 @@ def otp_send():
     return jsonify({'status': 'success', 'message': 'Verification code sent'})
 
 @app.route('/api/otp/verify', methods=['POST'])
+@require_auth
 def otp_verify():
     d = request.json or {}
     phone = (d.get('phone') or '').strip()
@@ -1787,6 +1829,7 @@ _CHAT_SYSTEM_PROMPT = (
 )
 
 @app.route('/api/chat', methods=['POST'])
+@require_auth
 def chat():
     d = request.json or {}
     messages = d.get('messages') or []
@@ -1871,6 +1914,7 @@ def get_location_code(city):
     return 2036  # Australia default
 
 @app.route('/api/search_volume', methods=['POST'])
+@require_auth
 def search_volume():
     d = request.json or {}
     keyword  = d.get('keyword', '')
@@ -2064,7 +2108,8 @@ def stripe_webhook():
     payload    = request.get_data()
     sig_header = request.headers.get('Stripe-Signature', '')
     if not STRIPE_WEBHOOK_SECRET:
-        return jsonify({'status': 'ok'})
+        log.error('STRIPE_WEBHOOK_SECRET not configured — rejecting webhook')
+        return jsonify({'error': 'Webhook not configured'}), 500
 
     # Verify signature
     try:
