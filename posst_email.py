@@ -34,8 +34,19 @@ DARK     = '#1A1A2E'
 GREEN    = '#16A34A'
 
 # ── SEND ──────────────────────────────────────────────────────
+def _sanitize_header(value):
+    """Strip CRLF from email header values to prevent header injection."""
+    if not isinstance(value, str):
+        return value
+    return value.replace('\r', '').replace('\n', '')
+
 def send_email(to, subject, html_body, reply_to=None):
     try:
+        # Sanitize all header fields to prevent CRLF injection
+        to      = _sanitize_header(to)
+        subject = _sanitize_header(subject)
+        reply_to = _sanitize_header(reply_to) if reply_to else None
+
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
         msg['From']    = f'{FROM_NAME} <{GMAIL_USER}>'
