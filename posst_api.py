@@ -40,6 +40,11 @@ API_SECRET       = os.environ.get('POSST_API_SECRET', '')
 if not API_SECRET:
     raise RuntimeError('[SECURITY] POSST_API_SECRET env var is not set. Refusing to start with no API key.')
 
+# B-032: Separate admin/internal secret. Falls back to API_SECRET if not set,
+# so existing deployments continue working. Set POSST_ADMIN_SECRET to a different
+# strong value to enforce separation between frontend-proxy and admin/n8n callers.
+ADMIN_SECRET = os.environ.get('POSST_ADMIN_SECRET', '') or API_SECRET
+
 sb: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ── IMAGE STYLE ROUTING (Phase B, Jul 1 2026) ─────────────────
@@ -251,6 +256,18 @@ def require_auth(f):
         return f(*args, **kwargs)
     return decorated
 
+def require_admin(f):
+    """B-032: Stricter auth for admin/internal endpoints (n8n, health checks, data access).
+    Accepts POSST_ADMIN_SECRET. Falls back to API_SECRET if ADMIN_SECRET not configured,
+    so deployment is non-breaking — but once set, frontend proxy key can't reach admin routes."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.headers.get('X-API-Key', '')
+        if auth != ADMIN_SECRET:
+            return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
 # ── HELPERS ───────────────────────────────────────────────────
 def generate_client_id():
     """Generate next client ID for today."""
@@ -317,6 +334,79 @@ def _sanitize_dict(d, fields=None):
             out[k] = v
     return out
 
+# ── B-031: REQUEST SCHEMA VALIDATION ─────────────────────────
+# Lightweight validator — no pydantic/marshmallow dependency needed.
+# Validates required fields, types, and max lengths at the boundary.
+def _validate(d, schema):
+    """Validate a request dict against a schema.
+    Schema format: { 'field': {'required': bool, 'type': str|int|list|dict|bool, 'maxlen': int} }
+    Returns (cleaned_dict, error_message). error_message is None if valid.
+    """
+    if not isinstance(d, dict):
+        return None, 'Request body must be JSON object'
+    errors = []
+    for field, rules in schema.items():
+        val = d.get(field)
+        if rules.get('required') and (val is None or val == ''):
+            errors.append(f'{field} is required')
+            continue
+        if val is not None and val != '':
+            expected_type = rules.get('type')
+            if expected_type and not isinstance(val, expected_type):
+                errors.append(f'{field} must be {expected_type.__name__}')
+                continue
+            maxlen = rules.get('maxlen')
+            if maxlen and isinstance(val, str) and len(val) > maxlen:
+                errors.append(f'{field} exceeds max length ({maxlen})')
+    if errors:
+        return None, '; '.join(errors)
+    return d, None
+
+# Schemas for critical endpoints
+_SCHEMA_CLIENT = {
+    'phone':          {'required': True,  'type': str, 'maxlen': 30},
+    'business_name':  {'required': True,  'type': str, 'maxlen': 200},
+    'business_type':  {'required': True,  'type': str, 'maxlen': 200},
+    'contact_email':  {'required': True,  'type': str, 'maxlen': 254},
+    'business_city':  {'required': False, 'type': str, 'maxlen': 200},
+    'business_desc':  {'required': False, 'type': str, 'maxlen': 3000},
+    'posting_time':   {'required': False, 'type': str, 'maxlen': 10},
+    'timezone':       {'required': False, 'type': str, 'maxlen': 50},
+}
+
+_SCHEMA_PROSPECT = {
+    'phone':          {'required': True,  'type': str, 'maxlen': 30},
+    'business_name':  {'required': False, 'type': str, 'maxlen': 200},
+    'contact_email':  {'required': False, 'type': str, 'maxlen': 254},
+}
+
+_SCHEMA_PORTAL_LOOKUP = {
+    'phone':          {'required': True,  'type': str, 'maxlen': 30},
+}
+
+_SCHEMA_CHAT = {
+    'messages':       {'required': True,  'type': list},
+}
+
+_SCHEMA_OTP = {
+    'phone':          {'required': True,  'type': str, 'maxlen': 30},
+}
+
+_SCHEMA_POSTS_LOG = {
+    'client_id':      {'required': True,  'type': str, 'maxlen': 30},
+}
+
+_SCHEMA_STYLE_SELECT = {
+    'client_id':      {'required': True,  'type': str, 'maxlen': 30},
+    'business_type':  {'required': True,  'type': str, 'maxlen': 200},
+}
+
+_SCHEMA_STRIPE_CHECKOUT = {
+    'client_id':      {'required': True,  'type': str, 'maxlen': 30},
+    'plan':           {'required': False, 'type': str, 'maxlen': 20},
+    'email':          {'required': False, 'type': str, 'maxlen': 254},
+}
+
 # ── CORS ALLOWLIST (Form Security Hardening, Jul 5 2026) ─────
 _CORS_ALLOWED_ORIGINS = [
     'https://posst.app',
@@ -344,6 +434,10 @@ def health():
 def create_client_record():
     """Create new client — called from onboarding form submit."""
     d = request.json or {}
+    # B-031: Schema validation
+    d, val_err = _validate(d, _SCHEMA_CLIENT)
+    if val_err:
+        return err(val_err)
     # Rate limit: 10 client creations per IP per hour
     client_ip = request.headers.get('X-Real-IP', request.remote_addr or 'unknown')
     if not _check_rate('create_client_ip_' + str(client_ip), 10):
@@ -464,7 +558,7 @@ def _is_internal():
     return request.headers.get('X-API-Key', '') == API_SECRET and request.args.get('full') == '1'
 
 @app.route('/api/client/<client_id>', methods=['GET'])
-@require_auth
+@require_admin
 def get_client(client_id):
     result = sb.table('clients').select('*').eq('client_id', client_id).single().execute()
     if not result.data:
@@ -474,7 +568,7 @@ def get_client(client_id):
     return ok(_safe_client(result.data))
 
 @app.route('/api/client/<client_id>/status', methods=['PATCH'])
-@require_auth
+@require_admin
 def update_client_status(client_id):
     d = request.json or {}
     new_status = d.get('status')
@@ -567,7 +661,7 @@ def update_drive(client_id):
     return ok()
 
 @app.route('/api/client/<client_id>/token', methods=['PATCH'])
-@require_auth
+@require_admin
 def update_token(client_id):
     d = request.json or {}
     update = {}
@@ -692,6 +786,10 @@ def resume_client(client_id):
 @require_auth
 def portal_lookup():
     d = request.json or {}
+    # B-031: Schema validation
+    d, val_err = _validate(d, _SCHEMA_PORTAL_LOOKUP)
+    if val_err:
+        return err(val_err)
     phone_raw = _sanitize(d.get('phone', ''), 30)
     if not phone_raw:
         return err('Phone required')
@@ -845,13 +943,13 @@ def generate_pending_token(client_id):
 
 # ── ACTIVE CLIENTS FOR POSTING ────────────────────────────────
 @app.route('/api/clients/active', methods=['GET'])
-@require_auth
+@require_admin
 def get_active_clients():
     result = sb.table('clients').select('*').eq('status', 'Active').execute()
     return ok(result.data, count=len(result.data))
 
 @app.route('/api/clients/token_received', methods=['GET'])
-@require_auth
+@require_admin
 def get_token_received_clients():
     result = sb.table('clients').select('*').eq('status', 'Token_Received').execute()
     return ok(result.data, count=len(result.data))
@@ -861,6 +959,10 @@ def get_token_received_clients():
 @require_auth
 def create_prospect():
     d = request.json or {}
+    # B-031: Schema validation
+    d, val_err = _validate(d, _SCHEMA_PROSPECT)
+    if val_err:
+        return err(val_err)
     phone = _sanitize(d.get('phone', ''), 30)
     if not phone:
         return err('Phone required')
@@ -1112,7 +1214,7 @@ def _resolve_style_row(style_id):
 
 
 @app.route('/api/style/select', methods=['POST'])
-@require_auth
+@require_admin
 def style_select():
     """
     Pick an image style for the next post.
@@ -1121,6 +1223,10 @@ def style_select():
     """
     import random
     d = request.json or {}
+    # B-031: Schema validation
+    d, val_err = _validate(d, _SCHEMA_STYLE_SELECT)
+    if val_err:
+        return err(val_err)
     client_id     = d.get('client_id', '')
     business_type = d.get('business_type', '') or ''
 
@@ -1167,9 +1273,13 @@ def style_select():
 
 # ── POSTS LOG ─────────────────────────────────────────────────
 @app.route('/api/posts_log', methods=['POST'])
-@require_auth
+@require_admin
 def log_post():
     d = request.json or {}
+    # B-031: Schema validation
+    d, val_err = _validate(d, _SCHEMA_POSTS_LOG)
+    if val_err:
+        return err(val_err)
     fb_status  = d.get('fb_status', '')
     ig_status  = d.get('ig_status', '')
     gbp_status = d.get('gbp_status', 'N/A')
@@ -1203,7 +1313,7 @@ def log_post():
 
 
 @app.route('/api/posts_log/update', methods=['POST'])
-@require_auth
+@require_admin
 def update_post_log():
     """
     Update an existing posts_log row after a same-day retry.
@@ -1241,7 +1351,7 @@ def update_post_log():
 
 # Returns the most recent posts_log row per active client — used by health check
 @app.route('/api/posts_log/recent', methods=['GET'])
-@require_auth
+@require_admin
 def get_recent_posts():
     # Get all active client IDs
     clients_res = sb.table('clients').select('client_id').eq('status', 'Active').execute()
@@ -1265,7 +1375,7 @@ def get_recent_posts():
 # Called by n8n immediately when a posting attempt fails.
 # Sends platform-aware customer email. Deduplicates via email_campaign_log.
 @app.route('/api/notify_error', methods=['POST'])
-@require_auth
+@require_admin
 def notify_error():
     d = request.json or {}
     client_id = d.get('client_id', '')
@@ -1315,7 +1425,7 @@ def notify_error():
 
 # ── PROVISIONING LOG ──────────────────────────────────────────
 @app.route('/api/provisioning_log', methods=['POST'])
-@require_auth
+@require_admin
 def log_provisioning():
     d = request.json or {}
     row = {
@@ -1332,13 +1442,13 @@ def log_provisioning():
 
 # ── GBP CLIENTS ───────────────────────────────────────────────
 @app.route('/api/gbp_clients', methods=['GET'])
-@require_auth
+@require_admin
 def get_gbp_clients():
     result = sb.table('gbp_clients').select('*').eq('active', True).eq('gbp_enabled', True).execute()
     return ok(result.data, count=len(result.data))
 
 @app.route('/api/gbp_clients', methods=['POST'])
-@require_auth
+@require_admin
 def add_gbp_client():
     d = request.json or {}
     # Check if already exists
@@ -1367,7 +1477,7 @@ def add_gbp_client():
 
 # ── REVIEW LOG ────────────────────────────────────────────────
 @app.route('/api/review_log', methods=['POST'])
-@require_auth
+@require_admin
 def log_review():
     d = request.json or {}
     row = {
@@ -1411,7 +1521,7 @@ def email_upgrade():
     return ok()
 
 @app.route('/api/email/go_live', methods=['POST'])
-@require_auth
+@require_admin
 def email_go_live():
     d = request.json or {}
     cid = d.get('client_id')
@@ -1424,7 +1534,7 @@ def email_go_live():
     return ok()
 
 @app.route('/api/email/cancel', methods=['POST'])
-@require_auth
+@require_admin
 def email_cancel():
     d = request.json or {}
     cid = d.get('client_id')
@@ -1433,7 +1543,7 @@ def email_cancel():
     return ok()
 
 @app.route('/api/email/pause', methods=['POST'])
-@require_auth
+@require_admin
 def email_pause():
     d = request.json or {}
     cid = d.get('client_id')
@@ -1442,7 +1552,7 @@ def email_pause():
     return ok()
 
 @app.route('/api/prospects/eligible', methods=['GET'])
-@require_auth
+@require_admin
 def prospects_eligible():
     """Return prospects eligible for re-engagement.
     Rules:
@@ -1480,7 +1590,7 @@ def prospects_eligible():
 
 
 @app.route('/api/prospects/mark_reengaged', methods=['POST'])
-@require_auth
+@require_admin
 def mark_reengaged():
     """Set re_engagement_sent_at = now on a prospect row."""
     try:
@@ -1520,7 +1630,7 @@ def email_reengagement():
     return ok()
 
 @app.route('/api/email/alert', methods=['POST'])
-@require_auth
+@require_admin
 def email_alert():
     d = request.json or {}
     if EMAIL_AVAILABLE:
@@ -1528,7 +1638,7 @@ def email_alert():
     return ok()
 
 @app.route('/api/health_check/dedup', methods=['POST'])
-@require_auth
+@require_admin
 def health_check_dedup():
     """
     Called by n8n Health Check before sending an alert email.
@@ -1559,7 +1669,7 @@ def health_check_dedup():
         return ok(already_sent=False)
 
 @app.route('/api/email/campaigns', methods=['POST'])
-@require_auth
+@require_admin
 def run_campaigns():
     from datetime import datetime
     today = datetime.utcnow().replace(hour=0,minute=0,second=0,microsecond=0)
@@ -1643,7 +1753,7 @@ def run_campaigns():
 # ── POST STATUS (called by n8n after each posting run) ────────
 # ── RECONNECT CONFIRMATION EMAIL ──────────────────────────────
 @app.route('/api/email/reconnect_confirmation', methods=['POST'])
-@require_auth
+@require_admin
 def send_reconnect_email():
     d          = request.json or {}
     client_id  = d.get('client_id')
@@ -1768,6 +1878,10 @@ def _twilio_verify(phone, code):
 @require_auth
 def otp_send():
     d = request.json or {}
+    # B-031: Schema validation
+    d, val_err = _validate(d, _SCHEMA_OTP)
+    if val_err:
+        return err(val_err)
     phone = (d.get('phone') or '').strip()
     client_ip = request.headers.get('X-Real-IP', request.remote_addr or 'unknown')
     if not phone or len(phone) < 8 or len(phone) > 16:
@@ -1832,6 +1946,10 @@ _CHAT_SYSTEM_PROMPT = (
 @require_auth
 def chat():
     d = request.json or {}
+    # B-031: Schema validation
+    d, val_err = _validate(d, _SCHEMA_CHAT)
+    if val_err:
+        return err(val_err)
     messages = d.get('messages') or []
     if not isinstance(messages, list) or not messages:
         return jsonify({'status': 'error', 'message': 'messages required'}), 400
@@ -1985,6 +2103,10 @@ def stripe_request(method, path, payload=None, raw_body=None, extra_headers=None
 @require_auth
 def stripe_checkout():
     d = request.json or {}
+    # B-031: Schema validation
+    d, val_err = _validate(d, _SCHEMA_STRIPE_CHECKOUT)
+    if val_err:
+        return err(val_err)
     client_id  = d.get('client_id', '')
     plan       = d.get('plan', 'Standard')
     currency   = d.get('currency', 'AU')
@@ -2188,6 +2310,27 @@ def stripe_webhook():
             log.info(f'Subscription cancelled: {cid}')
 
     return jsonify({'status': 'ok'})
+
+
+# ── B-030: GLOBAL ERROR HANDLER (Tier B Security) ────────────
+# Catches all unhandled exceptions. Logs full traceback server-side,
+# returns generic message to caller — no stack traces, paths, or
+# library versions ever leak to the client.
+import traceback as _tb
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    log.error(f'Unhandled exception on {request.method} {request.path}: '
+              f'{type(e).__name__}: {e}\n{_tb.format_exc()}')
+    return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+
+@app.errorhandler(404)
+def handle_404(e):
+    return jsonify({'status': 'error', 'message': 'Not found'}), 404
+
+@app.errorhandler(405)
+def handle_405(e):
+    return jsonify({'status': 'error', 'message': 'Method not allowed'}), 405
 
 
 if __name__ == '__main__':
