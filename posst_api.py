@@ -8,6 +8,7 @@ Connects to Supabase for data storage.
 import os
 import json
 import logging
+import threading
 from datetime import datetime, timedelta
 from urllib.parse import quote
 from flask import Flask, request, jsonify
@@ -46,6 +47,27 @@ if not API_SECRET:
 ADMIN_SECRET = os.environ.get('POSST_ADMIN_SECRET', '') or API_SECRET
 
 sb: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# ── AUDIT LOGGING (A2 Security, Jul 11 2026) ─────────────────
+# Non-blocking: fires in background thread, never slows requests or crashes on failure.
+def _audit_log(action, detail=None, actor=None, status_code=200):
+    try:
+        ip = request.headers.get('X-Real-IP') or request.headers.get('X-Forwarded-For', '').split(',')[0].strip() or request.remote_addr
+        endpoint = request.path
+        method = request.method
+    except RuntimeError:
+        ip, endpoint, method = 'system', 'background', 'SYSTEM'
+    row = {
+        'action': action, 'actor': actor or ip, 'ip': ip,
+        'endpoint': endpoint, 'method': method, 'status_code': status_code,
+        'detail': detail or {}, 'server': 'posst-api',
+    }
+    def _insert():
+        try:
+            sb.table('audit_log').insert(row).execute()
+        except Exception as e:
+            print(f'[AUDIT-WARN] Failed to write audit_log: {e}', flush=True)
+    threading.Thread(target=_insert, daemon=True).start()
 
 # ── IMAGE STYLE ROUTING (Phase B, Jul 1 2026) ─────────────────
 # See ai/style_library.md, ai/style_routing_map.md, ai/subject_nature_map.md.
@@ -252,15 +274,14 @@ def require_auth(f):
         # Body fallback allowed trivial auth bypass via JSON payload.
         auth = request.headers.get('X-API-Key', '')
         if auth != API_SECRET:
+            _audit_log('auth_failed', detail={'reason': 'invalid_api_key'}, status_code=401)
             return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
         return f(*args, **kwargs)
     return decorated
 
 def require_admin(f):
-    """B-032: Stricter auth for admin/internal endpoints (n8n, health checks, data access).
-    Accepts POSST_ADMIN_SECRET. Falls back to API_SECRET if ADMIN_SECRET not configured,
-    so deployment is non-breaking — but once set, frontend proxy key can't reach admin routes."""
-    @wraps(f)
+    from functools import wraps as _wraps
+    @_wraps(f)
     def decorated(*args, **kwargs):
         auth = request.headers.get('X-API-Key', '')
         if auth != ADMIN_SECRET:
@@ -309,7 +330,7 @@ _FIELD_LIMITS = {
     'facebook_page_url': 500, 'ig_handle': 200, 'ig_url': 500,
     'gbp_name': 200, 'brand_keywords': 500, 'business_phone': 30,
     'phone': 30, 'email': 254, 'google_drive_url': 500,
-    'caption_cta_email': 254, 'caption_cta_phone': 30,
+    'caption_email': 254, 'caption_phone': 30,
 }
 
 def _sanitize(value, maxlen=1000):
@@ -334,12 +355,12 @@ def _sanitize_dict(d, fields=None):
             out[k] = v
     return out
 
+
 # ── B-031: REQUEST SCHEMA VALIDATION ─────────────────────────
 # Lightweight validator — no pydantic/marshmallow dependency needed.
-# Validates required fields, types, and max lengths at the boundary.
 def _validate(d, schema):
     """Validate a request dict against a schema.
-    Schema format: { 'field': {'required': bool, 'type': str|int|list|dict|bool, 'maxlen': int} }
+    Schema: { 'field': {'required': bool, 'type': str|int|list|dict|bool, 'maxlen': int} }
     Returns (cleaned_dict, error_message). error_message is None if valid.
     """
     if not isinstance(d, dict):
@@ -362,49 +383,25 @@ def _validate(d, schema):
         return None, '; '.join(errors)
     return d, None
 
-# Schemas for critical endpoints
 _SCHEMA_CLIENT = {
-    'phone':          {'required': True,  'type': str, 'maxlen': 30},
-    'business_name':  {'required': True,  'type': str, 'maxlen': 200},
-    'business_type':  {'required': True,  'type': str, 'maxlen': 200},
-    'contact_email':  {'required': True,  'type': str, 'maxlen': 254},
-    'business_city':  {'required': False, 'type': str, 'maxlen': 200},
-    'business_desc':  {'required': False, 'type': str, 'maxlen': 3000},
-    'posting_time':   {'required': False, 'type': str, 'maxlen': 10},
-    'timezone':       {'required': False, 'type': str, 'maxlen': 50},
+    'phone': {'required': True, 'type': str, 'maxlen': 30},
+    'business_name': {'required': True, 'type': str, 'maxlen': 200},
+    'business_type': {'required': True, 'type': str, 'maxlen': 200},
+    'contact_email': {'required': True, 'type': str, 'maxlen': 254},
 }
-
-_SCHEMA_PROSPECT = {
-    'phone':          {'required': True,  'type': str, 'maxlen': 30},
-    'business_name':  {'required': False, 'type': str, 'maxlen': 200},
-    'contact_email':  {'required': False, 'type': str, 'maxlen': 254},
-}
-
-_SCHEMA_PORTAL_LOOKUP = {
-    'phone':          {'required': True,  'type': str, 'maxlen': 30},
-}
-
-_SCHEMA_CHAT = {
-    'messages':       {'required': True,  'type': list},
-}
-
-_SCHEMA_OTP = {
-    'phone':          {'required': True,  'type': str, 'maxlen': 30},
-}
-
-_SCHEMA_POSTS_LOG = {
-    'client_id':      {'required': True,  'type': str, 'maxlen': 30},
-}
-
+_SCHEMA_PROSPECT = {'phone': {'required': True, 'type': str, 'maxlen': 30}}
+_SCHEMA_PORTAL_LOOKUP = {'phone': {'required': True, 'type': str, 'maxlen': 30}}
+_SCHEMA_CHAT = {'messages': {'required': True, 'type': list}}
+_SCHEMA_OTP = {'phone': {'required': True, 'type': str, 'maxlen': 30}}
+_SCHEMA_POSTS_LOG = {'client_id': {'required': True, 'type': str, 'maxlen': 30}}
 _SCHEMA_STYLE_SELECT = {
-    'client_id':      {'required': True,  'type': str, 'maxlen': 30},
-    'business_type':  {'required': True,  'type': str, 'maxlen': 200},
+    'client_id': {'required': True, 'type': str, 'maxlen': 30},
+    'business_type': {'required': True, 'type': str, 'maxlen': 200},
 }
-
 _SCHEMA_STRIPE_CHECKOUT = {
-    'client_id':      {'required': True,  'type': str, 'maxlen': 30},
-    'plan':           {'required': False, 'type': str, 'maxlen': 20},
-    'email':          {'required': False, 'type': str, 'maxlen': 254},
+    'client_id': {'required': True, 'type': str, 'maxlen': 30},
+    'plan': {'required': False, 'type': str, 'maxlen': 20},
+    'email': {'required': False, 'type': str, 'maxlen': 254},
 }
 
 # ── CORS ALLOWLIST (Form Security Hardening, Jul 5 2026) ─────
@@ -510,8 +507,8 @@ def create_client_record():
         'drive_categories':    drive_categories,
         'google_drive_intent': d.get('google_drive_intent', ''),
         'pending_token':       pending_token,
-        'caption_email':       d.get('caption_cta_email', ''),
-        'caption_phone':       d.get('caption_cta_phone', ''),
+        'caption_email':       d.get('caption_email', ''),
+        'caption_phone':       d.get('caption_phone', ''),
     }
 
     result = sb.table('clients').insert(row).execute()
@@ -519,6 +516,7 @@ def create_client_record():
         return err('Failed to create client')
 
     log.info(f'Client created: {client_id} — {d.get("business_name")}')
+    _audit_log('client_created', actor=client_id, detail={'plan': d.get('tier', 'Standard'), 'business': d.get('business_name', '')})
 
     # Convert the prospect server-side so it never depends on a
     # fire-and-forget frontend call. Without this, a network blip or
@@ -890,7 +888,7 @@ def portal_lookup():
             'trial_start':      client.get('trial_start', ''),
             'drive_categories': client.get('drive_categories', []),
             'pending_token':    client.get('pending_token', ''),
-            'contact_email':    client.get('contact_email', ''),
+            'contact_email':    client.get('caption_email', ''),
             # Operational status — derived from posts_log, never stored on clients
             'fb_error':         post_status['fb_error'],
             'ig_error':         post_status['ig_error'],
@@ -1300,6 +1298,7 @@ def log_post():
         'image_prompt': d.get('image_prompt', ''),
         'image_source': d.get('image_source', 'ai'),
         'style_id_used':d.get('style_id_used', '') or None,  # Image style rotation (Phase B/C, Jul 1 2026)
+        'artistic_style_used': d.get('artistic_style_used', '') or None,  # Artistic style (v41, Jul 14 2026)
         # Error fields — populated on FAILED status
         'fb_error':     fb_status  == 'FAILED',
         'fb_error_msg': d.get('fb_error_msg', '') if fb_status  == 'FAILED' else '',
@@ -1894,6 +1893,7 @@ def otp_send():
         mins = int((until - _time.time()) / 60) + 1
         return jsonify({'status': 'error', 'code': 'LOCKED', 'message': f'Too many attempts. Try again in {mins} minutes.'}), 429
     if not _check_rate('ip_' + str(client_ip), MAX_OTP_PER_IP):
+        _audit_log('auth_rate_limited', detail={'type': 'otp_ip', 'phone': phone[:6] + '***'}, status_code=429)
         return jsonify({'status': 'error', 'code': 'RATE_LIMITED', 'message': 'Too many requests. Please try again later.'}), 429
     if not _check_rate('phone_' + phone, MAX_OTP_PER_PHONE):
         return jsonify({'status': 'error', 'code': 'RATE_LIMITED', 'message': 'Too many requests for this number. Try again in an hour.'}), 429
@@ -1957,6 +1957,7 @@ def chat():
         return jsonify({'status': 'error', 'message': 'Chat is not configured yet.'}), 503
     client_ip = request.headers.get('X-Real-IP', request.remote_addr or 'unknown')
     if not _check_rate('chat_ip_' + str(client_ip), MAX_CHAT_PER_IP):
+        _audit_log('auth_rate_limited', detail={'type': 'chat'}, status_code=429)
         return jsonify({'status': 'error', 'message': 'Too many messages. Please try again later.'}), 429
     # Cap history to last 20 messages to control cost/payload size
     # Cap each message content to 2000 chars to prevent abuse
@@ -2312,6 +2313,7 @@ def stripe_webhook():
     return jsonify({'status': 'ok'})
 
 
+
 # ── B-030: GLOBAL ERROR HANDLER (Tier B Security) ────────────
 # Catches all unhandled exceptions. Logs full traceback server-side,
 # returns generic message to caller — no stack traces, paths, or
@@ -2333,5 +2335,209 @@ def handle_405(e):
     return jsonify({'status': 'error', 'message': 'Method not allowed'}), 405
 
 
+# ============================================================
+# ARTISTIC STYLE ENDPOINTS (Phase 1 - Jul 13 2026)
+# ============================================================
+
+def _pick_artistic_style(client_id):
+    from datetime import datetime
+    try:
+        resp = sb.table("client_artistic_styles").select("style_id").eq("client_id", client_id).eq("is_active", True).execute()
+        if not resp.data:
+            return "", "none"
+        style_ids = [r["style_id"] for r in resp.data]
+        styles_resp = sb.table("artistic_styles").select("slug, prompt_prefix").in_("id", style_ids).order("sort_order").execute()
+        if not styles_resp.data:
+            return "", "none"
+        styles = styles_resp.data
+        client_resp = sb.table("clients").select("teaser_style_id, teaser_start_date, teaser_end_date").eq("client_id", client_id).maybe_single().execute()
+        if client_resp.data:
+            cd = client_resp.data
+            today = datetime.now().strftime("%Y-%m-%d")
+            if cd.get("teaser_style_id") and cd.get("teaser_start_date") and cd.get("teaser_end_date") and cd["teaser_start_date"] <= today <= cd["teaser_end_date"]:
+                teaser_resp = sb.table("artistic_styles").select("slug, prompt_prefix").eq("id", cd["teaser_style_id"]).maybe_single().execute()
+                if teaser_resp.data:
+                    styles.append(teaser_resp.data)
+        day_of_year = datetime.now().timetuple().tm_yday
+        idx = day_of_year % len(styles)
+        chosen = styles[idx]
+        return chosen["prompt_prefix"], chosen["slug"]
+    except Exception as e:
+        app.logger.error(f"Error picking artistic style: {e}")
+        return "", "error"
+
+@app.route("/api/artistic-styles", methods=["GET"])
+@require_auth
+def get_artistic_styles():
+    try:
+        resp = sb.table("artistic_styles").select("id, name, slug, description, category_affinity, tier, sort_order, is_default").order("sort_order").execute()
+        return jsonify({"status": "ok", "styles": resp.data})
+    except Exception as e:
+        app.logger.error(f"Error fetching artistic styles: {e}")
+        return jsonify({"status": "error", "message": "Failed to fetch styles"}), 500
+
+@app.route("/api/client/<client_id>/artistic-styles", methods=["GET"])
+@require_auth
+def get_client_artistic_styles(client_id):
+    try:
+        resp = sb.table("client_artistic_styles").select("style_id, is_active").eq("client_id", client_id).execute()
+        return jsonify({"status": "ok", "selections": resp.data})
+    except Exception as e:
+        app.logger.error(f"Error fetching client styles: {e}")
+        return jsonify({"status": "error", "message": "Failed to fetch client styles"}), 500
+
+@app.route("/api/client/<client_id>/artistic-styles", methods=["POST"])
+@require_auth
+def set_client_artistic_styles(client_id):
+    try:
+        data = request.get_json()
+        style_ids = data.get("style_ids", [])
+        if not style_ids:
+            return jsonify({"status": "error", "message": "At least one style required"}), 400
+        client_resp = sb.table("clients").select("plan").eq("client_id", client_id).maybe_single().execute()
+        if not client_resp.data:
+            return jsonify({"status": "error", "message": "Client not found"}), 404
+        plan = (client_resp.data.get("plan") or "standard").lower()
+        if plan != "pro" and len(style_ids) > 3:
+            return jsonify({"status": "error", "message": "Standard plan allows photorealistic + 2 styles. Upgrade to Pro for all 8."}), 400
+        photo_resp = sb.table("artistic_styles").select("id").eq("slug", "photorealistic").maybe_single().execute()
+        if photo_resp.data and photo_resp.data["id"] not in style_ids:
+            return jsonify({"status": "error", "message": "Photorealistic style must always be included"}), 400
+        sb.table("client_artistic_styles").delete().eq("client_id", client_id).execute()
+        for sid in style_ids:
+            sb.table("client_artistic_styles").insert({"client_id": client_id, "style_id": sid, "is_active": True}).execute()
+        return jsonify({"status": "ok", "count": len(style_ids)})
+    except Exception as e:
+        app.logger.error(f"Error setting client styles: {e}")
+        return jsonify({"status": "error", "message": "Failed to update styles"}), 500
+
+@app.route("/api/artistic-style/pick/<client_id>", methods=["GET"])
+@require_admin
+def pick_artistic_style(client_id):
+    prefix, slug = _pick_artistic_style(client_id)
+    return jsonify({"status": "ok", "prompt_prefix": prefix, "style_slug": slug})
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5680, debug=False)
+
+
+# ──────────────────────────────────────────────────────────────────────
+# /api/composite — Apply branding overlay to generated image (Phase 3, v41)
+# Called by n8n between image generation and Meta posting.
+# ──────────────────────────────────────────────────────────────────────
+@app.route('/api/composite', methods=['POST'])
+@require_admin
+def composite_image():
+    """
+    Download image from R2, apply branding overlay, upload branded image back to R2.
+    Request:  { image_url, client_id, composition_style }
+    Response: { branded_url, status: 'ok' } or { branded_url: <original>, status: 'fallback' }
+    Failsafe: on ANY error, returns original image_url so posting continues unbranded.
+    """
+    import base64
+    import time as _time
+    import requests as http_req
+    from template_engine import composite
+
+    d = request.json or {}
+    image_url  = d.get('image_url', '')
+    client_id  = d.get('client_id', '')
+    comp_style = d.get('composition_style', '')
+
+    # Failsafe wrapper — never break the posting pipeline
+    try:
+        if not image_url or not client_id:
+            log.info(f'[composite] skip — missing params')
+            return jsonify({'branded_url': image_url, 'status': 'skip', 'reason': 'missing params'})
+
+        # Look up client
+        cr = sb.table('clients').select(
+            'business_name,business_suburb,plan,logo_url,brand_colors,'
+            'caption_email,caption_phone,business_type'
+        ).eq('client_id', client_id).execute()
+
+        if not cr.data:
+            log.warning(f'[composite] client {client_id} not found — fallback')
+            return jsonify({'branded_url': image_url, 'status': 'fallback', 'reason': 'client not found'})
+
+        client = cr.data[0]
+        plan = client.get('plan', 'Standard')
+
+        # Download image from R2
+        img_resp = http_req.get(image_url, timeout=15)
+        if img_resp.status_code != 200:
+            log.warning(f'[composite] download failed ({img_resp.status_code}) — fallback')
+            return jsonify({'branded_url': image_url, 'status': 'fallback', 'reason': 'download failed'})
+
+        # Contact info (Pro only)
+        contact_parts = [
+            client.get('caption_email', '') or '',
+            client.get('caption_phone', '') or '',
+        ]
+        contact_info = ' | '.join(p for p in contact_parts if p) if plan == 'Pro' else ''
+
+        # Logo (Pro only)
+        logo_bytes = None
+        logo_url = client.get('logo_url', '') or ''
+        if plan == 'Pro' and logo_url:
+            try:
+                logo_resp = http_req.get(logo_url, timeout=10)
+                if logo_resp.status_code == 200:
+                    logo_bytes = logo_resp.content
+            except Exception as le:
+                log.warning(f'[composite] logo download failed: {le}')
+
+        # Brand colours (Pro only, from clients table)
+        brand_colours = None
+        if plan == 'Pro' and client.get('brand_colors'):
+            bc = client['brand_colors']
+            brand_colours = bc if isinstance(bc, dict) else None
+
+        # Default category colours (neutral professional — category-specific in Phase 4)
+        category_colours = {'primary': '#1A1A2E', 'secondary': '#E8E8E8', 'text': '#FFFFFF'}
+
+        # Run compositing
+        branded_bytes = composite(img_resp.content, {
+            'business_name':    client.get('business_name', ''),
+            'suburb':           client.get('business_suburb', ''),
+            'plan':             plan,
+            'composition_style': comp_style,
+            'category_colours': category_colours,
+            'logo_bytes':       logo_bytes,
+            'brand_colours':    brand_colours,
+            'contact_info':     contact_info,
+        })
+
+        # If composite returned the same bytes (failsafe triggered), skip re-upload
+        if branded_bytes == img_resp.content:
+            log.info(f'[composite] no change — using original')
+            return jsonify({'branded_url': image_url, 'status': 'unchanged'})
+
+        # Upload branded image to R2
+        branded_b64 = base64.b64encode(branded_bytes).decode()
+
+        # Build branded filename from original
+        if 'r2.dev/' in image_url:
+            original_filename = image_url.split('r2.dev/')[-1]
+            parts = original_filename.rsplit('.', 1)
+            branded_filename = f"{parts[0]}_branded.png"
+        else:
+            branded_filename = f"clients/{client_id}/{int(_time.time())}_branded.png"
+
+        r2_resp = http_req.post('http://172.17.0.1:5679/upload', json={
+            'filename': branded_filename,
+            'image_b64': branded_b64,
+        }, timeout=30)
+
+        if r2_resp.status_code != 200:
+            log.warning(f'[composite] R2 upload failed ({r2_resp.status_code}) — fallback')
+            return jsonify({'branded_url': image_url, 'status': 'fallback', 'reason': 'r2 upload failed'})
+
+        branded_url = f"https://pub-f5f1d08da66048808d14f48cb78ebb36.r2.dev/{branded_filename}"
+        log.info(f'[composite] {client_id} branded OK — {comp_style} — {plan}')
+        return jsonify({'branded_url': branded_url, 'status': 'ok'})
+
+    except Exception as e:
+        log.error(f'[composite] {client_id} failed: {e} — returning original')
+        return jsonify({'branded_url': image_url, 'status': 'fallback', 'reason': str(e)})
