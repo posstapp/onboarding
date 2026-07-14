@@ -9,6 +9,7 @@ Changes from v3.3:
 import os
 import json
 import logging
+import threading
 import requests
 from datetime import datetime, timedelta
 from flask import Flask, request, redirect, session, render_template_string, jsonify
@@ -63,6 +64,40 @@ cipher               = Fernet(ENCRYPT_KEY.encode()) if ENCRYPT_KEY else None
 
 API_BASE        = 'http://127.0.0.1:5680'
 POSST_API_SECRET = os.environ.get('POSST_API_SECRET', 'posst-api-secret-2026')
+
+# ── AUDIT LOGGING (A2 Security, Jul 11 2026) ─────────────────
+# Writes to Supabase audit_log table via direct connection (same creds as posst-api).
+_AUDIT_SB_URL = os.environ.get('SUPABASE_URL', 'https://itlndeorkphlorvcohaw.supabase.co')
+_AUDIT_SB_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
+
+def _audit_log(action, detail=None, actor=None, status_code=200):
+    try:
+        ip = request.headers.get('X-Real-IP') or request.headers.get('X-Forwarded-For', '').split(',')[0].strip() or request.remote_addr
+        endpoint = request.path
+        method = request.method
+    except RuntimeError:
+        ip, endpoint, method = 'system', 'background', 'SYSTEM'
+    row = {
+        'action': action, 'actor': actor or ip, 'ip': ip,
+        'endpoint': endpoint, 'method': method, 'status_code': status_code,
+        'detail': detail or {}, 'server': 'posst-oauth',
+    }
+    def _insert():
+        try:
+            requests.post(
+                f'{_AUDIT_SB_URL}/rest/v1/audit_log',
+                json=row,
+                headers={
+                    'apikey': _AUDIT_SB_KEY,
+                    'Authorization': f'Bearer {_AUDIT_SB_KEY}',
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal',
+                },
+                timeout=5,
+            )
+        except Exception as e:
+            print(f'[AUDIT-WARN] Failed to write audit_log: {e}', flush=True)
+    threading.Thread(target=_insert, daemon=True).start()
 
 # D1-5: Internal API calls now pass X-API-Key header so they can request
 # full client data (including tokens) via ?full=1. Without this, the
@@ -594,6 +629,8 @@ def save_meta_page(client_id, fb_page_id, page_name, ig_biz_id, ig_username, ll_
         'pending_token':     '',
     })
 
+    _audit_log('oauth_completed', actor=client_id, detail={'platform': 'meta', 'page': page_name})
+
     session['meta_done']    = True
     session['fb_page_name'] = page_name
     session['ig_username']  = ig_username
@@ -719,6 +756,7 @@ def tokens_refresh():
             })
 
             log.info(f'tokens_refresh: refreshed {cid} ({biz}) — new expiry {new_expiry}')
+            _audit_log('token_refresh', actor=cid, detail={'new_expiry': new_expiry})
             results['refreshed'].append(f'{cid}: new expiry {new_expiry}')
 
             # Warn client if in danger zone (7-14 days) even though refresh succeeded
@@ -1052,6 +1090,7 @@ def proxy(path):
 
     if not _proxy_allowed(path, request.method):
         log.warning(f'[PROXY BLOCKED] {request.method} /proxy/{path} from {request.headers.get("Origin", "unknown")}')
+        _audit_log('proxy_blocked', detail={'path': path, 'method': request.method}, status_code=403)
         response = app.make_response(json.dumps({'status': 'error', 'message': 'Not allowed'}))
         response.status_code = 403
         response.content_type = 'application/json'
