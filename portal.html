@@ -1314,6 +1314,14 @@ function showProSetupComplete(driveIntent) {
 let _galleryData = null;
 let _selectedStyleIds = new Set();
 
+// Reset when dashboard re-renders (account switch)
+const _origRenderDashboard = renderDashboard;
+renderDashboard = function() {
+  _galleryData = null;
+  _selectedStyleIds = new Set();
+  _origRenderDashboard();
+};
+
 async function loadStyleGallery() {
   const grid = document.getElementById('style-grid');
   if (!grid || !clientData) return;
