@@ -2627,14 +2627,14 @@ def update_branding(client_id):
         update = {}
 
         if 'caption_email' in d:
-            val = _sanitize_field('caption_email', d['caption_email'])
+            val = _sanitize(d['caption_email'], _FIELD_LIMITS.get('caption_email', 254))
             # Basic email format check
             if val and ('@' not in val or '.' not in val.split('@')[-1]):
                 return err('Invalid email format')
             update['caption_email'] = val
 
         if 'caption_phone' in d:
-            val = _sanitize_field('caption_phone', d['caption_phone'])
+            val = _sanitize(d['caption_phone'], _FIELD_LIMITS.get('caption_phone', 30))
             update['caption_phone'] = val
 
         if not update:
