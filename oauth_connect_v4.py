@@ -367,7 +367,7 @@ SUCCESS_PAGE = """
   <div style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:12px;padding:18px;margin:20px 0;text-align:center">
     <p style="font-size:14px;color:#0F0E17;margin-bottom:4px;font-weight:600">&#x1F3A8; Make it yours</p>
     <p style="font-size:13px;color:#4A4860;margin-bottom:14px">Pick your image styles and upload your logo to personalise your posts.</p>
-    <a href="https://onboarding.posst.app?mode=login" style="display:inline-block;background:#1648FF;color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:11px 28px;border-radius:8px">Personalise your posts &#x2192;</a>
+    <a href="https://onboarding.posst.app/portal.html?phone={{ client_phone }}" style="display:inline-block;background:#1648FF;color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:11px 28px;border-radius:8px">Personalise your posts &#x2192;</a>
   </div>
   {% if show_drive %}
   <div id="drive-box" style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:18px;margin:20px 0;text-align:left">
@@ -445,15 +445,18 @@ def render_success(client_id, email):
     fb_page_name = ''
     ig_handle    = ''
     gbp_name     = ''
+    client_phone = ''
     try:
         if client:
             fb_page_name = client.get('fb_page_name') or ''
             ig_handle    = client.get('ig_handle') or ''
             gbp_name     = client.get('gbp_name') or '' if client.get('gbp_location_id') else ''
+            client_phone = client.get('phone') or ''
     except:
         pass
     return render_template_string(SUCCESS_PAGE, email=email, show_drive=show_drive, drive_url=drive_url,
-                                  fb_page_name=fb_page_name, ig_handle=ig_handle, gbp_name=gbp_name)
+                                  fb_page_name=fb_page_name, ig_handle=ig_handle, gbp_name=gbp_name,
+                                  client_phone=client_phone)
 
 
 @app.route('/connect')
