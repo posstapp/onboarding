@@ -2608,6 +2608,42 @@ def set_portal_onboarded(client_id):
         return err('Failed to update', 500)
 
 
+@app.route('/api/client/<client_id>/branding', methods=['PATCH'])
+@require_auth
+def update_branding(client_id):
+    """Update branding contact info (caption_email, caption_phone) — Pro only."""
+    try:
+        cr = sb.table('clients').select('plan').eq('client_id', client_id).maybe_single().execute()
+        if not cr.data:
+            return err('Client not found', 404)
+        if (cr.data.get('plan') or 'standard').lower() != 'pro':
+            return err('Branding contact info is a Pro feature', 403)
+
+        d = request.get_json() or {}
+        update = {}
+
+        if 'caption_email' in d:
+            val = _sanitize_field('caption_email', d['caption_email'])
+            # Basic email format check
+            if val and ('@' not in val or '.' not in val.split('@')[-1]):
+                return err('Invalid email format')
+            update['caption_email'] = val
+
+        if 'caption_phone' in d:
+            val = _sanitize_field('caption_phone', d['caption_phone'])
+            update['caption_phone'] = val
+
+        if not update:
+            return err('Nothing to update')
+
+        sb.table('clients').update(update).eq('client_id', client_id).execute()
+        _audit_log('branding_updated', actor=client_id, detail=update)
+        return ok()
+    except Exception as e:
+        log.error(f'[branding] {client_id}: {e}')
+        return err('Failed to update branding', 500)
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5680, debug=False)
 
