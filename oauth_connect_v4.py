@@ -364,6 +364,11 @@ SUCCESS_PAGE = """
   <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Check your email</strong> — confirmation sent to {{ email }}</div></div>
   <div class="step"><div class="step-num">2</div><div class="step-text"><strong>We set everything up</strong> — your automation goes live within 24 hours</div></div>
   <div class="step"><div class="step-num">3</div><div class="step-text"><strong>First post goes out</strong> — you will get an email notification when you are live</div></div>
+  <div style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:12px;padding:18px;margin:20px 0;text-align:center">
+    <p style="font-size:14px;color:#0F0E17;margin-bottom:4px;font-weight:600">&#x1F3A8; Make it yours</p>
+    <p style="font-size:13px;color:#4A4860;margin-bottom:14px">Pick your image styles and upload your logo to personalise your posts.</p>
+    <a href="https://onboarding.posst.app?mode=login" style="display:inline-block;background:#1648FF;color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:11px 28px;border-radius:8px">Personalise your posts &#x2192;</a>
+  </div>
   {% if show_drive %}
   <div id="drive-box" style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:18px;margin:20px 0;text-align:left">
     <p style="font-size:13px;color:#92400e;margin-bottom:12px;line-height:1.5">&#x1F4F7; <strong>One more thing</strong> — you are on Pro. Connect your Google Drive photo library so we use your real photos in every post.</p>
