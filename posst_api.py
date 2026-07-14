@@ -507,8 +507,8 @@ def create_client_record():
         'drive_categories':    drive_categories,
         'google_drive_intent': d.get('google_drive_intent', ''),
         'pending_token':       pending_token,
-        'caption_email':       d.get('caption_email', ''),
-        'caption_phone':       d.get('caption_phone', ''),
+        'caption_email':       d.get('caption_email', '') or d.get('caption_cta_email', ''),
+        'caption_phone':       d.get('caption_phone', '') or d.get('caption_cta_phone', ''),
     }
 
     result = sb.table('clients').insert(row).execute()
