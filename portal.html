@@ -685,7 +685,7 @@ function renderDashboard() {
               <div style="font-size:12px;color:var(--ink-light)">Loading styles...</div>
             </div>
           </div>
-          ${!isPro ? '<div class="style-upgrade"><div class="info-box info-box-blue"><span class="info-icon">✦</span><div><strong>Unlock all 8 styles</strong> — Upgrade to Pro for the full collection including Studio Ghibli, Oil Painting, Pop Art and more.</div></div></div>' : ''}
+          ${!isPro ? '<div class="style-upgrade"><div class="info-box info-box-blue" onclick="startUpgrade()" style="cursor:pointer"><span class="info-icon">✦</span><div><strong>Unlock all 8 styles</strong> — Upgrade to Pro for the full collection including Studio Ghibli, Oil Painting, Pop Art and more.</div></div></div>' : ''}
           <div class="save-row" id="styles-save-row" style="display:none">
             <button class="btn btn-primary btn-sm" onclick="saveStyles(this)">
               <span class="btn-spinner" id="styles-spinner"></span>
@@ -730,7 +730,7 @@ function renderDashboard() {
       </div>
     </div>
     ` : `
-    <div class="card" style="opacity:0.7">
+    <div class="card" style="opacity:0.7;cursor:pointer" onclick="startUpgrade()">
       <div class="card-header">
         <div class="card-header-left">
           <div class="card-icon">🏷️</div>
