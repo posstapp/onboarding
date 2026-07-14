@@ -639,12 +639,12 @@ function renderDashboard() {
       const notes = typeof cd.notes === 'string' ? (() => { try { return JSON.parse(cd.notes); } catch(e) { return {}; } })() : (cd.notes || {});
       const onboarded = notes.portal_onboarded;
       if (onboarded) return '';
-      const hasStyles = true; // styles always assigned at provisioning
+      const hasStyles = !!notes.styles_customized;
       const hasLogo = !!cd.logo_url;
       return `
       <div class="welcome-card" id="welcome-card">
         <div class="welcome-title">Make it yours ✨</div>
-        <div class="welcome-desc">Personalise how your posts look across social media. Takes about 2 minutes.</div>
+        <div class="welcome-desc">Personalise how your posts look across social media.</div>
         <div class="welcome-steps">
           <div class="welcome-step ${hasStyles?'done':''}">
             <div class="welcome-step-num">1</div>
@@ -1397,6 +1397,10 @@ async function saveStyles(btn) {
     if (result.status === 'ok') {
       msg.textContent = '✅ Styles updated!';
       msg.style.color = 'var(--green)';
+      // Mark step 1 done in welcome card
+      let notes = typeof clientData.notes === 'string' ? (() => { try { return JSON.parse(clientData.notes); } catch(e) { return {}; } })() : (clientData.notes || {});
+      notes.styles_customized = true;
+      clientData.notes = notes;
     } else {
       msg.textContent = result.message || 'Error saving';
       msg.style.color = 'var(--red)';
