@@ -1070,8 +1070,13 @@ _PROXY_PATTERNS = [
     (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/plan$'),           {'PATCH'}),
     (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/pending_token$'),  {'GET', 'POST'}),
     (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/cancel$'),         {'POST'}),
-    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/pause$'),          {'POST'}),
-    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/resume$'),         {'POST'}),
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/pause$'),              {'POST'}),
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/resume$'),             {'POST'}),
+    # Phase 4: Style gallery + logo upload + portal onboarding (v43, Jul 15 2026)
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/style-gallery$'),      {'GET'}),
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/artistic-styles$'),    {'GET', 'POST'}),
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/logo$'),               {'POST'}),
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/portal-onboarded$'),   {'PATCH'}),
 ]
 
 def _proxy_allowed(path, method):
