@@ -889,6 +889,10 @@ def portal_lookup():
             'drive_categories': client.get('drive_categories', []),
             'pending_token':    client.get('pending_token', ''),
             'contact_email':    client.get('caption_email', ''),
+            'caption_email':    client.get('caption_email', ''),
+            'caption_phone':    client.get('caption_phone', ''),
+            'logo_url':         client.get('logo_url', ''),
+            'business_type':    client.get('business_type', ''),
             # Operational status — derived from posts_log, never stored on clients
             'fb_error':         post_status['fb_error'],
             'ig_error':         post_status['ig_error'],
