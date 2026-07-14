@@ -1085,6 +1085,7 @@ _PROXY_PATTERNS = [
     (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/artistic-styles$'),    {'GET', 'POST'}),
     (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/logo$'),               {'POST'}),
     (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/portal-onboarded$'),   {'PATCH'}),
+    (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/branding$'),            {'PATCH'}),
 ]
 
 def _proxy_allowed(path, method):
