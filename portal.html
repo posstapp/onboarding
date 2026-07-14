@@ -145,6 +145,42 @@ body{font-family:var(--sans);background:var(--cream);color:var(--ink);min-height
 .sw-divider{height:1px;background:var(--border);margin:4px 0}
 .sw-add{padding:11px 16px;font-size:13px;color:var(--blue);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.1s}
 .sw-add:hover{background:var(--blue-dim)}
+/* ── WELCOME CARD ── */
+.welcome-card{background:linear-gradient(135deg,#1648FF 0%,#4B6BFF 100%);border-radius:16px;padding:24px;margin-bottom:14px;color:white}
+.welcome-title{font-family:var(--serif);font-size:20px;margin-bottom:8px}
+.welcome-desc{font-size:13px;opacity:0.85;line-height:1.5;margin-bottom:16px}
+.welcome-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.welcome-step{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500}
+.welcome-step-num{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.welcome-step.done .welcome-step-num{background:rgba(255,255,255,0.4)}
+.welcome-step.done{opacity:0.6;text-decoration:line-through}
+.welcome-dismiss{font-size:12px;opacity:0.7;cursor:pointer;text-decoration:underline;background:none;border:none;color:white;font-family:var(--sans)}
+
+/* ── STYLE GALLERY ── */
+.style-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.style-card{position:relative;border-radius:10px;overflow:hidden;border:2px solid var(--border);cursor:pointer;transition:all 0.15s;background:var(--white)}
+.style-card:hover{border-color:var(--ink-light)}
+.style-card.selected{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-dim)}
+.style-card.locked{opacity:0.55;cursor:default}
+.style-card.locked:hover{border-color:var(--border)}
+.style-img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--border)}
+.style-img-placeholder{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:var(--border);font-size:28px}
+.style-name{font-size:11px;font-weight:600;padding:6px 8px;text-align:center;color:var(--ink)}
+.style-check{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;background:var(--blue);color:white;display:none;align-items:center;justify-content:center;font-size:11px}
+.style-card.selected .style-check{display:flex}
+.style-lock{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.5);color:white;display:flex;align-items:center;justify-content:center;font-size:10px}
+.style-upgrade{text-align:center;margin-bottom:16px}
+
+/* ── LOGO UPLOAD ── */
+.logo-upload-area{border:2px dashed var(--border);border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:all 0.15s;margin-bottom:12px}
+.logo-upload-area:hover{border-color:var(--blue);background:var(--blue-dim)}
+.logo-upload-area.has-logo{border-style:solid;cursor:default}
+.logo-preview{max-height:60px;max-width:200px;margin:0 auto 8px;display:block}
+.logo-upload-text{font-size:13px;color:var(--ink-mid)}
+.logo-upload-icon{font-size:28px;margin-bottom:6px}
+.logo-upload-hint{font-size:11px;color:var(--ink-light);margin-top:4px}
+.logo-replace-btn{font-size:12px;color:var(--blue);cursor:pointer;text-decoration:underline;background:none;border:none;font-family:var(--sans);margin-top:8px}
+
 /* ── FOOTER ── */
 .footer{text-align:center;padding:32px 16px;font-size:11px;color:var(--ink-light)}
 .footer a{color:var(--blue);text-decoration:none}
@@ -597,6 +633,116 @@ function renderDashboard() {
       </div>
     </div>
     ` : ''}
+
+    <!-- Make It Yours — Welcome Card (shown until dismissed) -->
+    ${(() => {
+      const notes = typeof cd.notes === 'string' ? (() => { try { return JSON.parse(cd.notes); } catch(e) { return {}; } })() : (cd.notes || {});
+      const onboarded = notes.portal_onboarded;
+      if (onboarded) return '';
+      const hasStyles = true; // styles always assigned at provisioning
+      const hasLogo = !!cd.logo_url;
+      return `
+      <div class="welcome-card" id="welcome-card">
+        <div class="welcome-title">Make it yours ✨</div>
+        <div class="welcome-desc">Personalise how your posts look across social media. Takes about 2 minutes.</div>
+        <div class="welcome-steps">
+          <div class="welcome-step ${hasStyles?'done':''}">
+            <div class="welcome-step-num">1</div>
+            <span>Pick your image styles</span>
+          </div>
+          <div class="welcome-step ${hasLogo&&isPro?'done':''}">
+            <div class="welcome-step-num">2</div>
+            <span>${isPro ? 'Upload your logo' : 'Upload your logo (Pro)'}</span>
+          </div>
+          <div class="welcome-step">
+            <div class="welcome-step-num">3</div>
+            <span>You're all set!</span>
+          </div>
+        </div>
+        <button class="welcome-dismiss" onclick="dismissWelcome()">I'll do this later</button>
+      </div>`;
+    })()}
+
+    <!-- Artistic Styles -->
+    <div class="card" id="card-styles">
+      <div class="card-header" onclick="toggleCard('styles')">
+        <div class="card-header-left">
+          <div class="card-icon">🎨</div>
+          <div>
+            <div class="card-title">Image Styles</div>
+            <div class="card-subtitle">${isPro ? 'All styles unlocked' : 'Photorealistic + 2 styles'}</div>
+          </div>
+        </div>
+        <div class="card-chevron" id="chevron-styles">▼</div>
+      </div>
+      <div class="card-divider"></div>
+      <div class="card-body" id="body-styles">
+        <div style="padding-top:12px">
+          <p style="font-size:13px;color:var(--ink-mid);margin-bottom:14px">Choose the visual styles for your social media images. Each day, a different style is applied automatically.</p>
+          <div class="style-grid" id="style-grid">
+            <div style="grid-column:1/-1;text-align:center;padding:20px 0">
+              <div class="spinner" style="margin:0 auto 8px"></div>
+              <div style="font-size:12px;color:var(--ink-light)">Loading styles...</div>
+            </div>
+          </div>
+          ${!isPro ? '<div class="style-upgrade"><div class="info-box info-box-blue"><span class="info-icon">✦</span><div><strong>Unlock all 8 styles</strong> — Upgrade to Pro for the full collection including Studio Ghibli, Oil Painting, Pop Art and more.</div></div></div>' : ''}
+          <div class="save-row" id="styles-save-row" style="display:none">
+            <button class="btn btn-primary btn-sm" onclick="saveStyles(this)">
+              <span class="btn-spinner" id="styles-spinner"></span>
+              Save styles
+            </button>
+            <span class="save-msg" id="styles-msg">✅ Styles updated!</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logo Upload (Pro) -->
+    ${isPro ? `
+    <div class="card" id="card-logo">
+      <div class="card-header" onclick="toggleCard('logo')">
+        <div class="card-header-left">
+          <div class="card-icon">🏷️</div>
+          <div>
+            <div class="card-title">Your Logo</div>
+            <div class="card-subtitle">${cd.logo_url ? 'Logo uploaded' : 'Add your logo to posts'}</div>
+          </div>
+        </div>
+        <div class="card-chevron" id="chevron-logo">▼</div>
+      </div>
+      <div class="card-divider"></div>
+      <div class="card-body" id="body-logo">
+        <div style="padding-top:12px">
+          <p style="font-size:13px;color:var(--ink-mid);margin-bottom:14px">Your logo will appear on every branded post alongside your business name.</p>
+          <div class="logo-upload-area ${cd.logo_url?'has-logo':''}" id="logo-area" onclick="triggerLogoUpload()">
+            ${cd.logo_url ? `
+              <img src="${esc(cd.logo_url)}" class="logo-preview" id="logo-preview" alt="Your logo">
+              <button class="logo-replace-btn" onclick="event.stopPropagation();triggerLogoUpload()">Replace logo</button>
+            ` : `
+              <div class="logo-upload-icon">📤</div>
+              <div class="logo-upload-text">Tap to upload your logo</div>
+              <div class="logo-upload-hint">PNG or JPG · Max 500KB</div>
+            `}
+          </div>
+          <input type="file" id="logo-file-input" accept="image/png,image/jpeg" style="display:none" onchange="handleLogoFile(this)">
+          <div id="logo-status" style="font-size:13px;margin-top:8px;text-align:center"></div>
+        </div>
+      </div>
+    </div>
+    ` : `
+    <div class="card" style="opacity:0.7">
+      <div class="card-header">
+        <div class="card-header-left">
+          <div class="card-icon">🏷️</div>
+          <div>
+            <div class="card-title">Your Logo</div>
+            <div class="card-subtitle">Upgrade to Pro to add your logo</div>
+          </div>
+        </div>
+        <span class="pill pill-blue">✦ Pro</span>
+      </div>
+    </div>
+    `}
 
     <!-- Add Another Business -->
     <div style="margin-bottom:16px;background:white;border:1.5px dashed var(--border);border-radius:16px;padding:20px;text-align:center">
@@ -1161,6 +1307,190 @@ function showProSetupComplete(driveIntent) {
       <p style="font-size:14px;color:var(--ink-mid);margin-bottom:24px;line-height:1.6">${driveIntent==='now'?'Your photo library is connected. Real photos will be used in your next posts.':'Your Pro features are active. You can connect your photo library anytime from your account.'}</p>
       <button class="btn btn-primary" onclick="renderDashboard()">Go to my account →</button>
     </div>`;
+}
+
+// ── STYLE GALLERY (Phase 4, v43) ─────────────────────────
+
+let _galleryData = null;
+let _selectedStyleIds = new Set();
+
+async function loadStyleGallery() {
+  const grid = document.getElementById('style-grid');
+  if (!grid || !clientData) return;
+  try {
+    const resp = await fetch(PROXY_URL + '/client/' + clientData.client_id + '/style-gallery', {
+      method: 'GET', headers: {'Content-Type': 'application/json'}
+    });
+    const result = await resp.json();
+    if (result.status !== 'success' || !result.data) {
+      grid.innerHTML = '<div style="grid-column:1/-1;font-size:13px;color:var(--ink-light);text-align:center;padding:20px">Could not load styles. Try refreshing.</div>';
+      return;
+    }
+    _galleryData = result.data;
+    _selectedStyleIds = new Set(result.data.gallery.filter(s => s.is_selected).map(s => s.id));
+    renderStyleGrid();
+  } catch(e) {
+    grid.innerHTML = '<div style="grid-column:1/-1;font-size:13px;color:var(--red);text-align:center;padding:20px">Connection error</div>';
+  }
+}
+
+function renderStyleGrid() {
+  const grid = document.getElementById('style-grid');
+  if (!grid || !_galleryData) return;
+  const plan = (_galleryData.plan || 'standard').toLowerCase();
+  grid.innerHTML = _galleryData.gallery.map(s => {
+    const selected = _selectedStyleIds.has(s.id);
+    const locked = s.is_locked;
+    const cls = `style-card${selected?' selected':''}${locked?' locked':''}`;
+    const imgHtml = s.preview_url
+      ? `<img class="style-img" src="${esc(s.preview_url)}" alt="${esc(s.name)}" loading="lazy" onerror="this.outerHTML='<div class=\\'style-img-placeholder\\'>🎨</div>'">`
+      : '<div class="style-img-placeholder">🎨</div>';
+    return `
+      <div class="${cls}" onclick="${locked?'':'toggleStyle(\''+s.id+'\',this)'}" title="${esc(s.description||s.name)}">
+        ${imgHtml}
+        <div class="style-name">${esc(s.name)}</div>
+        ${locked ? '<div class="style-lock">🔒</div>' : ''}
+        <div class="style-check">✓</div>
+      </div>`;
+  }).join('');
+  document.getElementById('styles-save-row').style.display = 'flex';
+}
+
+function toggleStyle(styleId, el) {
+  if (!_galleryData) return;
+  const style = _galleryData.gallery.find(s => s.id === styleId);
+  if (!style || style.is_locked) return;
+  // Photorealistic (is_default) can't be deselected
+  if (style.is_default && _selectedStyleIds.has(styleId)) return;
+  const plan = (_galleryData.plan || 'standard').toLowerCase();
+  if (_selectedStyleIds.has(styleId)) {
+    _selectedStyleIds.delete(styleId);
+  } else {
+    // Standard: max 3 total (photorealistic + 2)
+    if (plan !== 'pro' && _selectedStyleIds.size >= 3) {
+      const msg = document.getElementById('styles-msg');
+      msg.textContent = 'Standard plan allows Photorealistic + 2 styles';
+      msg.style.display = 'inline';
+      setTimeout(() => { msg.style.display = ''; }, 3000);
+      return;
+    }
+    _selectedStyleIds.add(styleId);
+  }
+  renderStyleGrid();
+}
+
+async function saveStyles(btn) {
+  if (busy || !_galleryData) return;
+  const ids = Array.from(_selectedStyleIds);
+  if (ids.length < 1) return;
+  busy = true;
+  const spinner = document.getElementById('styles-spinner');
+  const msg = document.getElementById('styles-msg');
+  spinner.style.display = 'inline-block';
+  msg.style.display = 'none';
+  try {
+    const resp = await fetch(PROXY_URL + '/client/' + clientData.client_id + '/artistic-styles', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ style_ids: ids })
+    });
+    const result = await resp.json();
+    if (result.status === 'ok') {
+      msg.textContent = '✅ Styles updated!';
+      msg.style.color = 'var(--green)';
+    } else {
+      msg.textContent = result.message || 'Error saving';
+      msg.style.color = 'var(--red)';
+    }
+  } catch(e) {
+    msg.textContent = 'Connection error';
+    msg.style.color = 'var(--red)';
+  }
+  spinner.style.display = 'none';
+  msg.style.display = 'inline';
+  busy = false;
+}
+
+// Load gallery when styles card is first opened
+const _origToggle = toggleCard;
+toggleCard = function(id) {
+  _origToggle(id);
+  if (id === 'styles' && !_galleryData) {
+    loadStyleGallery();
+  }
+};
+
+// ── LOGO UPLOAD (Phase 4, v43) ───────────────────────────
+
+function triggerLogoUpload() {
+  document.getElementById('logo-file-input').click();
+}
+
+async function handleLogoFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('logo-status');
+
+  // Client-side checks (server validates again)
+  if (!['image/png', 'image/jpeg'].includes(file.type)) {
+    status.innerHTML = '<span style="color:var(--red)">Only PNG or JPG files accepted</span>';
+    return;
+  }
+  if (file.size > 500 * 1024) {
+    status.innerHTML = '<span style="color:var(--red)">Logo must be under 500KB</span>';
+    return;
+  }
+
+  status.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0 auto"></div>';
+
+  try {
+    // Read as base64
+    const b64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = () => reject(new Error('Read failed'));
+      reader.readAsDataURL(file);
+    });
+
+    const resp = await fetch(PROXY_URL + '/client/' + clientData.client_id + '/logo', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ image_b64: b64 })
+    });
+    const result = await resp.json();
+
+    if (result.status === 'success' && result.logo_url) {
+      clientData.logo_url = result.logo_url;
+      status.innerHTML = '<span style="color:var(--green)">✅ Logo uploaded!</span>';
+      // Update the upload area to show preview
+      const area = document.getElementById('logo-area');
+      area.classList.add('has-logo');
+      area.innerHTML = `
+        <img src="${esc(result.logo_url)}" class="logo-preview" id="logo-preview" alt="Your logo">
+        <button class="logo-replace-btn" onclick="event.stopPropagation();triggerLogoUpload()">Replace logo</button>`;
+    } else {
+      status.innerHTML = `<span style="color:var(--red)">${result.message || 'Upload failed'}</span>`;
+    }
+  } catch(e) {
+    status.innerHTML = '<span style="color:var(--red)">Connection error. Please try again.</span>';
+  }
+  // Reset input so same file can be re-selected
+  input.value = '';
+}
+
+// ── WELCOME CARD (Phase 4, v43) ──────────────────────────
+
+async function dismissWelcome() {
+  const card = document.getElementById('welcome-card');
+  if (card) card.style.display = 'none';
+  try {
+    await fetch(PROXY_URL + '/client/' + clientData.client_id + '/portal-onboarded', {
+      method: 'PATCH', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({})
+    });
+    // Update local data so it doesn't reappear on re-render
+    let notes = typeof clientData.notes === 'string' ? (() => { try { return JSON.parse(clientData.notes); } catch(e) { return {}; } })() : (clientData.notes || {});
+    notes.portal_onboarded = true;
+    clientData.notes = notes;
+  } catch(e) { /* silent — card already hidden */ }
 }
 </script>
 </body>
