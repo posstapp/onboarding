@@ -704,7 +704,7 @@ function renderDashboard() {
         <div class="card-header-left">
           <div class="card-icon">🏷️</div>
           <div>
-            <div class="card-title">Your Logo</div>
+            <div class="card-title">Your Logo & Contact Info</div>
             <div class="card-subtitle">${cd.logo_url ? 'Logo uploaded' : 'Add your logo to posts'}</div>
           </div>
         </div>
@@ -713,7 +713,9 @@ function renderDashboard() {
       <div class="card-divider"></div>
       <div class="card-body" id="body-logo">
         <div style="padding-top:12px">
-          <p style="font-size:13px;color:var(--ink-mid);margin-bottom:14px">Your logo will appear on every branded post alongside your business name.</p>
+          <p style="font-size:13px;color:var(--ink-mid);margin-bottom:14px">Your logo and contact info appear on every branded post.</p>
+
+          <!-- Logo Upload -->
           <div class="logo-upload-area ${cd.logo_url?'has-logo':''}" id="logo-area" onclick="triggerLogoUpload()">
             ${cd.logo_url ? `
               <img src="${esc(cd.logo_url)}" class="logo-preview" id="logo-preview" alt="Your logo">
@@ -726,6 +728,34 @@ function renderDashboard() {
           </div>
           <input type="file" id="logo-file-input" accept="image/png,image/jpeg" style="display:none" onchange="handleLogoFile(this)">
           <div id="logo-status" style="font-size:13px;margin-top:8px;text-align:center"></div>
+
+          <!-- Contact Info Preview -->
+          <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">Contact info on posts</div>
+            <div style="font-size:12px;color:var(--ink-light);margin-bottom:12px">This appears below your business name on every post.</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div>
+                <label style="font-size:11px;font-weight:600;color:var(--ink-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;display:block">Email</label>
+                <input class="form-input" id="branding-email" value="${esc(cd.caption_email||'')}" placeholder="e.g. hello@yourbusiness.com" style="width:100%">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:600;color:var(--ink-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;display:block">Phone</label>
+                <input class="form-input" id="branding-phone" value="${esc(cd.caption_phone||'')}" placeholder="e.g. 0400 123 456" style="width:100%">
+              </div>
+            </div>
+            <div style="margin-top:8px;padding:10px;background:var(--blue-dim);border-radius:8px">
+              <div style="font-size:11px;color:var(--ink-mid);margin-bottom:4px">Preview on your posts:</div>
+              <div style="font-size:13px;font-weight:600;color:var(--ink)">${esc(cd.business_name||'Your Business')}</div>
+              <div style="font-size:12px;color:var(--ink-mid)" id="branding-preview">${esc([cd.caption_email,cd.caption_phone].filter(Boolean).join(' | ')||'No contact info set')}</div>
+            </div>
+            <div class="save-row" style="margin-top:12px">
+              <button class="btn btn-primary btn-sm" onclick="saveBranding(this)">
+                <span class="btn-spinner" id="branding-spinner"></span>
+                Save contact info
+              </button>
+              <span class="save-msg" id="branding-msg"></span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1489,6 +1519,58 @@ async function handleLogoFile(input) {
 }
 
 // ── WELCOME CARD (Phase 4, v43) ──────────────────────────
+
+// ── BRANDING CONTACT INFO (Phase 4, v43) ─────────────────
+
+function updateBrandingPreview() {
+  const email = (document.getElementById('branding-email')?.value || '').trim();
+  const phone = (document.getElementById('branding-phone')?.value || '').trim();
+  const preview = document.getElementById('branding-preview');
+  if (preview) {
+    const parts = [email, phone].filter(Boolean);
+    preview.textContent = parts.length ? parts.join(' | ') : 'No contact info set';
+  }
+}
+
+// Live preview as user types
+document.addEventListener('input', function(e) {
+  if (e.target.id === 'branding-email' || e.target.id === 'branding-phone') {
+    updateBrandingPreview();
+  }
+});
+
+async function saveBranding(btn) {
+  if (busy) return;
+  busy = true;
+  const spinner = document.getElementById('branding-spinner');
+  const msg = document.getElementById('branding-msg');
+  spinner.style.display = 'inline-block';
+  msg.style.display = 'none';
+  const email = (document.getElementById('branding-email')?.value || '').trim();
+  const phone = (document.getElementById('branding-phone')?.value || '').trim();
+  try {
+    const resp = await fetch(PROXY_URL + '/client/' + clientData.client_id + '/branding', {
+      method: 'PATCH', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ caption_email: email, caption_phone: phone })
+    });
+    const result = await resp.json();
+    if (result.status === 'success') {
+      clientData.caption_email = email;
+      clientData.caption_phone = phone;
+      msg.textContent = '✅ Contact info updated!';
+      msg.style.color = 'var(--green)';
+    } else {
+      msg.textContent = result.message || 'Error saving';
+      msg.style.color = 'var(--red)';
+    }
+  } catch(e) {
+    msg.textContent = 'Connection error';
+    msg.style.color = 'var(--red)';
+  }
+  spinner.style.display = 'none';
+  msg.style.display = 'inline';
+  busy = false;
+}
 
 async function dismissWelcome() {
   const card = document.getElementById('welcome-card');
