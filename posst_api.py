@@ -30,7 +30,7 @@ from functools import wraps
 
 app = Flask(__name__)
 # D2-10 Security: reject request bodies larger than 1MB before any processing.
-app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2MB — covers logo upload base64 overhead
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
@@ -2416,6 +2416,196 @@ def set_client_artistic_styles(client_id):
 def pick_artistic_style(client_id):
     prefix, slug = _pick_artistic_style(client_id)
     return jsonify({"status": "ok", "prompt_prefix": prefix, "style_slug": slug})
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Phase 4: Portal UI endpoints (v43, Jul 15 2026)
+# ──────────────────────────────────────────────────────────────────────
+
+# Preview group mapping — maps 208 business types to 29 visual groups
+from preview_group_mapping import get_preview_group, get_all_preview_urls, PREVIEW_GROUPS, ARTISTIC_STYLES
+
+@app.route('/api/client/<client_id>/style-gallery', methods=['GET'])
+@require_auth
+def style_gallery(client_id):
+    """Return style gallery data for the portal: all artistic styles with
+    lock/unlock status per plan, and preview image URLs for client's business type."""
+    try:
+        # Get client info
+        cr = sb.table('clients').select('business_type, plan').eq('client_id', client_id).maybe_single().execute()
+        if not cr.data:
+            return err('Client not found', 404)
+        business_type = cr.data.get('business_type', '')
+        plan = (cr.data.get('plan') or 'standard').lower()
+
+        # Get all artistic styles from Supabase
+        styles_resp = sb.table('artistic_styles').select(
+            'id, name, slug, description, tier, sort_order, is_default'
+        ).order('sort_order').execute()
+        all_styles = styles_resp.data or []
+
+        # Get client's current selections
+        sel_resp = sb.table('client_artistic_styles').select('style_id, is_active').eq('client_id', client_id).execute()
+        selected_ids = {r['style_id'] for r in (sel_resp.data or []) if r.get('is_active')}
+
+        # Get preview image URLs for this business type
+        preview_urls = get_all_preview_urls(business_type)
+
+        # Build gallery items
+        gallery = []
+        for s in all_styles:
+            slug = s.get('slug', '')
+            tier = (s.get('tier') or 'standard').lower()
+            is_locked = (tier == 'pro' and plan != 'pro')
+            gallery.append({
+                'id': s['id'],
+                'name': s['name'],
+                'slug': slug,
+                'description': s.get('description', ''),
+                'is_selected': s['id'] in selected_ids,
+                'is_locked': is_locked,
+                'is_default': s.get('is_default', False),
+                'preview_url': preview_urls.get(slug, ''),
+            })
+
+        return ok(data={
+            'gallery': gallery,
+            'plan': plan,
+            'business_type': business_type,
+            'preview_group': get_preview_group(business_type),
+        })
+    except Exception as e:
+        log.error(f'[style-gallery] {client_id}: {e}')
+        return err('Failed to load style gallery', 500)
+
+
+@app.route('/api/client/<client_id>/logo', methods=['POST'])
+@require_auth
+def upload_logo(client_id):
+    """Upload a logo image for a Pro client.
+    Security: magic bytes check, Pillow re-encode, EXIF strip, UUID filename,
+    dimension cap, size cap, rate limit, audit log."""
+    import base64
+    import uuid
+    import io as _io
+    import time as _time
+    import requests as http_req
+
+    try:
+        # Rate limit: 5 uploads per client per hour
+        rate_key = f'logo_upload_{client_id}'
+        if not _check_rate(rate_key, 5):
+            _audit_log('logo_upload_rate_limited', actor=client_id, status_code=429)
+            return err('Too many uploads. Try again later.', 429)
+
+        # Verify client exists and is Pro
+        cr = sb.table('clients').select('plan').eq('client_id', client_id).maybe_single().execute()
+        if not cr.data:
+            return err('Client not found', 404)
+        if (cr.data.get('plan') or 'standard').lower() != 'pro':
+            _audit_log('logo_upload_denied', actor=client_id, detail={'reason': 'not_pro'}, status_code=403)
+            return err('Logo upload is a Pro feature. Upgrade to Pro to add your logo.', 403)
+
+        d = request.get_json() or {}
+        image_b64 = d.get('image_b64', '')
+        if not image_b64:
+            return err('No image data provided')
+
+        # Decode base64
+        try:
+            raw_bytes = base64.b64decode(image_b64)
+        except Exception:
+            _audit_log('logo_upload_failed', actor=client_id, detail={'reason': 'invalid_base64'}, status_code=400)
+            return err('Invalid image data')
+
+        # Size check: max 500KB raw (plenty for a logo)
+        if len(raw_bytes) > 500 * 1024:
+            _audit_log('logo_upload_failed', actor=client_id, detail={'reason': 'too_large', 'size': len(raw_bytes)}, status_code=400)
+            return err('Logo must be under 500KB')
+
+        # Magic bytes check — only PNG and JPEG accepted
+        png_magic = b'\x89PNG\r\n\x1a\n'
+        jpg_magic = (b'\xff\xd8\xff',)
+        if raw_bytes[:8] == png_magic:
+            detected_format = 'PNG'
+        elif raw_bytes[:3] in jpg_magic:
+            detected_format = 'JPEG'
+        else:
+            _audit_log('logo_upload_failed', actor=client_id, detail={'reason': 'invalid_type'}, status_code=400)
+            return err('Only PNG and JPG images are accepted')
+
+        # Re-encode through Pillow — strips EXIF, embedded scripts, polyglot payloads
+        try:
+            from PIL import Image as _PILImage
+            img = _PILImage.open(_io.BytesIO(raw_bytes))
+
+            # Dimension check: max 4096×4096
+            if img.width > 4096 or img.height > 4096:
+                _audit_log('logo_upload_failed', actor=client_id, detail={'reason': 'too_large_dims', 'w': img.width, 'h': img.height}, status_code=400)
+                return err('Logo dimensions must be under 4096×4096 pixels')
+
+            # Convert to RGBA (handle transparency) then re-save as PNG
+            img = img.convert('RGBA')
+            buf = _io.BytesIO()
+            img.save(buf, format='PNG', optimize=True)
+            clean_bytes = buf.getvalue()
+
+        except Exception as pil_err:
+            _audit_log('logo_upload_failed', actor=client_id, detail={'reason': 'corrupt_image', 'error': str(pil_err)}, status_code=400)
+            return err('Image appears to be corrupt or invalid')
+
+        # Upload to R2 — isolated path per client, UUID filename
+        logo_filename = f'logos/{client_id}/{uuid.uuid4().hex}.png'
+        logo_b64 = base64.b64encode(clean_bytes).decode()
+
+        r2_resp = http_req.post('http://172.17.0.1:5679/upload', json={
+            'filename': logo_filename,
+            'image_b64': logo_b64,
+        }, timeout=30)
+
+        if r2_resp.status_code != 200:
+            _audit_log('logo_upload_failed', actor=client_id, detail={'reason': 'r2_error', 'status': r2_resp.status_code}, status_code=500)
+            return err('Failed to store logo. Please try again.', 500)
+
+        logo_url = f'https://pub-f5f1d08da66048808d14f48cb78ebb36.r2.dev/{logo_filename}'
+
+        # Save URL to clients table
+        sb.table('clients').update({'logo_url': logo_url}).eq('client_id', client_id).execute()
+
+        _audit_log('logo_uploaded', actor=client_id, detail={
+            'size': len(clean_bytes), 'dims': f'{img.width}x{img.height}', 'format': detected_format
+        })
+        log.info(f'[logo] {client_id} uploaded — {len(clean_bytes)} bytes — {img.width}x{img.height}')
+        return ok(logo_url=logo_url)
+
+    except Exception as e:
+        log.error(f'[logo] {client_id} failed: {e}')
+        _audit_log('logo_upload_failed', actor=client_id, detail={'reason': 'exception', 'error': str(e)}, status_code=500)
+        return err('Logo upload failed. Please try again.', 500)
+
+
+@app.route('/api/client/<client_id>/portal-onboarded', methods=['PATCH'])
+@require_auth
+def set_portal_onboarded(client_id):
+    """Mark the 'Make it yours' card as dismissed."""
+    try:
+        # Read current notes JSON and add portal_onboarded flag
+        cr = sb.table('clients').select('notes').eq('client_id', client_id).maybe_single().execute()
+        if not cr.data:
+            return err('Client not found', 404)
+        notes = cr.data.get('notes') or {}
+        if isinstance(notes, str):
+            import json as _json
+            try:
+                notes = _json.loads(notes)
+            except Exception:
+                notes = {}
+        notes['portal_onboarded'] = True
+        sb.table('clients').update({'notes': notes}).eq('client_id', client_id).execute()
+        return ok()
+    except Exception as e:
+        log.error(f'[portal-onboarded] {client_id}: {e}')
+        return err('Failed to update', 500)
 
 
 if __name__ == '__main__':
