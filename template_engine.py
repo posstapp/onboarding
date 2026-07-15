@@ -181,6 +181,12 @@ def _composite_inner(image_bytes: bytes, config: dict) -> bytes:
 
     # Open image
     img = Image.open(io.BytesIO(image_bytes)).convert('RGBA')
+
+    # Strip ALL metadata including C2PA watermarks (reduces "Made with AI" labels)
+    # Creating a new image from raw pixel bytes guarantees zero metadata carryover
+    clean = Image.frombytes('RGBA', img.size, img.tobytes())
+    img = clean
+
     w, h = img.size
 
     # Create overlay layer
