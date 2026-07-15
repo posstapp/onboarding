@@ -598,7 +598,11 @@ async function verifyOTP() {
     if(result.status==='success'&&result.verified) {
       otpVerified=true; errors.otp='';
       var fullPhone = F.phone_code + F.phone_number;
+      var portalSessionToken = result.session_token || '';
       sessionStorage.setItem('posst_phone', fullPhone);
+      if (portalSessionToken) {
+        sessionStorage.setItem('posst_session_token', portalSessionToken);
+      }
       var sid = sessionStorage.getItem('posst_session_id') || '';
       // Create or update prospect with phone + any GBP data from session
       // This covers both Path A (came via GBP search) and Path B (direct entry)
@@ -636,7 +640,7 @@ async function verifyOTP() {
         callAppsScript('portal_lookup', {phone: fullPhone}).then(function(portalRes) {
           const clientStatus = portalRes && portalRes.status === 'success' && portalRes.data ? (portalRes.data.status || '') : '';
           if(['Active','Provisioning','Paused','Cancelled'].includes(clientStatus)) {
-            window.location.href = 'https://onboarding.posst.app/portal.html?phone=' + encodeURIComponent(fullPhone);
+            window.location.href = 'https://onboarding.posst.app/portal.html?session=' + encodeURIComponent(portalSessionToken);
             return;
           }
           next();
@@ -673,7 +677,7 @@ async function verifyOTP() {
       callAppsScript('portal_lookup', {phone: fullPhone}).then(function(portalRes) {
         const clientStatus = portalRes && portalRes.status === 'success' && portalRes.data ? (portalRes.data.status || '') : '';
         if(['Active','Provisioning','Paused','Cancelled'].includes(clientStatus)) {
-          window.location.href = 'https://onboarding.posst.app/portal.html?phone=' + encodeURIComponent(fullPhone);
+          window.location.href = 'https://onboarding.posst.app/portal.html?session=' + encodeURIComponent(portalSessionToken);
           return;
         }
         // Pending_Token = client row exists but Stripe not yet completed.
