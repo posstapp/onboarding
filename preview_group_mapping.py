@@ -659,14 +659,14 @@ ARTISTIC_STYLES = {
         "prompt_prefix": "Bold pop art style with vivid colours.",
         "tier": "pro",
     },
-    "ink_wash": {
-        "label": "Ink Wash",
-        "prompt_prefix": "Traditional ink wash painting style.",
+    "cinematic_noir": {
+        "label": "Cinematic Noir",
+        "prompt_prefix": "Dramatic cinematic noir style with deep shadows and moody contrast.",
         "tier": "pro",
     },
-    "retro_vintage": {
-        "label": "Retro Vintage",
-        "prompt_prefix": "Retro vintage poster style.",
+    "vintage_film": {
+        "label": "Vintage Film",
+        "prompt_prefix": "Warm vintage film photography style with retro grain and muted tones.",
         "tier": "pro",
     },
 }
