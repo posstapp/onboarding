@@ -367,7 +367,7 @@ SUCCESS_PAGE = """
   <div style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:12px;padding:18px;margin:20px 0;text-align:center">
     <p style="font-size:14px;color:#0F0E17;margin-bottom:4px;font-weight:600">&#x1F3A8; Make it yours</p>
     <p style="font-size:13px;color:#4A4860;margin-bottom:14px">Pick your image styles and upload your logo to personalise your posts.</p>
-    <a href="https://onboarding.posst.app/portal.html?phone={{ client_phone }}" style="display:inline-block;background:#1648FF;color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:11px 28px;border-radius:8px">Personalise your posts &#x2192;</a>
+    <a href="https://onboarding.posst.app/portal.html?session={{ portal_session_token }}" style="display:inline-block;background:#1648FF;color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:11px 28px;border-radius:8px">Personalise your posts &#x2192;</a>
   </div>
   {% if show_drive %}
   <div id="drive-box" style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:18px;margin:20px 0;text-align:left">
@@ -446,17 +446,29 @@ def render_success(client_id, email):
     ig_handle    = ''
     gbp_name     = ''
     client_phone = ''
+    portal_session_token = ''
     try:
         if client:
             fb_page_name = client.get('fb_page_name') or ''
             ig_handle    = client.get('ig_handle') or ''
             gbp_name     = client.get('gbp_name') or '' if client.get('gbp_location_id') else ''
             client_phone = client.get('phone') or ''
+            # Generate portal session token for "Personalise your posts" link
+            if client_phone:
+                try:
+                    r = requests.post('http://127.0.0.1:5680/api/session/create',
+                        json={'phone': client_phone},
+                        headers={'X-API-Key': POSST_API_SECRET},
+                        timeout=5)
+                    if r.status_code == 200:
+                        portal_session_token = r.json().get('session_token', '')
+                except:
+                    pass
     except:
         pass
     return render_template_string(SUCCESS_PAGE, email=email, show_drive=show_drive, drive_url=drive_url,
                                   fb_page_name=fb_page_name, ig_handle=ig_handle, gbp_name=gbp_name,
-                                  client_phone=client_phone)
+                                  client_phone=client_phone, portal_session_token=portal_session_token)
 
 
 @app.route('/connect')
@@ -1086,6 +1098,7 @@ _PROXY_PATTERNS = [
     (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/logo$'),               {'POST'}),
     (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/portal-onboarded$'),   {'PATCH'}),
     (_proxy_re.compile(r'^client/POSST_\d{8}_\d{3}/branding$'),            {'PATCH'}),
+    (_proxy_re.compile(r'^session/create$'),                               {'POST'}),
 ]
 
 def _proxy_allowed(path, method):
