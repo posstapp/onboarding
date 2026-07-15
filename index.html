@@ -637,7 +637,7 @@ async function verifyOTP() {
         return;
       }
       function goToPortalOrContinue() {
-        callAppsScript('portal_lookup', {phone: fullPhone}).then(function(portalRes) {
+        callAppsScript('portal_lookup', {session_token: portalSessionToken}).then(function(portalRes) {
           const clientStatus = portalRes && portalRes.status === 'success' && portalRes.data ? (portalRes.data.status || '') : '';
           if(['Active','Provisioning','Paused','Cancelled'].includes(clientStatus)) {
             window.location.href = 'https://onboarding.posst.app/portal.html?session=' + encodeURIComponent(portalSessionToken);
@@ -674,7 +674,7 @@ async function verifyOTP() {
         }).catch(function() { goToPortalOrContinue(); });
         return;
       }
-      callAppsScript('portal_lookup', {phone: fullPhone}).then(function(portalRes) {
+      callAppsScript('portal_lookup', {session_token: portalSessionToken}).then(function(portalRes) {
         const clientStatus = portalRes && portalRes.status === 'success' && portalRes.data ? (portalRes.data.status || '') : '';
         if(['Active','Provisioning','Paused','Cancelled'].includes(clientStatus)) {
           window.location.href = 'https://onboarding.posst.app/portal.html?session=' + encodeURIComponent(portalSessionToken);
