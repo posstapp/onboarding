@@ -390,7 +390,7 @@ _SCHEMA_CLIENT = {
     'contact_email': {'required': True, 'type': str, 'maxlen': 254},
 }
 _SCHEMA_PROSPECT = {'phone': {'required': True, 'type': str, 'maxlen': 30}}
-_SCHEMA_PORTAL_LOOKUP = {'phone': {'required': True, 'type': str, 'maxlen': 30}}
+_SCHEMA_PORTAL_LOOKUP = {'session_token': {'required': True, 'type': str, 'maxlen': 64}}
 _SCHEMA_CHAT = {'messages': {'required': True, 'type': list}}
 _SCHEMA_OTP = {'phone': {'required': True, 'type': str, 'maxlen': 30}}
 _SCHEMA_POSTS_LOG = {'client_id': {'required': True, 'type': str, 'maxlen': 30}}
@@ -784,13 +784,42 @@ def resume_client(client_id):
 @require_auth
 def portal_lookup():
     d = request.json or {}
-    # B-031: Schema validation
+    # v43: Session token auth (clean cut — no phone-based access)
     d, val_err = _validate(d, _SCHEMA_PORTAL_LOOKUP)
     if val_err:
         return err(val_err)
-    phone_raw = _sanitize(d.get('phone', ''), 30)
+    session_token = (d.get('session_token') or '').strip()
+    if not session_token:
+        return err('Session token required')
+
+    # Look up token in portal_sessions
+    try:
+        token_row = sb.table('portal_sessions').select('phone, client_id, expires_at') \
+            .eq('token', session_token).maybe_single().execute()
+    except Exception as e:
+        log.error(f'portal_lookup session query failed: {e}')
+        return err('Session error', 500)
+
+    if not token_row.data:
+        return jsonify({'status': 'error', 'code': 'SESSION_INVALID', 'message': 'Session expired or invalid. Please log in again.'}), 401
+
+    # Check expiry
+    from datetime import datetime, timezone
+    expires_at = token_row.data.get('expires_at', '')
+    if expires_at:
+        try:
+            exp_dt = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            if datetime.now(timezone.utc) > exp_dt:
+                # Clean up expired token
+                sb.table('portal_sessions').delete().eq('token', session_token).execute()
+                return jsonify({'status': 'error', 'code': 'SESSION_EXPIRED', 'message': 'Session expired. Please log in again.'}), 401
+        except Exception:
+            pass
+
+    phone_raw = token_row.data.get('phone', '')
     if not phone_raw:
-        return err('Phone required')
+        return err('Session has no phone')
+
     # Normalize — remove all spaces for comparison
     phone = phone_raw.replace(' ', '')
     # Fetch all clients and compare normalized phones — collect ALL matches
@@ -1787,6 +1816,51 @@ def send_reconnect_email():
         }).execute()
     return ok(sent=EMAIL_AVAILABLE)
 
+# ── PORTAL SESSION TOKENS (v43 Security) ─────────────────────
+import secrets as _secrets
+from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+
+def _create_portal_session(phone):
+    """Create a session token for portal access. Returns the token string.
+    Invalidates any previous tokens for this phone. Expires in 24 hours."""
+    token = _secrets.token_hex(32)  # 64-char hex string
+    expires = (_dt.now(_tz.utc) + _td(hours=24)).isoformat()
+
+    # Delete previous sessions for this phone
+    try:
+        sb.table('portal_sessions').delete().eq('phone', phone).execute()
+    except Exception:
+        pass  # OK if table is empty
+
+    # Clean up expired sessions (housekeeping)
+    try:
+        sb.table('portal_sessions').delete().lt('expires_at', _dt.now(_tz.utc).isoformat()).execute()
+    except Exception:
+        pass
+
+    # Create new session
+    sb.table('portal_sessions').insert({
+        'token': token,
+        'phone': phone,
+        'expires_at': expires,
+    }).execute()
+
+    _audit_log('portal_session_created', detail={'phone': phone[:6] + '***'})
+    return token
+
+
+@app.route('/api/session/create', methods=['POST'])
+@require_auth
+def create_session():
+    """Create a portal session token for a given phone. Used by post-OAuth redirect."""
+    d = request.json or {}
+    phone = (d.get('phone') or '').strip()
+    if not phone:
+        return err('Phone required')
+    token = _create_portal_session(phone)
+    return ok(session_token=token)
+
+
 # ── OTP SYSTEM ────────────────────────────────────────────────
 import re as _re
 import time as _time
@@ -1923,7 +1997,9 @@ def otp_verify():
         return jsonify({'status': 'error', 'code': 'LOCKED', 'message': f'Too many wrong attempts. Try again in {mins} minutes.'}), 429
     if _twilio_verify(phone.replace(' ', ''), code):
         _clear_attempts(phone)
-        return jsonify({'status': 'success', 'verified': True})
+        # Create session token for portal access
+        token = _create_portal_session(phone)
+        return jsonify({'status': 'success', 'verified': True, 'session_token': token})
     rec = _inc_attempts(phone)
     if rec.get('locked_until', 0) > _time.time():
         return jsonify({'status': 'error', 'code': 'LOCKED', 'message': f'Too many wrong attempts. Locked for {LOCKOUT_MINS} minutes.'}), 429
