@@ -230,19 +230,25 @@ const ALL_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 let clientData = null;
 let phone = '';
 let busy = false;
+let sessionToken = '';
 
 // ── INIT ──────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
-  // Get phone from URL or sessionStorage
+  // Get session token from URL or sessionStorage
   const params = new URLSearchParams(window.location.search);
-  phone = params.get('phone') || sessionStorage.getItem('posst_portal_phone') || '';
+  sessionToken = params.get('session') || sessionStorage.getItem('posst_session_token') || '';
 
-  if (!phone) {
-    // No phone — redirect to login
+  if (!sessionToken) {
+    // No token — redirect to login
     window.location.href = 'https://onboarding.posst.app?mode=login';
     return;
   }
-  sessionStorage.setItem('posst_portal_phone', phone);
+  sessionStorage.setItem('posst_session_token', sessionToken);
+
+  // Clean the URL — remove token from address bar for extra security
+  if (params.get('session')) {
+    window.history.replaceState({}, '', window.location.pathname);
+  }
 
   await loadAccount();
 });
@@ -251,8 +257,16 @@ async function loadAccount() {
   try {
     const resp = await fetch(PROXY_URL + '/portal_lookup', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ phone })
+      body: JSON.stringify({ session_token: sessionToken })
     });
+
+    if (resp.status === 401) {
+      // Session expired or invalid
+      sessionStorage.removeItem('posst_session_token');
+      showError('Session expired. Please log in again.', true);
+      return;
+    }
+
     const result = await resp.json();
 
     if (result.status !== 'success') {
@@ -290,7 +304,7 @@ function showError(msg) {
 }
 
 function signOut() {
-  sessionStorage.removeItem('posst_portal_phone');
+  sessionStorage.removeItem('posst_session_token');
   window.location.href = 'https://posst.app';
 }
 
@@ -361,7 +375,7 @@ async function switchBusiness(clientId) {
     // instead of duplicating the connection-status logic in two endpoints.
     const resp = await fetch(PROXY_URL + '/portal_lookup', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ phone, client_id: clientId })
+      body: JSON.stringify({ session_token: sessionToken, client_id: clientId })
     });
     const result = await resp.json();
     if (result.status === 'success') {
