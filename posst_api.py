@@ -800,7 +800,7 @@ def portal_lookup():
         log.error(f'portal_lookup session query failed: {e}')
         return err('Session error', 500)
 
-    if not token_row.data:
+    if not token_row or not token_row.data:
         return jsonify({'status': 'error', 'code': 'SESSION_INVALID', 'message': 'Session expired or invalid. Please log in again.'}), 401
 
     # Check expiry
