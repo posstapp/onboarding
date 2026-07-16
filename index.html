@@ -1344,13 +1344,12 @@ function renderStep3() {
         <div class="tier-price"><sup>${p.sym}</sup>${p.std}</div>
         <div class="tier-per">per month &middot; no setup fee</div>
         <div class="tier-divider"></div>
-        <div class="tier-feat"><span class="tier-ck">&#10003;</span>Daily posting &mdash; 7 days a week</div>
-        <div class="tier-feat"><span class="tier-ck">&#10003;</span>AI images (gpt-image-1)</div>
-        <div class="tier-feat"><span class="tier-ck">&#10003;</span>AI captions &mdash; brand voice</div>
-        <div class="tier-feat"><span class="tier-ck">&#10003;</span>Auto Google review replies</div>
-        <div class="tier-feat"><span class="tier-ck">&#10003;</span>Monthly performance report</div>
-        <div class="tier-feat"><span class="tier-ck">&#10003;</span>Photorealistic + 2 image styles</div>
-        <div class="tier-feat"><span class="tier-ck">&#10003;</span>Business name on posts</div>
+        <div class="tier-feat"><span class="tier-ck">&#10003;</span>Social Agent &mdash; Daily FB + IG posts</div>
+        <div class="tier-feat"><span class="tier-ck">&#10003;</span>Caption Agent &mdash; AI captions in your brand voice</div>
+        <div class="tier-feat"><span class="tier-ck">&#10003;</span>Local SEO Agent &mdash; Hyper-local keywords</div>
+        <div class="tier-feat"><span class="tier-ck">&#10003;</span>3 Image Styles</div>
+        <div class="tier-feat"><span class="tier-ck">&#10003;</span>Business Name Branding</div>
+        <div class="tier-feat"><span class="tier-ck">&#10003;</span>Monthly Report</div>
       </div>
       <div class="tier-card ${F.tier==='Pro'?'selected-dark':''}" onclick="F.tier='Pro';render()">
         <div class="tier-popular">Most popular</div>
@@ -1359,11 +1358,11 @@ function renderStep3() {
         <div class="tier-per">per month &middot; no setup fee</div>
         <div class="tier-divider"></div>
         <div class="tier-feat"><span class="tier-ck">&#10003;</span>Everything in Standard</div>
-        <div class="tier-feat"><span class="tier-diff">+</span><span class="tier-diff-text">All 9 image styles unlocked</span></div>
-        <div class="tier-feat"><span class="tier-diff">+</span><span class="tier-diff-text">Your logo on every post</span></div>
-        <div class="tier-feat"><span class="tier-diff">+</span><span class="tier-diff-text">Contact info on posts (email &amp; phone)</span></div>
-        <div class="tier-feat"><span class="tier-diff">+</span><span class="tier-diff-text">Custom theme per day of week</span></div>
-        <div class="tier-feat"><span class="tier-diff">+</span><span class="tier-diff-text">Your own photos via Google Drive</span></div>
+        <div class="tier-feat"><span class="tier-diff">+</span><span class="tier-diff-text">All 9 Image Styles</span></div>
+        <div class="tier-feat"><span class="tier-diff">+</span><span class="tier-diff-text">Full Branding &mdash; logo, name, email &amp; phone</span></div>
+        <div class="tier-feat"><span class="tier-diff">+</span><span class="tier-diff-text">Your Own Photos via Google Drive</span></div>
+        <div class="tier-feat"><span class="tier-diff">+</span><span class="tier-diff-text">Content Themes &mdash; daily variety</span></div>
+        <div class="tier-feat"><span class="tier-diff">+</span><span class="tier-diff-text">Monthly Report</span></div>
       </div>
     </div>
     ${errors.tier?`<div class="form-error" style="margin-top:8px">${errors.tier}</div>`:''}
