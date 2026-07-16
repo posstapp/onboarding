@@ -420,6 +420,59 @@ def send_reconnect_confirmation_email(client, posting_time, timezone, platforms)
         body
     )
 
+def send_teaser_start_email(client, style_name, preview_url):
+    """
+    Sent when a Standard client's 3-day style teaser begins.
+    style_name: human-readable name (e.g. "Studio Ghibli")
+    preview_url: R2 URL for the style preview image matching their business category
+    """
+    business = client.get('business_name') or 'there'
+    body = wrap(f'''
+        {hero("&#x1F3A8;", f"You've unlocked {style_name} for 3 days!", "A sneak peek at what Pro can do for your posts.")}
+        {hi(business)}
+        {para(f"For the next 3 days, your posts will include images in the <strong>{style_name}</strong> style — one of 9 unique styles available on the Pro plan.")}
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+          <tr><td style="text-align:center;padding:12px 0;">
+            <img src="{preview_url}" alt="{style_name} preview" width="400" style="max-width:100%;border-radius:10px;border:1px solid {BORDER};" />
+          </td></tr>
+          <tr><td style="text-align:center;padding:4px 0 0;">
+            <p style="margin:0;font-size:12px;color:{MID};font-style:italic;">{style_name} style — preview</p>
+          </td></tr>
+        </table>
+        {para("Keep an eye on your social channels over the next few days to see the difference. No action needed — we handle everything.")}
+        {hl(f"This style will be active until your teaser window ends. After that, upgrade to Pro to keep all 9 styles permanently.", "&#x2B50;")}
+        {btn("View my account &rarr;", "https://onboarding.posst.app/portal.html")}
+        {sign_off()}
+    ''')
+    return send_email(client.get('contact_email'), f"You've unlocked {style_name} for 3 days — {business}", body)
+
+
+def send_teaser_end_email(client, style_name, preview_url):
+    """
+    Sent when a Standard client's 3-day style teaser ends.
+    Encourages upgrade to Pro.
+    """
+    business = client.get('business_name') or 'there'
+    body = wrap(f'''
+        {hero("&#x23F0;", f"Your {style_name} trial has ended", "Your posts are back to your current styles.")}
+        {hi(business)}
+        {para(f"Your 3-day preview of <strong>{style_name}</strong> has wrapped up. Your posts will continue with your current image styles.")}
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+          <tr><td style="text-align:center;padding:12px 0;">
+            <img src="{preview_url}" alt="{style_name} preview" width="400" style="max-width:100%;border-radius:10px;border:1px solid {BORDER};" />
+          </td></tr>
+        </table>
+        {sec("Want to keep all 9 styles?")}
+        {hl("All 9 unique image styles — from Watercolour to Cinematic Noir.", "&#x1F5BC;")}
+        {hl("Your logo on every post.", "&#x1F3AF;")}
+        {hl("Custom contact info branding.", "&#x1F4DE;")}
+        {para("Upgrade to Pro and every post stands out with the full range of styles. It takes less than a minute.")}
+        {btn("Upgrade to Pro &rarr;", "https://onboarding.posst.app/portal.html")}
+        {sign_off()}
+    ''')
+    return send_email(client.get('contact_email'), f"Your {style_name} trial ended — upgrade to keep it", body)
+
+
 if __name__ == '__main__':
     # Test
     print('Testing email...')
