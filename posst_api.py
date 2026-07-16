@@ -21,7 +21,8 @@ try:
         send_day1_email, send_day7_standard_email, send_day7_pro_email,
         send_trial_ending_email, send_monthly_email, send_missing_platform_email,
         send_reengagement_email, send_internal_alert, send_upgrade_email,
-        send_connection_error_email, send_reconnect_confirmation_email
+        send_connection_error_email, send_reconnect_confirmation_email,
+        send_teaser_start_email, send_teaser_end_email,
     )
     EMAIL_AVAILABLE = True
 except Exception as e:
@@ -2496,6 +2497,219 @@ def set_client_artistic_styles(client_id):
 def pick_artistic_style(client_id):
     prefix, slug = _pick_artistic_style(client_id)
     return jsonify({"status": "ok", "prompt_prefix": prefix, "style_slug": slug})
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Phase 5: Teaser / Upgrade Emails (v44, Jul 16 2026)
+# ──────────────────────────────────────────────────────────────────────
+
+R2_PREVIEW_BASE = 'https://pub-f5f1d08da66048808d14f48cb78ebb36.r2.dev/style_previews'
+
+def _get_teased_styles(notes):
+    """Extract list of previously teased style IDs from client notes JSON."""
+    try:
+        n = notes if isinstance(notes, dict) else json.loads(notes or '{}')
+        return n.get('teased_styles', [])
+    except Exception:
+        return []
+
+def _save_teased_style(client_id, style_id, current_notes):
+    """Append style_id to the teased_styles list in client notes."""
+    try:
+        n = current_notes if isinstance(current_notes, dict) else json.loads(current_notes or '{}')
+    except Exception:
+        n = {}
+    teased = n.get('teased_styles', [])
+    if style_id not in teased:
+        teased.append(style_id)
+    n['teased_styles'] = teased
+    sb.table('clients').update({'notes': json.dumps(n)}).eq('client_id', client_id).execute()
+
+def _get_preview_url_for_teaser(client_business_type, style_slug):
+    """Build the R2 preview URL for a style + business type combo."""
+    try:
+        group = get_preview_group(client_business_type)
+    except Exception:
+        group = 'professional_creative'  # safe fallback
+    return f'{R2_PREVIEW_BASE}/{group}/{style_slug}.jpg'
+
+
+@app.route('/api/teaser/activate', methods=['POST'])
+@require_admin
+def teaser_activate():
+    """
+    Monthly cron: activate a 3-day style teaser for each Standard client.
+    Picks the next locked style they haven't been teased with yet.
+    Sends teaser start email. Audit logs each activation.
+    """
+    from datetime import datetime, timedelta
+    activated = []
+    errors = []
+    try:
+        # Get all active Standard clients
+        clients_resp = sb.table('clients').select(
+            'client_id, plan, business_name, business_type, contact_email, notes, teaser_style_id'
+        ).eq('status', 'Active').execute()
+        if not clients_resp.data:
+            return ok(message='No active clients found', activated=[])
+
+        standard_clients = [
+            c for c in clients_resp.data
+            if (c.get('plan') or '').lower() == 'standard'
+            and not c.get('teaser_style_id')  # skip if already in a teaser window
+        ]
+        if not standard_clients:
+            return ok(message='No eligible Standard clients', activated=[])
+
+        # Get all artistic styles
+        all_styles = sb.table('artistic_styles').select('id, name, slug, is_default').order('sort_order').execute()
+        if not all_styles.data:
+            return err('No artistic styles found in database')
+
+        # Get photorealistic ID to exclude from teaser candidates
+        photo_id = None
+        for st in all_styles.data:
+            if st.get('slug') == 'photorealistic':
+                photo_id = st['id']
+                break
+
+        for client in standard_clients:
+            try:
+                cid = client['client_id']
+                # Get client's currently assigned styles (to exclude from teaser)
+                assigned_resp = sb.table('client_artistic_styles').select('style_id').eq('client_id', cid).eq('is_active', True).execute()
+                assigned_ids = {r['style_id'] for r in (assigned_resp.data or [])}
+
+                # Previously teased styles
+                teased_ids = _get_teased_styles(client.get('notes'))
+
+                # Candidate = all styles minus assigned minus photorealistic minus already teased
+                candidates = [
+                    st for st in all_styles.data
+                    if st['id'] not in assigned_ids
+                    and st['id'] != photo_id
+                    and st['id'] not in teased_ids
+                ]
+                # If all styles have been teased, reset rotation and start over
+                if not candidates:
+                    candidates = [
+                        st for st in all_styles.data
+                        if st['id'] not in assigned_ids
+                        and st['id'] != photo_id
+                    ]
+                    # Clear teased list for fresh rotation
+                    if candidates:
+                        try:
+                            n = client.get('notes')
+                            n = n if isinstance(n, dict) else json.loads(n or '{}')
+                        except Exception:
+                            n = {}
+                        n['teased_styles'] = []
+                        sb.table('clients').update({'notes': json.dumps(n)}).eq('client_id', cid).execute()
+
+                if not candidates:
+                    continue  # no locked styles to tease (shouldn't happen for Standard)
+
+                # Pick the first candidate (deterministic, ordered by sort_order)
+                chosen = candidates[0]
+                today_str = datetime.now().strftime('%Y-%m-%d')
+                end_str = (datetime.now() + timedelta(days=3)).strftime('%Y-%m-%d')
+
+                sb.table('clients').update({
+                    'teaser_style_id': chosen['id'],
+                    'teaser_start_date': today_str,
+                    'teaser_end_date': end_str,
+                }).eq('client_id', cid).execute()
+
+                # Send teaser start email
+                if EMAIL_AVAILABLE and client.get('contact_email'):
+                    preview_url = _get_preview_url_for_teaser(client.get('business_type', ''), chosen['slug'])
+                    try:
+                        from posst_email import send_teaser_start_email
+                        send_teaser_start_email(client, chosen['name'], preview_url)
+                    except Exception as email_err:
+                        log.error(f'[teaser/activate] Email failed for {cid}: {email_err}')
+
+                _audit_log('teaser_activated', actor=cid, detail={
+                    'style_id': chosen['id'], 'style_name': chosen['name'],
+                    'start': today_str, 'end': end_str,
+                })
+                activated.append({'client_id': cid, 'style': chosen['name'], 'end': end_str})
+
+            except Exception as client_err:
+                log.error(f'[teaser/activate] Error for {client.get("client_id")}: {client_err}')
+                errors.append({'client_id': client.get('client_id'), 'error': str(client_err)})
+
+    except Exception as e:
+        log.error(f'[teaser/activate] Fatal error: {e}')
+        return err(f'Teaser activation failed: {e}')
+
+    return ok(activated=activated, errors=errors, count=len(activated))
+
+
+@app.route('/api/teaser/expire', methods=['POST'])
+@require_admin
+def teaser_expire():
+    """
+    Daily cron: expire teasers whose teaser_end_date has passed.
+    Clears teaser fields, records used style, sends end email.
+    """
+    from datetime import datetime
+    expired = []
+    errors = []
+    try:
+        today_str = datetime.now().strftime('%Y-%m-%d')
+        # Find clients with active teasers that have expired
+        resp = sb.table('clients').select(
+            'client_id, business_name, business_type, contact_email, notes, teaser_style_id, teaser_end_date'
+        ).not_.is_('teaser_style_id', 'null').lt('teaser_end_date', today_str).execute()
+
+        if not resp.data:
+            return ok(message='No expired teasers', expired=[])
+
+        for client in resp.data:
+            try:
+                cid = client['client_id']
+                style_id = client['teaser_style_id']
+
+                # Look up style name for email
+                style_resp = sb.table('artistic_styles').select('name, slug').eq('id', style_id).maybe_single().execute()
+                style_name = style_resp.data['name'] if style_resp and style_resp.data else 'Unknown'
+                style_slug = style_resp.data['slug'] if style_resp and style_resp.data else 'photorealistic'
+
+                # Record this style as teased (for rotation tracking)
+                _save_teased_style(cid, style_id, client.get('notes'))
+
+                # Clear teaser fields
+                sb.table('clients').update({
+                    'teaser_style_id': None,
+                    'teaser_start_date': None,
+                    'teaser_end_date': None,
+                }).eq('client_id', cid).execute()
+
+                # Send teaser end email
+                if EMAIL_AVAILABLE and client.get('contact_email'):
+                    preview_url = _get_preview_url_for_teaser(client.get('business_type', ''), style_slug)
+                    try:
+                        from posst_email import send_teaser_end_email
+                        send_teaser_end_email(client, style_name, preview_url)
+                    except Exception as email_err:
+                        log.error(f'[teaser/expire] Email failed for {cid}: {email_err}')
+
+                _audit_log('teaser_expired', actor=cid, detail={
+                    'style_id': style_id, 'style_name': style_name,
+                })
+                expired.append({'client_id': cid, 'style': style_name})
+
+            except Exception as client_err:
+                log.error(f'[teaser/expire] Error for {client.get("client_id")}: {client_err}')
+                errors.append({'client_id': client.get('client_id'), 'error': str(client_err)})
+
+    except Exception as e:
+        log.error(f'[teaser/expire] Fatal error: {e}')
+        return err(f'Teaser expiry failed: {e}')
+
+    return ok(expired=expired, errors=errors, count=len(expired))
 
 
 # ──────────────────────────────────────────────────────────────────────
