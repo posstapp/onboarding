@@ -17,7 +17,7 @@ import sys
 sys.path.insert(0, '/opt/posst')
 try:
     from posst_email import (
-        send_go_live_email, send_cancellation_email, send_pause_email,
+        send_go_live_email, send_cancellation_email, send_pause_email, send_resume_email,
         send_day1_email, send_day7_standard_email, send_day7_pro_email,
         send_trial_ending_email, send_monthly_email, send_missing_platform_email,
         send_reengagement_email, send_internal_alert, send_upgrade_email,
@@ -734,6 +734,10 @@ def cancel_client(client_id):
 
     sb.table('clients').update({'status': 'Cancelled'}).eq('client_id', client_id).execute()
     log.info(f'Client cancelled: {client_id}')
+    if EMAIL_AVAILABLE:
+        client_data = sb.table('clients').select('*').eq('client_id', client_id).single().execute().data
+        if client_data:
+            send_cancellation_email(client_data)
     return ok()
 
 @app.route('/api/client/<client_id>/pause', methods=['POST'])
@@ -756,6 +760,10 @@ def pause_client(client_id):
 
     sb.table('clients').update({'status': 'Paused'}).eq('client_id', client_id).execute()
     log.info(f'Client paused: {client_id}')
+    if EMAIL_AVAILABLE:
+        client_data = sb.table('clients').select('*').eq('client_id', client_id).single().execute().data
+        if client_data:
+            send_pause_email(client_data)
     return ok()
 
 @app.route('/api/client/<client_id>/resume', methods=['POST'])
@@ -778,6 +786,10 @@ def resume_client(client_id):
 
     sb.table('clients').update({'status': 'Active'}).eq('client_id', client_id).execute()
     log.info(f'Client resumed: {client_id}')
+    if EMAIL_AVAILABLE:
+        client_data = sb.table('clients').select('*').eq('client_id', client_id).single().execute().data
+        if client_data:
+            send_resume_email(client_data)
     return ok()
 
 # ── PORTAL LOOKUP ─────────────────────────────────────────────
