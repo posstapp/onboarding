@@ -207,6 +207,18 @@ def send_pause_email(client):
     ''')
     return send_email(client.get('contact_email'), "Your posst.app posting has been paused", body)
 
+def send_resume_email(client):
+    body = wrap(
+        hero('\u25b6\ufe0f', 'Your posting has resumed!', 'Welcome back.')
+        + hi(client.get('business_name') or 'there')
+        + para('Your posst.app account is back up and running. Automated posts will resume on your next scheduled posting day.')
+        + tbl([['Status', 'Active'], ['Posting', 'Resumes on next scheduled day'], ['Billing', 'Resumes immediately']])
+        + hl('No action needed -- your posts will start going out automatically.', '\u2705')
+        + btn('View my account &rarr;', 'https://onboarding.posst.app/portal.html')
+        + sign_off()
+    )
+    return send_email(client.get('contact_email'), 'Your posst.app posting has resumed!', body)
+
 def send_day1_email(client):
     is_pro = (client.get('plan') or '').lower() == 'pro'
     body = wrap(f'''
