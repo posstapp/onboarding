@@ -202,7 +202,8 @@ def send_pause_email(client):
         {hero("&#x23F8;&#xFE0F;", "Your posting has been paused", "You can resume anytime.")}
         {hi(client.get("business_name") or "there")}
         {para("Your posst.app posting has been paused. No posts will go out until you resume.")}
-        {hl("To resume posting, simply reply to this email and say Resume my account.", "&#x25B6;&#xFE0F;")}
+        {hl("Your account is safe and your settings are preserved. Resume anytime.", "&#x2705;")}
+        {btn("Log in to resume posting &rarr;", "https://onboarding.posst.app/?mode=login")}
         {sign_off()}
     ''')
     return send_email(client.get('contact_email'), "Your posst.app posting has been paused", body)
