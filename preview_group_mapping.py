@@ -25,6 +25,7 @@ PREVIEW_GROUPS = {
             "Warm low sun streaming through windows, motion in the air. "
             "No human faces — hands gripping equipment and silhouettes only."
         ),
+        "hero_subject": "The equipment and movement — kettlebells mid-swing, barbells loaded on a rack, battle ropes frozen in a wave, boxing gloves hanging from a hook. Gym floor with chalk dust, mirrors reflecting rows of machines, resistance bands stretched taut. Dance studio wooden floors with ballet barres, martial arts mats with belts displayed. Punching bags swinging, skipping ropes mid-arc, TRX straps hanging from ceiling, yoga poses in silhouette. Outdoor bootcamp — tyres, cones, park benches, sunrise stretching.",
     },
 
     "pet_services": {
@@ -34,6 +35,7 @@ PREVIEW_GROUPS = {
             "A happy well-groomed dog in a professional pet care setting — clean salon or outdoor environment. "
             "Warm golden light, soft background. The dog looks clean, healthy, and content. No human faces."
         ),
+        "hero_subject": "The dog as the star — wet nose close-ups, freshly groomed coat texture, paws on the grooming table, ears perked up, tongue out mid-bath. Grooming tools in action: clippers buzzing through fur, scissors mid-cut, brushes pulling through a coat, nail trimming. Shampoo lather, blow-dry fluff, bandana being tied. The wash station, drying area, breed-specific cuts on display. Happy dog in a fresh bow or bandana walking out the door.",
     },
 
     "automotive": {
@@ -44,6 +46,7 @@ PREVIEW_GROUPS = {
             "detailed mechanical work in progress. Warm workshop lighting with some natural light. "
             "No human faces — hands with tools only."
         ),
+        "hero_subject": "The vehicle and the craft — open bonnets showing engine bays, wheels being torqued, brake pads being replaced, exhaust systems being fitted. Paint booths with masked panels, spray guns applying clear coat, polishing machines buffing paintwork to mirror finish. Tyre walls stacked with branded rubber, wheel alignment screens, diagnostic scan tools plugged into OBD ports. Car wash tunnels with foam and brushes, interior detailing with steam cleaners, leather conditioning. Showroom floors, service bays with hoists raised.",
     },
 
     "accommodation_tourism": {
@@ -54,6 +57,7 @@ PREVIEW_GROUPS = {
             "comfortable furnishings, and a sense of arrival. Wide establishing shot showing the full space. "
             "No human faces."
         ),
+        "hero_subject": "The destination and comfort — hotel beds made with crisp white linen and scatter cushions, balcony views over water or mountains, infinity pools at sunset. Reception desks with welcome cards, room keys on a tray, concierge bells. Boutique interiors — exposed brick, velvet armchairs, vintage lamps, minibar setups. Tour vehicles — kayaks on a beach, hiking boots on a trail, snorkel gear laid out, bikes parked by a coastal path. Breakfast spreads on a terrace, hammocks between palms, fire pits under stars.",
     },
 
     "online_ecommerce": {
@@ -64,6 +68,7 @@ PREVIEW_GROUPS = {
             "clean minimal desk setup. Abstract tech elements suggesting online business. "
             "Soft directional lighting. No human faces."
         ),
+        "hero_subject": "The digital business in motion — laptop showing a Shopify dashboard, mobile phone displaying an Instagram shop, tablet with order notifications. Packing stations with branded boxes, tissue paper, thank-you cards, shipping labels being printed. Product photography setups — lightboxes, ring lights, flat-lay arrangements on marble. Analytics on screens — traffic graphs, conversion funnels, email campaign metrics. Home office desks with dual monitors, wireless earbuds, coffee, and a notebook.",
     },
 
     "health_wellness": {
@@ -74,6 +79,7 @@ PREVIEW_GROUPS = {
             "with natural light, plants, and comfortable seating. Wide shot showing the welcoming atmosphere. "
             "No human faces."
         ),
+        "hero_subject": "The healing environment — treatment tables with support cushions, resistance bands on hooks, exercise balls, anatomical charts on walls. Consultation rooms with natural light, stethoscopes, blood pressure cuffs, rehabilitation equipment. Walking aids, ultrasound machines, taping supplies, ice packs. Community care spaces with comfortable chairs, garden courtyards, activity boards. Mobility equipment, sensory gardens, communal dining areas with fresh flowers.",
     },
 
     "spiritual_alternative": {
@@ -84,6 +90,7 @@ PREVIEW_GROUPS = {
             "candles, and natural materials on a clean modern surface. No people. "
             "Soft directional lighting with shallow depth of field."
         ),
+        "hero_subject": "The symbolic still life — crystals arranged by colour on velvet, essential oil bottles with botanical labels, dried herb bundles tied with twine, singing bowls with mallets. Tarot cards fanned on silk, incense smoke curling upward, mandala artwork, moon phase charts. Acupuncture needles in a case, cupping sets, moxibustion sticks. Yoga mats rolled beside meditation cushions, mala beads, chakra diagrams, Himalayan salt lamps glowing warm. Journal and pen beside a candle, oracle decks, smudge sticks.",
     },
 
     "events_entertainment": {
@@ -94,6 +101,7 @@ PREVIEW_GROUPS = {
             "atmosphere of anticipation before showtime. Wide establishing shot with dramatic venue lighting. "
             "No human faces."
         ),
+        "hero_subject": "The venue and atmosphere — stage rigging with spotlights, DJ decks with turntables glowing, microphones on stands under stage lights. Event styling — floral centrepieces, draped fabric, fairy light canopies, table runners with place cards. Photo booth props and backdrops, red carpet with stanchions, confetti mid-air. Sound mixing desks with slider banks, speaker stacks, fog machines, mirror balls. Marquee tents being erected, outdoor festival grounds with bunting, food stall rows.",
     },
 
     "food_drink_production": {
@@ -104,6 +112,7 @@ PREVIEW_GROUPS = {
             "bottles or packages being prepared. Natural indoor lighting from a nearby window. "
             "Authentic craft production feel. No human faces — hands at work only."
         ),
+        "hero_subject": "The production line and finished bottle — copper stills, fermenting tanks with condensation, barrels stacked in cellars, hops and grain in open bins. Bottling lines with labels being applied, cork being inserted, wax sealing a bottle top. Tasting flights lined up on a bar, vineyard rows at sunrise, a roastery with beans cascading from a roaster. Lab testing equipment, refractometers, tasting notes on a clipboard, branded merchandise on shelves.",
     },
 
     "kids_family": {
@@ -114,6 +123,7 @@ PREVIEW_GROUPS = {
             "set up for fun. Bright overcast natural light filling the space. "
             "Joyful, safe environment. No people."
         ),
+        "hero_subject": "The play and wonder — ball pits with bright colours, trampolines mid-bounce, climbing walls with coloured holds, slides and tunnels. Party tables set with themed decorations, balloons arching, cake with candles, party bags lined up. Face painting palettes, costume racks, craft stations with scissors and sequins. Arcade machines with flashing screens, mini golf holes, go-kart tracks, laser tag vests. Water play areas with splash pads, sandpits with buckets and spades, fairy gardens with tiny doors.",
     },
 
     "trade_industrial": {
@@ -124,6 +134,7 @@ PREVIEW_GROUPS = {
             "in progress. Natural mixed lighting with industrial fixtures. "
             "Raw, authentic working environment. No human faces — gloved hands and equipment only."
         ),
+        "hero_subject": "The heavy craft and raw materials — welding arcs with sparks spraying, angle grinders cutting steel, forklift loading pallets, CNC machines cutting metal. Warehouse racks stacked to ceiling, shipping containers being loaded, conveyor belts with products moving. Steel beams being craned into place, concrete being poured, excavators digging trenches. Safety signage, hard hat racks, fire extinguisher stations, high-vis uniforms hung in rows. Blueprint tables in site offices, material sample boards.",
     },
 
     "education_childcare": {
@@ -134,6 +145,7 @@ PREVIEW_GROUPS = {
             "colourful educational displays. Morning light streaming in. "
             "Warm, nurturing educational setting. No human faces."
         ),
+        "hero_subject": "The learning world — stacked textbooks with coloured tabs, pencil cases spilling crayons, exercise books with handwriting practice. Classroom whiteboards with equations, alphabet charts, globe on a desk, microscopes in a science lab. Art tables with paint pots and brushes, construction paper cut-outs, glue sticks, glitter. Reading corners with beanbags and picture books, cubbies with labelled bags, nap mats rolled. Interactive screens, coding robots, musical instruments in a circle.",
     },
 
     # ──────────────────────────────────────────────────────────────
@@ -149,6 +161,7 @@ PREVIEW_GROUPS = {
             "layers of flaky dough. Fill the frame with texture and warmth. "
             "Shallow depth of field. No human faces."
         ),
+        "hero_subject": "The baked creation front and centre — golden crusts cracking open, laminated croissant layers, icing dripping down a layered cake, sugar dust on a doughnut. Bread dough mid-rise, flour-dusted wooden boards, piping bags squeezing rosettes, chocolate tempering in a bowl. Display cabinet filled with rows of pastries, a tiered wedding cake, cookies cooling on a wire rack. Rolling pins, dough scrapers, proofing baskets, decorated cupcakes in rows.",
     },
 
     "food_dining": {
@@ -160,6 +173,7 @@ PREVIEW_GROUPS = {
             "warm inviting atmosphere. Wide establishing shot showing the full dining space. "
             "No human faces — figures at distance only."
         ),
+        "hero_subject": "The dish as the centrepiece — plated food with garnish detail, sauce drizzled artistically, steam rising from a bowl. Table setting with linen napkins, wine glass catching light, candle glow on cutlery. The pass with plates lined up ready to serve, a wood-fired oven with flames visible, a cocktail being poured. Wide shots of the dining room at golden hour, booth seating with warm leather, an outdoor terrace set for evening service. Chalkboard menus, open kitchen flames, espresso machines.",
     },
 
     "food_street_casual": {
@@ -171,6 +185,7 @@ PREVIEW_GROUPS = {
             "colourful menu boards. Warm golden hour light with movement and energy. "
             "No human faces — hands preparing food only."
         ),
+        "hero_subject": "The food mid-assembly — burgers being stacked, sauce bottles squeezing, cheese melting on a grill, wok tossing with flames. Steam billowing from a food truck window, neon menu boards, brown paper bags being filled, takeaway containers being packed. Street-side energy: a queue at the counter, condiment stations, hand-painted signage. Loaded fries overflowing, bao buns in bamboo steamers, kebabs turning on a vertical spit, bubble tea being sealed.",
     },
 
     "food_specialty": {
@@ -182,6 +197,7 @@ PREVIEW_GROUPS = {
             "ingredients, or catering prep in progress. Natural indoor lighting. "
             "Authentic craft food feel. No human faces — hands at work only."
         ),
+        "hero_subject": "The raw ingredient and craft process — marbled cuts of meat on butcher paper, a whole fish on ice, spice jars in rows, fresh juice ingredients lined up. Smoking process with wood chips, cheese wheels aging on racks, honey being extracted from frames. Catering trays being assembled, grazing boards with layered charcuterie, preserving jars with hand-written labels. Butcher knives on a magnetic strip, commercial mixers mid-batch, vacuum-sealed products ready to ship.",
     },
 
     # ──────────────────────────────────────────────────────────────
@@ -197,6 +213,7 @@ PREVIEW_GROUPS = {
             "nail polish arranged professionally. Fill the frame with texture and detail. "
             "Shallow depth of field. No human faces."
         ),
+        "hero_subject": "The tools and the transformation — scissors mid-cut, razor fading a hairline, colour being painted onto foils, curling iron wrapping a section. Product bottles lined up on a station, brushes in holders, salon mirrors reflecting the workspace. Nail art close-ups, gel polish under UV light, lash extensions on a tray, brow mapping with thread. The salon chair, wash basin with running water, colour swatches fanned out. Finished styles from behind — updos, braids, balayage, sharp fades.",
     },
 
     "beauty_clinical": {
@@ -208,6 +225,7 @@ PREVIEW_GROUPS = {
             "bright sterile lighting. Wide shot showing the professional, reassuring space. "
             "No human faces."
         ),
+        "hero_subject": "The clinical precision — treatment devices with LED screens, dermal pens, laser handpieces, ultrasound probes. Clean treatment beds with white linens, magnifying lamps, sterilised tool trays. Product vials and serums in clinical packaging, gloved hands holding a syringe, skin analysis screens. Dental chairs with overhead lights, X-ray displays, whitening trays, orthodontic models. Waiting rooms with calming decor, consultation desks with before-and-after displays.",
     },
 
     "beauty_therapy": {
@@ -219,6 +237,7 @@ PREVIEW_GROUPS = {
             "lighting. Over-the-shoulder perspective showing the treatment space and tools. "
             "No human faces — hands providing care only."
         ),
+        "hero_subject": "The sanctuary atmosphere — massage table with fresh towels rolled, hot stones arranged in a line, oil bottles with dropper caps, candles lit beside a treatment bed. Facial masks in bowls being mixed, jade rollers, steaming towels, body scrub jars with wooden scoops. The quiet room — dim lighting, bamboo accents, water feature, eucalyptus sprigs. Waxing strips, sugar paste, warm wax pots. Sauna doors, plunge pools, robe hooks, herbal tea on a tray.",
     },
 
     # ──────────────────────────────────────────────────────────────
@@ -234,6 +253,7 @@ PREVIEW_GROUPS = {
             "High-contrast studio-style lighting with deep shadows. "
             "Elegant, curated retail feel. No human faces."
         ),
+        "hero_subject": "The garments and their details — fabric textures up close (linen weave, silk sheen, denim grain), stitching detail on a collar, buttons on a cuff. Mannequins styled with layered outfits, clothing racks colour-graded, shoe walls with rows of heels and sneakers. Jewellery displayed on velvet trays — rings, chains, earrings catching light. Silhouettes wearing styled outfits against clean backgrounds, accessories flat-laid on marble. Bridal gowns on padded hangers, sunglasses on stands, handbags arranged by colour.",
     },
 
     "retail_specialty": {
@@ -245,6 +265,7 @@ PREVIEW_GROUPS = {
             "hobby supplies. Fill the frame with rich colour and detail. "
             "Shallow depth of field. No human faces."
         ),
+        "hero_subject": "The curated product world — bookshop shelves floor to ceiling with a ladder, vinyl records fanned in a crate, flower buckets bursting with colour at a market stall. Gift boxes with ribbon, handmade soap bars stacked, candle collections with branded labels. Stationery laid out flat — pens, notebooks, wax seals. Music instruments on display — guitars on wall hooks, piano keys, drumsticks on a snare. Florist workbench with stems being arranged, wrapping paper rolls, secateurs beside a vase.",
     },
 
     "retail_tech": {
@@ -256,6 +277,7 @@ PREVIEW_GROUPS = {
             "arranged. Clean white or dark background, crisp product lighting. "
             "Minimal, modern tech retail aesthetic. No human faces."
         ),
+        "hero_subject": "The devices and workbenches — smartphone screens glowing on display stands, laptop keyboards at angles, gaming setups with RGB lighting. Repair workbench with micro-screwdrivers, magnifying lamps, circuit boards, soldering irons. Product shelves with cables, cases, chargers in branded packaging. VR headsets, drone propellers, 3D printers mid-print, smart home devices arranged on a shelf. Component drawers, anti-static mats, heat guns, diagnostic screens showing repair progress.",
     },
 
     "retail_general": {
@@ -267,6 +289,7 @@ PREVIEW_GROUPS = {
             "shopping environment. Wide shot showing the breadth of the store. "
             "Bright overhead and natural light. No human faces."
         ),
+        "hero_subject": "The stocked space and storefront — aisles with fully loaded shelves, colourful product packaging at eye level, basket displays near the entrance. Pharmacy counters with vitamins in rows, hardware walls with pegboard tool displays, fresh produce stacked in crates. Checkout counters, shopping trolleys, loyalty card signage. Seasonal window displays, awnings over a footpath, open/closed signs on glass doors, sale tags on racks. Community notice boards, local delivery vans, staff in aprons.",
     },
 
     # ──────────────────────────────────────────────────────────────
@@ -282,6 +305,7 @@ PREVIEW_GROUPS = {
             "tradie van visible. Over-the-shoulder perspective of the work being done. "
             "Natural daylight on a job site. No human faces — hands with tools only."
         ),
+        "hero_subject": "The work in action — copper pipes being soldered, electrical wires being stripped and connected, timber being measured and cut, paint rollers mid-stroke on a wall. Tool belts loaded with gear, spirit levels on surfaces, power drills driving screws, nail guns into framing. Roof tiles being laid, gutters being cleaned, air conditioning units being mounted. Work vans loaded with supplies, drop sheets on floors, ladders against houses, switchboards being wired. Safety boots on scaffolding, hard hats, high-vis vests.",
     },
 
     "home_services": {
@@ -293,6 +317,7 @@ PREVIEW_GROUPS = {
             "in a residential setting. Natural indoor lighting. "
             "Candid documentary feel of professional service being delivered. No human faces."
         ),
+        "hero_subject": "The visible transformation — sparkling kitchen benchtops, streak-free glass, freshly mowed lawn stripes. Vacuum lines on carpet, organised wardrobes with colour-coded hangers, pressure-washed driveways revealing clean concrete. Garden beds with fresh mulch and planted rows, hedge lines trimmed sharp, pool water crystal clear. Pest control equipment, termite barriers being laid, moving boxes stacked and labelled, furniture wrapped in blankets on a truck ramp.",
     },
 
     "home_improvement": {
@@ -304,6 +329,7 @@ PREVIEW_GROUPS = {
             "or freshly renovated exterior. Natural outdoor light, lush greenery. "
             "Wide view of the improved home environment. No human faces."
         ),
+        "hero_subject": "The finished result and the process — a new kitchen with stone benchtops and pendant lights, a tiled bathroom with frameless shower, a timber deck with outdoor furniture. Renovation in progress: exposed framing, tile adhesive being trowelled, cabinet doors being hung. Landscaped gardens with retaining walls, fire pits, native plantings, outdoor kitchens. Pool installations with water filling for the first time, fencing panels being erected. Architectural plans on a table, material samples, 3D renders.",
     },
 
     # ──────────────────────────────────────────────────────────────
@@ -319,6 +345,7 @@ PREVIEW_GROUPS = {
             "laptop with business software. Abstract composition suggesting expertise and trust. "
             "Soft directional lighting. No human faces."
         ),
+        "hero_subject": "The workspace and digital tools — laptop screens showing spreadsheets and dashboards, dual monitors with financial charts, tablets with digital signatures. Desktop setups with wireless keyboards, desk lamps, notebook and pen beside a coffee cup. Meeting rooms with glass whiteboards, conference tables, presentation screens. Document folders with tabs, bound reports, business cards fanned on a desk. Office building exteriors, city skyline views through windows, reception desks. Mobile phones showing email apps, calendar views, video call grids on screen.",
     },
 
     "professional_creative": {
@@ -330,6 +357,7 @@ PREVIEW_GROUPS = {
             "creative tools. Over-the-shoulder perspective of the creative workspace. "
             "Warm studio lighting. No human faces — hands at work only."
         ),
+        "hero_subject": "The creative output and tools — design mockups on a monitor, Pantone swatches fanned out, sketchbooks with concept drawings, colour palettes pinned to a mood board. Camera gear — lenses lined up, tripod legs, memory cards, a DSLR body with the lens cap off. Laptops showing editing software, drawing tablets with stylus, portfolio books open to spreads. Branding materials — logo proofs, business card mock-ups, packaging prototypes. Studio lights with softboxes, green screens, audio mixing boards, podcast microphones.",
     },
 
     "professional_specialist": {
@@ -341,6 +369,7 @@ PREVIEW_GROUPS = {
             "property showcase, event setup in progress, or modern IT server room. "
             "Wide establishing shot. Natural light. No human faces."
         ),
+        "hero_subject": "The specialist instruments and environment — architectural models beside blueprints, survey tripods on a site, engineering CAD drawings on a screen. Lab benches with microscopes, test tubes in racks, safety goggles, data loggers. Server racks with blinking lights, network cable runs, firewall dashboards on monitors. Drafting tables with T-squares, soil sample jars labelled, environmental monitoring equipment in the field. Consulting rooms with diplomas on walls, reference books, whiteboards with system diagrams.",
     },
 }
 
