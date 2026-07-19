@@ -1277,6 +1277,17 @@ def style_select():
     if not client_id:
         return err('client_id required', 400)
 
+    def _enrich_template(tpl, biz_type):
+        try:
+            group_slug = get_preview_group(biz_type)
+            hero = PREVIEW_GROUPS.get(group_slug, {}).get('hero_subject', '')
+        except Exception:
+            hero = ''
+        if hero:
+            tpl += f' The hero subject is {hero}. It must dominate the frame. Compose the entire scene around it.'
+        tpl += ' Keep all content gender-neutral. Do not include any names for people or animals.'
+        return tpl
+
     # Step 1: business_type → category (Beta lookup; Lesson 178).
     category = BUSINESS_TYPE_TO_CATEGORY.get(business_type)
     if not category:
@@ -1286,7 +1297,7 @@ def style_select():
         )
         chosen = random.choice(SAFE_FALLBACK_POOL)
         sid, tpl = _resolve_style_row(chosen)
-        return jsonify({'status': 'success', 'style_id': sid, 'style_template': tpl,
+        return jsonify({'status': 'success', 'style_id': sid, 'style_template': _enrich_template(tpl, business_type),
                         'source': 'fallback_pool'})
 
     # Step 2: routing lookup (type override first, category default fallback).
@@ -1298,7 +1309,7 @@ def style_select():
         )
         chosen = random.choice(SAFE_FALLBACK_POOL)
         sid, tpl = _resolve_style_row(chosen)
-        return jsonify({'status': 'success', 'style_id': sid, 'style_template': tpl,
+        return jsonify({'status': 'success', 'style_id': sid, 'style_template': _enrich_template(tpl, business_type),
                         'source': 'fallback_pool'})
 
     # Step 3: anti-repeat — exclude last 2 styles.
@@ -1311,7 +1322,7 @@ def style_select():
     # Step 4: pick + resolve.
     chosen = random.choice(eligible)
     sid, tpl = _resolve_style_row(chosen)
-    return jsonify({'status': 'success', 'style_id': sid, 'style_template': tpl,
+    return jsonify({'status': 'success', 'style_id': sid, 'style_template': _enrich_template(tpl, business_type),
                     'source': 'primary'})
 
 
