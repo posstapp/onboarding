@@ -1196,7 +1196,7 @@ async function modalConfirm() {
     const result = await resp.json();
     closeModal();
     if (result.status === 'success') {
-      if (modalAction === 'resume') {
+      if (endpoint === 'resume') {
         // Resume drops the user straight back into their live dashboard, not a goodbye screen
         clientData.status = 'Active';
         renderDashboard();
@@ -1204,9 +1204,9 @@ async function modalConfirm() {
       }
       document.getElementById('dashboard').innerHTML = `
         <div style="text-align:center;padding:60px 20px">
-          <div style="font-size:48px;margin-bottom:16px">${modalAction==='cancel'?'👋':'⏸️'}</div>
-          <h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">${modalAction==='cancel'?'Account cancelled':'Posting paused'}</h2>
-          <p style="font-size:14px;color:var(--ink-mid);line-height:1.6;margin-bottom:24px">${modalAction==='cancel'?'Confirmation email sent. Your data is kept for 30 days.':'Confirmation email sent. Resume anytime from My Account.'}</p>
+          <div style="font-size:48px;margin-bottom:16px">${endpoint==='cancel'?'👋':'⏸️'}</div>
+          <h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">${endpoint==='cancel'?'Account cancelled':'Posting paused'}</h2>
+          <p style="font-size:14px;color:var(--ink-mid);line-height:1.6;margin-bottom:24px">${endpoint==='cancel'?'Confirmation email sent. Your data is kept for 30 days.':'Confirmation email sent. Resume anytime from My Account.'}</p>
           <a href="https://posst.app" class="btn btn-secondary">Back to posst.app</a>
         </div>`;
     } else {
